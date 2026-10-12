@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>atm · web-app</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0052CC}a:hover{color:#003E99}
+.lg{--ink:#1A1A1A;--ink2:#4A4A4A;--ink3:#686D76;--accent:#0066FF;--accent-h:#005CE6;--accent-soft:rgba(0,102,255,.12);--accent-ink:#0052CC;--glass:rgba(255,255,255,.58);--glass-2:rgba(255,255,255,.36);--glass-strong:rgba(255,255,255,.82);--edge:rgba(255,255,255,.78);--hi:rgba(255,255,255,.7);--line:rgba(26,26,26,.08);--line2:rgba(26,26,26,.16);--shadow:0 2px 12px rgba(16,24,40,.06),0 16px 40px rgba(16,24,40,.08);--bg:#EDF0F7;--b1:#8DB8FF;--b2:#CDB0FF;--b3:#93E6DF;--b4:#FFC9DE;--skill:#3FB8C9;--skill-ink:#0A6474;--skill-soft:rgba(63,184,201,.18);--mcp:#0066FF;--mcp-ink:#0052CC;--mcp-soft:rgba(0,102,255,.12);--plugin:#4B22A0;--plugin-ink:#5B2BB5;--plugin-soft:rgba(91,43,181,.12);--err:#D92D20;--err-ink:#B42318;--err-soft:rgba(217,45,32,.12);--warn:#DC8A0E;--warn-ink:#8A4B06;--warn-soft:rgba(220,138,14,.16);--ok:#079455;--ok-ink:#067647;--ok-soft:rgba(7,148,85,.12);--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Noto Sans SC","Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;background:var(--bg);color:var(--ink);font-family:var(--sans);position:relative;overflow:hidden;isolation:isolate;transition:background-color .5s,color .5s}
+.lg[data-theme=dark]{--ink:#F2F4F8;--ink2:#C3C8D1;--ink3:#9097A3;--accent:#3D8BFF;--accent-h:#5A9CFF;--accent-soft:rgba(61,139,255,.18);--accent-ink:#8DBBFF;--glass:rgba(28,32,42,.56);--glass-2:rgba(28,32,42,.34);--glass-strong:rgba(36,40,52,.86);--edge:rgba(255,255,255,.12);--hi:rgba(255,255,255,.08);--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.2);--shadow:0 2px 12px rgba(0,0,0,.3),0 16px 40px rgba(0,0,0,.35);--bg:#0D1017;--b1:#1D4ED8;--b2:#6D28D9;--b3:#0E7490;--b4:#9D174D;--skill:#5FD3E2;--skill-ink:#86E3EE;--skill-soft:rgba(95,211,226,.16);--mcp:#3D8BFF;--mcp-ink:#8DBBFF;--mcp-soft:rgba(61,139,255,.18);--plugin:#B795FF;--plugin-ink:#C9AEFF;--plugin-soft:rgba(183,149,255,.16);--err-ink:#FF8A80;--err-soft:rgba(255,99,88,.16);--warn-ink:#FFC266;--warn-soft:rgba(255,184,77,.16);--ok-ink:#5CE0A0;--ok-soft:rgba(92,224,160,.14)}
+.mesh{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.blob{position:absolute;border-radius:42% 58% 63% 37%/45% 41% 59% 55%;filter:blur(64px);opacity:.72;animation:morph 22s ease-in-out infinite alternate}
+.blob.b2{animation-duration:26s;animation-direction:alternate-reverse}.blob.b3{animation-duration:30s}
+@keyframes morph{0%{transform:translate(0,0) rotate(0) scale(1)}50%{transform:translate(60px,-40px) rotate(40deg) scale(1.12)}100%{transform:translate(-40px,30px) rotate(-20deg) scale(.94)}}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:1px solid var(--edge);box-shadow:var(--shadow),inset 0 1px 0 var(--hi)}
+.iri{position:relative}.iri::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:linear-gradient(120deg,#6FA8FF,#C7A6FF 30%,#8EE6E0 60%,#FFB8D5);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.9}
+.ca{text-shadow:-.7px 0 rgba(255,40,120,.38),.7px 0 rgba(0,150,255,.38)}
+.rise{animation:rise .48s cubic-bezier(.2,.8,.2,1) both}.d1{animation-delay:.1s}.d2{animation-delay:.2s}.d3{animation-delay:.3s}.d4{animation-delay:.4s}.d5{animation-delay:.5s}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.btn{height:40px;padding:0 16px;box-sizing:border-box;border-radius:12px;font:600 14px var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;transition:transform .2s,background-color .2s,box-shadow .2s;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-p{background:var(--accent);color:#FFFFFF;border:0}.btn-p:hover{background:var(--accent-h);color:#FFFFFF;box-shadow:0 8px 20px rgba(0,102,255,.28)}
+.btn-g{background:var(--glass-2);color:var(--ink);border:1.5px solid var(--line2)}.btn-g:hover{background:var(--glass-strong);color:var(--ink)}
+.mono{font-family:var(--mono)}
+.chip{height:22px;padding:0 9px;border-radius:999px;font:600 11px var(--mono);display:inline-flex;align-items:center;letter-spacing:.02em;white-space:nowrap}
+.c-skill{background:var(--skill-soft);color:var(--skill-ink)}.c-mcp{background:var(--mcp-soft);color:var(--mcp-ink)}.c-plugin{background:var(--plugin-soft);color:var(--plugin-ink)}
+.cap{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.sw{width:40px;height:24px;border-radius:999px;border:0;padding:0;position:relative;cursor:pointer;flex-shrink:0;transition:background-color .4s}
+.sw span{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#FFFFFF;box-shadow:0 2px 6px rgba(0,0,0,.22);transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
+.sw[aria-checked=true]{background:var(--accent)}.sw[aria-checked=true] span{transform:translateX(16px)}.sw[aria-checked=false]{background:var(--line2)}
+.item{transition:opacity .4s,background-color .3s}.item:hover{background:var(--glass-2)}
+.agt{min-height:40px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line2);background:var(--glass-2);display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;cursor:pointer}
+.agt input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.nv{min-height:40px;padding:0 12px;border-radius:12px;color:var(--ink2);font-size:14px;text-decoration:none;display:flex;align-items:center;gap:10px;transition:background-color .2s}
+.nv:hover{background:var(--glass-2);color:var(--ink)}
+.nv.on{background:var(--glass-strong);color:var(--ink);font-weight:500;box-shadow:inset 0 1px 0 var(--hi)}
+.nv .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}.nv.on .dot{background:var(--accent)}
+.bar{transition:width .5s cubic-bezier(.34,1.3,.64,1)}
+.toast{animation:toast .45s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes toast{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</helmet>
+<div class="lg" data-theme="{{theme}}" style="min-height: 1000px; box-sizing: border-box; padding: 16px; display: flex; flex-wrap: wrap; align-items: stretch; gap: 16px">
+<div class="mesh" aria-hidden="true">
+<div class="blob" style="width: 44%; height: 56%; top: -20%; left: 45%; background: var(--b1)"></div>
+<div class="blob b2" style="width: 36%; height: 50%; top: 30%; left: 75%; background: var(--b2)"></div>
+<div class="blob b3" style="width: 42%; height: 52%; top: 50%; left: 5%; background: var(--b3)"></div>
+<div class="blob" style="width: 30%; height: 40%; top: 75%; left: 50%; background: var(--b4)"></div>
+</div>
+
+<nav aria-label="主导航" class="glass" style="flex: 1 1 220px; box-sizing: border-box; padding: 20px 12px; border-radius: 20px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px"><span style="width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, #0066FF, #8E6CFF); color: #FFFFFF; font: 600 12px var(--mono); display: flex; align-items: center; justify-content: center">atm</span><strong style="font-size: 15px">Agent Tool Manager</strong></div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="Overview.dc.html" class="nv"><span class="dot"></span>总览</a>
+<a href="Library.dc.html" class="nv"><span class="dot"></span>工具库</a>
+<a href="Matrix.dc.html" class="nv"><span class="dot"></span>矩阵</a>
+<a href="Doctor.dc.html" class="nv"><span class="dot"></span>体检<span class="chip" style="margin-left: auto; background: var(--err-soft); color: var(--err-ink)">1</span></a>
+<span class="nv" style="color: var(--ink3)"><span class="dot"></span>全局<span class="mono" style="margin-left: auto; font-size: 11px">P5</span></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span class="cap" style="padding: 0 12px 6px">项目</span>
+<a href="Project.dc.html" class="nv on mono" aria-current="page" style="font-size: 13px"><span style="width: 7px; height: 7px; border-radius: 1px; background: var(--warn); transform: rotate(45deg); flex-shrink: 0"></span>web-app</a>
+<span class="nv mono" style="font-size: 13px; color: var(--ink)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--err); flex-shrink: 0"></span>agent-tool-manager</span>
+<span class="nv mono" style="font-size: 13px; color: var(--ink3); text-decoration: line-through"><span style="width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink3); box-sizing: border-box; flex-shrink: 0"></span>old-landing</span>
+</div>
+<div style="margin-top: auto; padding: 14px 12px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink3)">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>已连接 · 实时同步</span>
+<span class="mono">127.0.0.1:52817</span>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 16px 8px; display: flex; flex-direction: column; gap: 20px">
+
+<div class="rise" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: var(--ink3)"><a href="Overview.dc.html" style="color: var(--ink3)">总览</a> / 项目</span>
+<h1 class="mono ca" style="margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.02em">web-app</h1>
+<span class="mono" style="font-size: 12px; color: var(--ink3)">~/work/web-app · .agents/tools.json</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" class="btn btn-g">查看生成的配置</button>
+<button type="button" class="btn btn-g">doctor --measure</button>
+<button type="button" class="btn btn-p">install</button>
+</div>
+</div>
+
+<section class="glass iri rise d1" style="border-radius: 20px; padding: 22px 24px; display: flex; flex-wrap: wrap; gap: 32px; align-items: center; background: var(--glass-strong)">
+<div style="flex: 7 1 360px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span class="cap">常驻上下文</span><span class="mono ca" style="font-size: 32px; font-weight: 600">≈ {{totalLabel}} <span style="font-size: 13px; font-weight: 400; color: var(--ink3); text-shadow: none">/ 10k tokens</span></span></div>
+<div style="display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: var(--line); gap: 2px">
+<div class="bar" style="width: {{skillW}}; background: var(--skill)"></div>
+<div class="bar" style="width: {{mcpW}}; background: var(--mcp)"></div>
+<div class="bar" style="width: {{pluginW}}; background: var(--plugin)"></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--ink2)">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--skill)"></span>Skill {{skillLabel}}</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--mcp)"></span>MCP {{mcpLabel}}</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--plugin)"></span>插件 {{pluginLabel}}</span>
+</div>
+</div>
+<fieldset style="flex: 5 1 280px; margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px">
+<legend class="cap" style="padding: 0 0 10px">落地到 Agent</legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<label class="agt"><input type="checkbox" checked="">Claude Code</label>
+<label class="agt"><input type="checkbox" checked="">Cursor</label>
+<label class="agt" style="color: var(--ink3); border-style: dashed"><input type="checkbox">Codex</label>
+</div>
+</fieldset>
+</section>
+
+<div role="status" class="glass rise d2" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 14px; background: var(--warn-soft); font-size: 14px; line-height: 1.5">
+<span style="width: 9px; height: 9px; border-radius: 2px; background: var(--warn); transform: rotate(45deg); flex-shrink: 0"></span>
+<span style="flex: 1 1 300px; color: var(--ink)"><strong style="color: var(--warn-ink)">warn</strong> · MCP <code class="mono">figma</code> 与插件 <code class="mono">figma@claude-plugins-official</code> 自带的 MCP 同名，Agent 中会出现两份工具定义。</span>
+<a href="Doctor.dc.html" style="color: var(--warn-ink); font-weight: 600">去体检处理 →</a>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+
+<section class="glass rise d3" style="flex: 4 1 280px; min-width: 0; border-radius: 20px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line)">
+<span class="chip c-skill">SKILL</span><h2 style="margin: 0; font-size: 16px; font-weight: 600">Skills</h2><span class="mono" style="font-size: 13px; color: var(--ink3)">2</span>
+<a href="Library.dc.html" style="margin-left: auto; font-size: 14px; font-weight: 500; text-decoration: none; color: var(--accent-ink)">+ 添加</a>
+</div>
+<sc-for list="{{skills}}" as="t" hint-placeholder-count="2">
+<div class="item" style="display: flex; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); opacity: {{t.op}}">
+<button type="button" class="sw" role="switch" aria-checked="{{t.ariaOn}}" aria-label="启用 {{t.name}}" onClick="{{t.toggle}}"><span></span></button>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span class="mono" style="font-size: 14px; font-weight: 500">{{t.name}}</span><span class="mono" style="font-size: 13px; font-weight: 600">{{t.tokLabel}}</span></div>
+<span class="mono" style="font-size: 12px; color: var(--ink3)">{{t.source}}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip" style="background: var(--line); color: var(--ink2); font-weight: 500">{{t.rev}}</span><span style="font-size: 12px; color: var(--ink2)">{{t.agents}}</span></div>
+</div>
+</div>
+</sc-for>
+<p style="margin: 0; padding: 12px 18px; font-size: 12px; line-height: 1.5; color: var(--ink3)">软链到 <code class="mono">~/GitHub</code>，所有 Agent 共用 .agents/skills</p>
+</section>
+
+<section class="glass rise d4" style="flex: 5 1 300px; min-width: 0; border-radius: 20px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line)">
+<span class="chip c-mcp">MCP</span><h2 style="margin: 0; font-size: 16px; font-weight: 600">MCP</h2><span class="mono" style="font-size: 13px; color: var(--ink3)">2</span>
+<a href="AddDiff.dc.html" style="margin-left: auto; font-size: 14px; font-weight: 500; text-decoration: none; color: var(--accent-ink)">+ 添加</a>
+</div>
+<sc-for list="{{mcp}}" as="t" hint-placeholder-count="2">
+<div class="item" style="display: flex; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); opacity: {{t.op}}">
+<button type="button" class="sw" role="switch" aria-checked="{{t.ariaOn}}" aria-label="启用 {{t.name}}" onClick="{{t.toggle}}"><span></span></button>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span class="mono" style="font-size: 14px; font-weight: 500">{{t.name}}</span><span class="mono" style="font-size: 13px; font-weight: 600">{{t.tokLabel}}</span></div>
+<span class="mono" style="font-size: 12px; color: var(--ink3)">{{t.source}}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip" style="background: var(--line); color: var(--ink2); font-weight: 500">{{t.rev}}</span><span style="font-size: 12px; color: var(--ink2)">{{t.agents}}</span></div>
+</div>
+</div>
+</sc-for>
+<p style="margin: 0; padding: 12px 18px; font-size: 12px; line-height: 1.5; color: var(--ink3)">渲染到 .mcp.json 与 .cursor/mcp.json，只改动 atm 管理的条目</p>
+</section>
+
+<section class="glass rise d5" style="flex: 3 1 260px; min-width: 0; border-radius: 20px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line)">
+<span class="chip c-plugin">PLUGIN</span><h2 style="margin: 0; font-size: 16px; font-weight: 600">插件</h2><span class="mono" style="font-size: 13px; color: var(--ink3)">1</span>
+<a href="Library.dc.html" style="margin-left: auto; font-size: 14px; font-weight: 500; text-decoration: none; color: var(--accent-ink)">+ 添加</a>
+</div>
+<sc-for list="{{plugins}}" as="t" hint-placeholder-count="1">
+<div class="item" style="display: flex; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); opacity: {{t.op}}">
+<button type="button" class="sw" role="switch" aria-checked="{{t.ariaOn}}" aria-label="启用 {{t.name}}" onClick="{{t.toggle}}"><span></span></button>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span class="mono" style="font-size: 14px; font-weight: 500">{{t.name}}</span><span class="mono" style="font-size: 13px; font-weight: 600">{{t.tokLabel}}</span></div>
+<span class="mono" style="font-size: 12px; color: var(--ink3)">{{t.source}}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip" style="background: var(--line); color: var(--ink2); font-weight: 500">{{t.rev}}</span><span style="font-size: 12px; color: var(--ink2)">{{t.agents}}</span></div>
+</div>
+</div>
+</sc-for>
+<p style="margin: 0; padding: 12px 18px; font-size: 12px; line-height: 1.5; color: var(--ink3)">写入 .claude/settings.json 的 enabledPlugins，只对 Claude Code 生效</p>
+</section>
+</div>
+
+<sc-if value="{{hasPending}}" hint-placeholder-val="{{false}}">
+<div role="status" class="glass iri toast" style="position: sticky; bottom: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 14px 12px 20px; border-radius: 16px; background: var(--glass-strong)">
+<span style="flex: 1 1 240px; font-size: 14px; font-weight: 500">{{pendingLabel}} <span style="font-weight: 400; color: var(--ink3)">· 尚未写入任何文件</span></span>
+<button type="button" class="btn btn-g" onClick="{{reset}}">撤销</button>
+<a href="AddDiff.dc.html" class="btn btn-p">查看 diff 并应用</a>
+</div>
+</sc-if>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { off: {} };
+}
+renderVals() {
+const off = this.state.off;
+const self = this;
+const fmt = function (n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); };
+const mk = function (list) {
+return list.map(function (t) {
+const on = !off[t.name];
+return Object.assign({}, t, {
+on: on,
+tokLabel: fmt(t.tok),
+op: on ? '1' : '0.5',
+ariaOn: on ? 'true' : 'false',
+toggle: function () {
+const next = Object.assign({}, self.state.off);
+next[t.name] = !next[t.name];
+self.setState({ off: next });
+}
+});
+});
+};
+const skills = mk([
+{ name: 'baoyu-comic', tok: 96, source: 'jimliu/baoyu-skills', rev: 'a1b2c3d', agents: 'Claude Code · Cursor' },
+{ name: 'baoyu-cover', tok: 88, source: 'jimliu/baoyu-skills', rev: 'rev v1.2.0', agents: 'Claude Code · Cursor' }
+]);
+const mcp = mk([
+{ name: 'figma', tok: 4200, source: 'registry · stdio · npx', rev: 'sha256:9f3e…', agents: 'Claude Code · Cursor' },
+{ name: 'playwright', tok: 1400, source: 'registry · stdio · npx', rev: 'sha256:41ac…', agents: '仅 Claude Code' }
+]);
+const plugins = mk([
+{ name: 'security-guidance', tok: 300, source: '@claude-plugins-official', rev: '已安装', agents: '仅 Claude Code' }
+]);
+const sum = function (l) { return l.filter(function (t) { return t.on; }).reduce(function (s, t) { return s + t.tok; }, 0); };
+const s = sum(skills), m = sum(mcp), p = sum(plugins);
+const pct = function (n) { return Math.max(n > 0 ? 1 : 0, n / 100) + '%'; };
+const pending = Object.keys(off).filter(function (k) { return off[k]; }).length;
+return {
+theme: this.props.theme ?? 'light',
+skills: skills, mcp: mcp, plugins: plugins,
+totalLabel: fmt(s + m + p),
+skillW: pct(s), mcpW: pct(m), pluginW: pct(p),
+skillLabel: fmt(s), mcpLabel: fmt(m), pluginLabel: fmt(p),
+hasPending: pending > 0,
+pendingLabel: pending + ' 项改动待提交',
+reset: function () { self.setState({ off: {} }); }
+};
+}
+}
+</script>
+</body>
+</html>

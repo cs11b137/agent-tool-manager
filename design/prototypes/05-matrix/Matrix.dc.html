@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>atm · 矩阵</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0052CC}a:hover{color:#003E99}
+.lg{--ink:#1A1A1A;--ink2:#4A4A4A;--ink3:#686D76;--accent:#0066FF;--accent-h:#005CE6;--accent-soft:rgba(0,102,255,.12);--accent-ink:#0052CC;--glass:rgba(255,255,255,.58);--glass-2:rgba(255,255,255,.36);--glass-strong:rgba(255,255,255,.82);--edge:rgba(255,255,255,.78);--hi:rgba(255,255,255,.7);--line:rgba(26,26,26,.08);--line2:rgba(26,26,26,.16);--shadow:0 2px 12px rgba(16,24,40,.06),0 16px 40px rgba(16,24,40,.08);--bg:#EDF0F7;--b1:#8DB8FF;--b2:#CDB0FF;--b3:#93E6DF;--b4:#FFC9DE;--skill:#3FB8C9;--skill-ink:#0A6474;--skill-soft:rgba(63,184,201,.18);--mcp:#0066FF;--mcp-ink:#0052CC;--mcp-soft:rgba(0,102,255,.12);--plugin:#4B22A0;--plugin-ink:#5B2BB5;--plugin-soft:rgba(91,43,181,.12);--err:#D92D20;--err-ink:#B42318;--err-soft:rgba(217,45,32,.12);--warn:#DC8A0E;--warn-ink:#8A4B06;--warn-soft:rgba(220,138,14,.16);--ok:#079455;--ok-ink:#067647;--ok-soft:rgba(7,148,85,.12);--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Noto Sans SC","Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;background:var(--bg);color:var(--ink);font-family:var(--sans);position:relative;overflow:hidden;isolation:isolate;transition:background-color .5s,color .5s}
+.lg[data-theme=dark]{--ink:#F2F4F8;--ink2:#C3C8D1;--ink3:#9097A3;--accent:#3D8BFF;--accent-h:#5A9CFF;--accent-soft:rgba(61,139,255,.18);--accent-ink:#8DBBFF;--glass:rgba(28,32,42,.56);--glass-2:rgba(28,32,42,.34);--glass-strong:rgba(36,40,52,.86);--edge:rgba(255,255,255,.12);--hi:rgba(255,255,255,.08);--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.2);--shadow:0 2px 12px rgba(0,0,0,.3),0 16px 40px rgba(0,0,0,.35);--bg:#0D1017;--b1:#1D4ED8;--b2:#6D28D9;--b3:#0E7490;--b4:#9D174D;--skill:#5FD3E2;--skill-ink:#86E3EE;--skill-soft:rgba(95,211,226,.16);--mcp:#3D8BFF;--mcp-ink:#8DBBFF;--mcp-soft:rgba(61,139,255,.18);--plugin:#B795FF;--plugin-ink:#C9AEFF;--plugin-soft:rgba(183,149,255,.16);--err-ink:#FF8A80;--err-soft:rgba(255,99,88,.16);--warn-ink:#FFC266;--warn-soft:rgba(255,184,77,.16);--ok-ink:#5CE0A0;--ok-soft:rgba(92,224,160,.14)}
+.mesh{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.blob{position:absolute;border-radius:42% 58% 63% 37%/45% 41% 59% 55%;filter:blur(64px);opacity:.72;animation:morph 22s ease-in-out infinite alternate}
+.blob.b2{animation-duration:26s;animation-direction:alternate-reverse}.blob.b3{animation-duration:30s}
+@keyframes morph{0%{transform:translate(0,0) rotate(0) scale(1)}50%{transform:translate(60px,-40px) rotate(40deg) scale(1.12)}100%{transform:translate(-40px,30px) rotate(-20deg) scale(.94)}}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:1px solid var(--edge);box-shadow:var(--shadow),inset 0 1px 0 var(--hi)}
+.iri{position:relative}.iri::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:linear-gradient(120deg,#6FA8FF,#C7A6FF 30%,#8EE6E0 60%,#FFB8D5);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.9}
+.ca{text-shadow:-.7px 0 rgba(255,40,120,.38),.7px 0 rgba(0,150,255,.38)}
+.rise{animation:rise .48s cubic-bezier(.2,.8,.2,1) both}.d1{animation-delay:.1s}.d2{animation-delay:.2s}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.btn{height:40px;padding:0 16px;box-sizing:border-box;border-radius:12px;font:600 14px var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;transition:transform .2s,background-color .2s,box-shadow .2s;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-p{background:var(--accent);color:#FFFFFF;border:0}.btn-p:hover{background:var(--accent-h);color:#FFFFFF;box-shadow:0 8px 20px rgba(0,102,255,.28)}
+.btn-g{background:var(--glass-2);color:var(--ink);border:1.5px solid var(--line2)}.btn-g:hover{background:var(--glass-strong);color:var(--ink)}
+.mono{font-family:var(--mono)}
+.chip{height:22px;padding:0 9px;border-radius:999px;font:600 11px var(--mono);display:inline-flex;align-items:center;letter-spacing:.02em;white-space:nowrap}
+.c-skill{background:var(--skill-soft);color:var(--skill-ink)}.c-mcp{background:var(--mcp-soft);color:var(--mcp-ink)}.c-plugin{background:var(--plugin-soft);color:var(--plugin-ink)}
+.cap{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.nv{min-height:40px;padding:0 12px;border-radius:12px;color:var(--ink2);font-size:14px;text-decoration:none;display:flex;align-items:center;gap:10px;transition:background-color .2s}
+.nv:hover{background:var(--glass-2);color:var(--ink)}
+.nv.on{background:var(--glass-strong);color:var(--ink);font-weight:500;box-shadow:inset 0 1px 0 var(--hi)}
+.nv .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}.nv.on .dot{background:var(--accent)}
+.cell{width:64px;height:40px;border-radius:12px;box-sizing:border-box;font:600 15px var(--mono);display:inline-flex;align-items:center;justify-content:center;gap:4px;transition:transform .45s cubic-bezier(.34,1.56,.64,1),background-color .4s,border-color .4s,color .4s,box-shadow .3s}
+.cell:not([disabled]):hover{transform:scale(1.08)}
+.cell:not([disabled]):active{transform:scale(.94)}
+.mrow{transition:background-color .3s}.mrow:hover{background:var(--glass-2)}
+.bar{transition:width .5s cubic-bezier(.34,1.3,.64,1)}
+.toast{animation:toast .45s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes toast{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</helmet>
+<div class="lg" data-theme="{{theme}}" style="min-height: 1000px; box-sizing: border-box; padding: 16px; display: flex; flex-wrap: wrap; align-items: stretch; gap: 16px">
+<div class="mesh" aria-hidden="true">
+<div class="blob" style="width: 42%; height: 55%; top: -15%; left: 55%; background: var(--b2)"></div>
+<div class="blob b2" style="width: 40%; height: 55%; top: 30%; left: 15%; background: var(--b1)"></div>
+<div class="blob b3" style="width: 38%; height: 50%; top: 60%; left: 65%; background: var(--b3)"></div>
+<div class="blob" style="width: 30%; height: 40%; top: 80%; left: 30%; background: var(--b4)"></div>
+</div>
+
+<nav aria-label="主导航" class="glass" style="flex: 1 1 220px; box-sizing: border-box; padding: 20px 12px; border-radius: 20px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px"><span style="width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, #0066FF, #8E6CFF); color: #FFFFFF; font: 600 12px var(--mono); display: flex; align-items: center; justify-content: center">atm</span><strong style="font-size: 15px">Agent Tool Manager</strong></div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="Overview.dc.html" class="nv"><span class="dot"></span>总览</a>
+<a href="Library.dc.html" class="nv"><span class="dot"></span>工具库</a>
+<a href="Matrix.dc.html" class="nv on" aria-current="page"><span class="dot"></span>矩阵</a>
+<a href="Doctor.dc.html" class="nv"><span class="dot"></span>体检<span class="chip" style="margin-left: auto; background: var(--err-soft); color: var(--err-ink)">1</span></a>
+<span class="nv" style="color: var(--ink3)"><span class="dot"></span>全局<span class="mono" style="margin-left: auto; font-size: 11px">P5</span></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span class="cap" style="padding: 0 12px 6px">项目</span>
+<a href="Project.dc.html" class="nv mono" style="font-size: 13px"><span style="width: 7px; height: 7px; border-radius: 1px; background: var(--warn); transform: rotate(45deg); flex-shrink: 0"></span>web-app</a>
+<span class="nv mono" style="font-size: 13px; color: var(--ink)"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--err); flex-shrink: 0"></span>agent-tool-manager</span>
+<span class="nv mono" style="font-size: 13px; color: var(--ink3); text-decoration: line-through"><span style="width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink3); box-sizing: border-box; flex-shrink: 0"></span>old-landing</span>
+</div>
+<div style="margin-top: auto; padding: 14px 12px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink3)">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>已连接 · 实时同步</span>
+<span class="mono">127.0.0.1:52817</span>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 16px 8px; display: flex; flex-direction: column; gap: 20px">
+<div class="rise" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="cap">工具 × 项目</span>
+<h1 class="ca" style="margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.02em">矩阵</h1>
+<span style="font-size: 14px; color: var(--ink2)">点击单元格启用或停用，改动先攒成一批，统一预览 diff 后写入</span>
+</div>
+<div class="glass" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 16px; border-radius: 999px; font-size: 12px; color: var(--ink2)">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 12px; border-radius: 4px; background: var(--accent)"></span>启用</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 12px; border-radius: 4px; border: 1.5px dashed var(--accent); box-sizing: border-box"></span>待提交</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 1px; background: var(--warn); transform: rotate(45deg)"></span>有告警</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 12px; border-radius: 4px; background: repeating-linear-gradient(135deg, var(--line2) 0 3px, transparent 3px 6px)"></span>项目缺失</span>
+</div>
+</div>
+
+<section class="glass rise d1" style="border-radius: 20px; overflow: hidden">
+<div style="overflow-x: auto">
+<div role="grid" aria-label="工具 × 项目" style="min-width: 720px">
+<div role="row" style="display: grid; grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(140px, 1fr)) 80px; border-bottom: 1px solid var(--line)">
+<span role="columnheader" class="cap" style="padding: 16px 18px">工具</span>
+<a role="columnheader" href="Project.dc.html" class="mono" style="padding: 16px 12px; font-size: 13px; font-weight: 600; color: var(--ink); text-decoration: none; text-align: center">web-app</a>
+<span role="columnheader" class="mono" style="padding: 16px 12px; font-size: 13px; font-weight: 600; text-align: center">agent-tool-manager</span>
+<span role="columnheader" class="mono" style="padding: 16px 12px; font-size: 13px; font-weight: 600; color: var(--ink3); text-align: center; text-decoration: line-through">old-landing</span>
+<span role="columnheader" class="cap" style="padding: 16px 18px; text-align: right">tokens</span>
+</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+<div role="row" class="mrow" style="display: grid; grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(140px, 1fr)) 80px; align-items: center; border-bottom: 1px solid var(--line)">
+<span role="rowheader" style="padding: 10px 18px; display: flex; align-items: center; gap: 12px; min-width: 0"><span class="{{r.chipCls}}" style="width: 62px; justify-content: center; flex-shrink: 0">{{r.kindLabel}}</span><span class="mono" style="font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{r.name}}</span></span>
+<sc-for list="{{r.cells}}" as="c" hint-placeholder-count="3">
+<span role="gridcell" style="padding: 8px 12px; display: flex; justify-content: center">
+<button type="button" class="cell" onClick="{{c.toggle}}" disabled="{{c.disabled}}" aria-pressed="{{c.pressed}}" aria-label="{{c.aria}}" style="border: {{c.border}}; background: {{c.bg}}; color: {{c.color}}; box-shadow: {{c.shadow}}; cursor: {{c.cursor}}">{{c.glyph}}<sc-if value="{{c.warn}}" hint-placeholder-val="{{false}}"><span style="width: 7px; height: 7px; border-radius: 1px; background: #FFC266; transform: rotate(45deg)"></span></sc-if></button>
+</span>
+</sc-for>
+<span class="mono" style="padding: 10px 18px; text-align: right; font-size: 13px; font-weight: 600; color: var(--ink2)">{{r.tokLabel}}</span>
+</div>
+</sc-for>
+<div role="row" style="display: grid; grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(140px, 1fr)) 80px; align-items: center; background: var(--glass-2)">
+<span style="padding: 16px 18px; font-size: 14px; font-weight: 600">上下文合计</span>
+<sc-for list="{{totals}}" as="t" hint-placeholder-count="3">
+<span style="padding: 16px 12px; display: flex; flex-direction: column; align-items: center; gap: 8px"><span class="mono" style="font-size: 15px; font-weight: 600; color: {{t.color}}">{{t.label}}</span><span style="width: 88px; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; display: flex"><span class="bar" style="width: {{t.w}}; background: var(--accent); border-radius: 999px"></span></span></span>
+</sc-for>
+<span></span>
+</div>
+</div>
+</div>
+</section>
+
+<sc-if value="{{hasPending}}" hint-placeholder-val="{{false}}">
+<div role="status" class="glass iri toast" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 14px 12px 20px; border-radius: 16px; background: var(--glass-strong)">
+<span style="flex: 1 1 260px; font-size: 14px; font-weight: 500">{{pendingLabel}}</span>
+<button type="button" class="btn btn-g" onClick="{{reset}}">撤销</button>
+<a href="AddDiff.dc.html" class="btn btn-p">预览 diff</a>
+</div>
+</sc-if>
+<p class="rise d2" style="margin: 0; font-size: 12px; line-height: 1.6; color: var(--ink3)">插件只对 Claude Code 生效；在只启用了 Cursor 的项目里，插件单元格会显示为不可用。</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { diff: {} };
+}
+renderVals() {
+const self = this;
+const kinds = {
+skill: { kindLabel: 'SKILL', chipCls: 'chip c-skill' },
+mcp: { kindLabel: 'MCP', chipCls: 'chip c-mcp' },
+plugin: { kindLabel: 'PLUGIN', chipCls: 'chip c-plugin' }
+};
+const projects = [
+{ id: 'web-app', exists: true },
+{ id: 'agent-tool-manager', exists: true },
+{ id: 'old-landing', exists: false }
+];
+const tools = [
+{ kind: 'skill', name: 'baoyu-comic', tok: 96, tokLabel: '96', on: ['web-app', 'agent-tool-manager'] },
+{ kind: 'skill', name: 'baoyu-cover', tok: 88, tokLabel: '88', on: ['web-app'] },
+{ kind: 'mcp', name: 'figma', tok: 4200, tokLabel: '4.2k', on: ['web-app'], warn: ['web-app'] },
+{ kind: 'mcp', name: 'playwright', tok: 1400, tokLabel: '1.4k', on: ['web-app', 'agent-tool-manager'] },
+{ kind: 'mcp', name: 'linear', tok: 0, tokLabel: '?', on: [] },
+{ kind: 'plugin', name: 'security-guidance', tok: 300, tokLabel: '0.3k', on: ['web-app'] }
+];
+const diff = this.state.diff;
+const sums = { 'web-app': 0, 'agent-tool-manager': 0 };
+const unknown = { 'web-app': false, 'agent-tool-manager': false };
+const rows = tools.map(function (t) {
+const cells = projects.map(function (p) {
+const k = t.name + '|' + p.id;
+if (!p.exists) {
+return { disabled: true, pressed: 'false', aria: t.name + ' 在 ' + p.id + '：项目缺失', border: '1px solid var(--line2)', bg: 'repeating-linear-gradient(135deg, var(--line) 0 4px, transparent 4px 8px)', color: 'var(--ink3)', shadow: 'none', glyph: '', cursor: 'not-allowed', warn: false, toggle: null };
+}
+const base = t.on.indexOf(p.id) >= 0;
+const changed = !!diff[k];
+const now = changed ? !base : base;
+if (now) { sums[p.id] += t.tok; if (t.tok === 0) unknown[p.id] = true; }
+let st;
+if (changed && now) st = { border: '1.5px dashed var(--accent)', bg: 'var(--accent-soft)', color: 'var(--accent-ink)', shadow: 'none', glyph: '+' };
+else if (changed && !now) st = { border: '1.5px dashed var(--err-ink)', bg: 'var(--err-soft)', color: 'var(--err-ink)', shadow: 'none', glyph: '−' };
+else if (now) st = { border: '0', bg: 'var(--accent)', color: '#FFFFFF', shadow: '0 4px 14px rgba(0,102,255,.3), inset 0 1px 0 rgba(255,255,255,.35)', glyph: '✓' };
+else st = { border: '1px solid var(--line2)', bg: 'var(--glass-2)', color: 'var(--ink3)', shadow: 'none', glyph: '' };
+return Object.assign(st, {
+disabled: false,
+pressed: now ? 'true' : 'false',
+aria: (now ? '停用 ' : '启用 ') + t.name + ' 于 ' + p.id,
+cursor: 'pointer',
+warn: !!(t.warn && t.warn.indexOf(p.id) >= 0 && now && !changed),
+toggle: function () {
+const next = Object.assign({}, self.state.diff);
+next[k] = !next[k];
+self.setState({ diff: next });
+}
+});
+});
+return Object.assign({}, t, kinds[t.kind], { cells: cells });
+});
+const fmt = function (n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); };
+const totals = projects.map(function (p) {
+if (!p.exists) return { label: '—', color: 'var(--ink3)', w: '0%' };
+const n = sums[p.id];
+return { label: '≈ ' + fmt(n) + (unknown[p.id] ? ' + ?' : ''), color: 'var(--ink)', w: Math.min(100, n / 100) + '%' };
+});
+const keys = Object.keys(diff).filter(function (k) { return diff[k]; });
+const projCount = keys.map(function (k) { return k.split('|')[1]; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).length;
+return {
+theme: this.props.theme ?? 'light',
+rows: rows, totals: totals,
+hasPending: keys.length > 0,
+pendingLabel: keys.length + ' 处改动待提交 · 涉及 ' + projCount + ' 个项目',
+reset: function () { self.setState({ diff: {} }); }
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>atm · 体检</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0052CC}a:hover{color:#003E99}
+.lg{--ink:#1A1A1A;--ink2:#4A4A4A;--ink3:#686D76;--accent:#0066FF;--accent-h:#005CE6;--accent-soft:rgba(0,102,255,.12);--accent-ink:#0052CC;--glass:rgba(255,255,255,.58);--glass-2:rgba(255,255,255,.36);--glass-strong:rgba(255,255,255,.82);--edge:rgba(255,255,255,.78);--hi:rgba(255,255,255,.7);--line:rgba(26,26,26,.08);--line2:rgba(26,26,26,.16);--shadow:0 2px 12px rgba(16,24,40,.06),0 16px 40px rgba(16,24,40,.08);--bg:#EDF0F7;--b1:#8DB8FF;--b2:#CDB0FF;--b3:#93E6DF;--b4:#FFC9DE;--skill:#3FB8C9;--skill-ink:#0A6474;--skill-soft:rgba(63,184,201,.18);--mcp:#0066FF;--mcp-ink:#0052CC;--mcp-soft:rgba(0,102,255,.12);--plugin:#4B22A0;--plugin-ink:#5B2BB5;--plugin-soft:rgba(91,43,181,.12);--err:#D92D20;--err-ink:#B42318;--err-soft:rgba(217,45,32,.12);--warn:#DC8A0E;--warn-ink:#8A4B06;--warn-soft:rgba(220,138,14,.16);--ok:#079455;--ok-ink:#067647;--ok-soft:rgba(7,148,85,.12);--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Noto Sans SC","Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;background:var(--bg);color:var(--ink);font-family:var(--sans);position:relative;overflow:hidden;isolation:isolate;transition:background-color .5s,color .5s}
+.lg[data-theme=dark]{--ink:#F2F4F8;--ink2:#C3C8D1;--ink3:#9097A3;--accent:#3D8BFF;--accent-h:#5A9CFF;--accent-soft:rgba(61,139,255,.18);--accent-ink:#8DBBFF;--glass:rgba(28,32,42,.56);--glass-2:rgba(28,32,42,.34);--glass-strong:rgba(36,40,52,.86);--edge:rgba(255,255,255,.12);--hi:rgba(255,255,255,.08);--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.2);--shadow:0 2px 12px rgba(0,0,0,.3),0 16px 40px rgba(0,0,0,.35);--bg:#0D1017;--b1:#1D4ED8;--b2:#6D28D9;--b3:#0E7490;--b4:#9D174D;--skill:#5FD3E2;--skill-ink:#86E3EE;--skill-soft:rgba(95,211,226,.16);--mcp:#3D8BFF;--mcp-ink:#8DBBFF;--mcp-soft:rgba(61,139,255,.18);--plugin:#B795FF;--plugin-ink:#C9AEFF;--plugin-soft:rgba(183,149,255,.16);--err-ink:#FF8A80;--err-soft:rgba(255,99,88,.16);--warn-ink:#FFC266;--warn-soft:rgba(255,184,77,.16);--ok-ink:#5CE0A0;--ok-soft:rgba(92,224,160,.14)}
+.mesh{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.blob{position:absolute;border-radius:42% 58% 63% 37%/45% 41% 59% 55%;filter:blur(64px);opacity:.72;animation:morph 22s ease-in-out infinite alternate}
+.blob.b2{animation-duration:26s;animation-direction:alternate-reverse}.blob.b3{animation-duration:30s}
+@keyframes morph{0%{transform:translate(0,0) rotate(0) scale(1)}50%{transform:translate(60px,-40px) rotate(40deg) scale(1.12)}100%{transform:translate(-40px,30px) rotate(-20deg) scale(.94)}}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:1px solid var(--edge);box-shadow:var(--shadow),inset 0 1px 0 var(--hi)}
+.iri{position:relative}.iri::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:linear-gradient(120deg,#6FA8FF,#C7A6FF 30%,#8EE6E0 60%,#FFB8D5);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.9}
+.ca{text-shadow:-.7px 0 rgba(255,40,120,.38),.7px 0 rgba(0,150,255,.38)}
+.rise{animation:rise .48s cubic-bezier(.2,.8,.2,1) both}.d1{animation-delay:.1s}.d2{animation-delay:.2s}.d3{animation-delay:.3s}.d4{animation-delay:.4s}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.btn{height:40px;padding:0 16px;box-sizing:border-box;border-radius:12px;font:600 14px var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;transition:transform .2s,background-color .2s,box-shadow .2s;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-p{background:var(--accent);color:#FFFFFF;border:0}.btn-p:hover{background:var(--accent-h);color:#FFFFFF;box-shadow:0 8px 20px rgba(0,102,255,.28)}
+.btn-p[disabled]{background:var(--line2);color:var(--ink3);box-shadow:none;cursor:default}
+.btn-g{background:var(--glass-2);color:var(--ink);border:1.5px solid var(--line2)}.btn-g:hover{background:var(--glass-strong);color:var(--ink)}
+.mono{font-family:var(--mono)}
+.chip{height:22px;padding:0 9px;border-radius:999px;font:600 11px var(--mono);display:inline-flex;align-items:center;letter-spacing:.02em;white-space:nowrap}
+.c-skill{background:var(--skill-soft);color:var(--skill-ink)}.c-mcp{background:var(--mcp-soft);color:var(--mcp-ink)}.c-plugin{background:var(--plugin-soft);color:var(--plugin-ink)}
+.cap{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.nv{min-height:40px;padding:0 12px;border-radius:12px;color:var(--ink2);font-size:14px;text-decoration:none;display:flex;align-items:center;gap:10px;transition:background-color .2s}
+.nv:hover{background:var(--glass-2);color:var(--ink)}
+.nv.on{background:var(--glass-strong);color:var(--ink);font-weight:500;box-shadow:inset 0 1px 0 var(--hi)}
+.nv .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}.nv.on .dot{background:var(--accent)}
+.issue{transition:background-color .3s}.issue:hover{background:var(--glass-2)}
+.morph{animation:morphin .55s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes morphin{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+.dotc{transition:background-color .5s}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</helmet>
+<div class="lg" data-theme="{{theme}}" style="min-height: 1000px; box-sizing: border-box; padding: 16px; display: flex; flex-wrap: wrap; align-items: stretch; gap: 16px">
+<div class="mesh" aria-hidden="true">
+<div class="blob" style="width: 40%; height: 55%; top: -15%; left: 40%; background: var(--b4)"></div>
+<div class="blob b2" style="width: 40%; height: 55%; top: 15%; left: 72%; background: var(--b1)"></div>
+<div class="blob b3" style="width: 40%; height: 50%; top: 55%; left: 10%; background: var(--b2)"></div>
+<div class="blob" style="width: 32%; height: 42%; top: 75%; left: 60%; background: var(--b3)"></div>
+</div>
+
+<nav aria-label="主导航" class="glass" style="flex: 1 1 220px; box-sizing: border-box; padding: 20px 12px; border-radius: 20px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px"><span style="width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, #0066FF, #8E6CFF); color: #FFFFFF; font: 600 12px var(--mono); display: flex; align-items: center; justify-content: center">atm</span><strong style="font-size: 15px">Agent Tool Manager</strong></div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="Overview.dc.html" class="nv"><span class="dot"></span>总览</a>
+<a href="Library.dc.html" class="nv"><span class="dot"></span>工具库</a>
+<a href="Matrix.dc.html" class="nv"><span class="dot"></span>矩阵</a>
+<a href="Doctor.dc.html" class="nv on" aria-current="page"><span class="dot"></span>体检<sc-if value="{{notFixed}}" hint-placeholder-val="{{true}}"><span class="chip" style="margin-left: auto; background: var(--err-soft); color: var(--err-ink)">1</span></sc-if></a>
+<span class="nv" style="color: var(--ink3)"><span class="dot"></span>全局<span class="mono" style="margin-left: auto; font-size: 11px">P5</span></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span class="cap" style="padding: 0 12px 6px">项目</span>
+<a href="Project.dc.html" class="nv mono" style="font-size: 13px"><span style="width: 7px; height: 7px; border-radius: 1px; background: var(--warn); transform: rotate(45deg); flex-shrink: 0"></span>web-app</a>
+<span class="nv mono" style="font-size: 13px; color: var(--ink)"><span class="dotc" style="width: 7px; height: 7px; border-radius: 50%; background: {{atmDot}}; flex-shrink: 0"></span>agent-tool-manager</span>
+<span class="nv mono" style="font-size: 13px; color: var(--ink3); text-decoration: line-through"><span style="width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink3); box-sizing: border-box; flex-shrink: 0"></span>old-landing</span>
+</div>
+<div style="margin-top: auto; padding: 14px 12px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink3)">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>已连接 · 实时同步</span>
+<span class="mono">127.0.0.1:52817</span>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 16px 8px; display: flex; flex-direction: column; gap: 20px">
+<div class="rise" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="cap">2 个项目 · atm doctor · 10:58 更新</span>
+<h1 class="ca" style="margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.02em">体检</h1>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" class="btn btn-g">重新检查（含 --measure）</button>
+<button type="button" class="btn btn-p" onClick="{{fix}}" disabled="{{fixed}}">{{fixAllLabel}}</button>
+</div>
+</div>
+
+<div class="rise d1" style="display: grid; grid-template-columns: 5fr 4fr 3fr; gap: 12px">
+<div class="glass iri" style="border-radius: 20px; padding: 20px 22px; display: flex; align-items: center; gap: 16px; background: var(--glass-strong)">
+<span class="dotc" style="width: 44px; height: 44px; border-radius: 50%; background: {{errSoft}}; display: flex; align-items: center; justify-content: center"><span class="dotc" style="width: 14px; height: 14px; border-radius: 50%; background: {{errDot}}"></span></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span class="mono ca" style="font-size: 34px; font-weight: 600; line-height: 1">{{errCount}}</span><span style="font-size: 13px; color: var(--ink2)">{{errText}}</span></span>
+</div>
+<div class="glass" style="border-radius: 20px; padding: 20px 22px; display: flex; align-items: center; gap: 16px">
+<span style="width: 44px; height: 44px; border-radius: 50%; background: var(--warn-soft); display: flex; align-items: center; justify-content: center"><span style="width: 12px; height: 12px; border-radius: 2px; background: var(--warn); transform: rotate(45deg)"></span></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span class="mono" style="font-size: 34px; font-weight: 600; line-height: 1">1</span><span style="font-size: 13px; color: var(--ink2)">warn · 需要你决定</span></span>
+</div>
+<div class="glass" style="border-radius: 20px; padding: 20px 22px; display: flex; align-items: center; gap: 16px">
+<span style="width: 44px; height: 44px; border-radius: 50%; background: var(--line); display: flex; align-items: center; justify-content: center"><span style="width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--ink2); box-sizing: border-box"></span></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span class="mono" style="font-size: 34px; font-weight: 600; line-height: 1">3</span><span style="font-size: 13px; color: var(--ink2)">info</span></span>
+</div>
+</div>
+
+<section aria-labelledby="h-err" class="glass rise d2" style="border-radius: 20px; overflow: hidden">
+<h2 id="h-err" class="cap" style="margin: 0; padding: 14px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; color: var(--err-ink)"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--err)"></span>error</h2>
+<sc-if value="{{fixed}}" hint-placeholder-val="{{false}}">
+<div class="morph" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 18px 20px; font-size: 14px; background: var(--ok-soft)"><span style="width: 24px; height: 24px; border-radius: 50%; background: var(--ok); color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span><span>已重建软链 <code class="mono">.agents/skills/baoyu-comic</code>，没有其他 error</span></div>
+</sc-if>
+<sc-if value="{{notFixed}}" hint-placeholder-val="{{true}}">
+<div class="issue" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 18px 20px; align-items: center">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span class="mono" style="font-size: 13px; font-weight: 500">agent-tool-manager</span><span class="chip c-skill">SKILL</span><strong style="font-size: 15px">断链</strong></div>
+<code class="mono" style="font-size: 12px; color: var(--ink2); word-break: break-all">.agents/skills/baoyu-comic → ~/GitHub/baoyu-skills/skills/baoyu-comic（目标不存在）</code>
+<span class="mono" style="font-size: 12px; color: var(--ink3)">下一步：atm install</span>
+</div>
+<button type="button" class="btn btn-p" onClick="{{fix}}">重建软链</button>
+</div>
+</sc-if>
+</section>
+
+<section aria-labelledby="h-warn" class="glass rise d3" style="border-radius: 20px; overflow: hidden">
+<h2 id="h-warn" class="cap" style="margin: 0; padding: 14px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; color: var(--warn-ink)"><span style="width: 8px; height: 8px; border-radius: 1px; background: var(--warn); transform: rotate(45deg)"></span>warn</h2>
+<div class="issue" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 18px 20px; align-items: center">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><a href="Project.dc.html" class="mono" style="font-size: 13px; font-weight: 500; color: var(--accent-ink)">web-app</a><span class="chip c-mcp">MCP</span><strong style="font-size: 15px">与插件自带的 MCP 同名</strong></div>
+<span style="font-size: 14px; line-height: 1.6; color: var(--ink2)">清单里的 <code class="mono">figma</code> 与已启用插件 <code class="mono">figma@claude-plugins-official</code> 自带的 MCP 重名，Claude Code 会加载两份工具 schema（多占约 4.2k tokens）。</span>
+<span style="font-size: 12px; color: var(--ink3)">需要你决定保留哪一个，atm 不会自动处理</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" class="btn btn-g">保留清单的 MCP</button>
+<button type="button" class="btn btn-g">改用插件版本</button>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="h-info" class="glass rise d4" style="border-radius: 20px; overflow: hidden">
+<h2 id="h-info" class="cap" style="margin: 0; padding: 14px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px"><span style="width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--ink2); box-sizing: border-box"></span>info</h2>
+<div class="issue" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 16px 20px; align-items: center; border-bottom: 1px solid var(--line)">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-size: 14px"><code class="mono">~/GitHub/baoyu-skills</code> 有未提交的改动</span><span style="font-size: 12px; color: var(--ink3)">共享仓库被 2 个项目引用，改动已对两者生效；确认无误可以给上游提 PR</span></div>
+<button type="button" class="btn btn-g">查看改动</button>
+</div>
+<div class="issue" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 16px 20px; align-items: center; border-bottom: 1px solid var(--line)">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-size: 14px">插件 <code class="mono">figma@claude-plugins-official</code> 全局启用，但只有 web-app 在用</span><span style="font-size: 12px; color: var(--ink3)">改为项目级后，其他项目的会话不再加载它</span></div>
+<button type="button" class="btn btn-g">移到项目级…</button>
+</div>
+<div class="issue" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 16px 20px; align-items: center">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 4px; min-width: 0"><span style="font-size: 14px">web-app 工具总上下文 ≈ 6.1k tokens</span><span style="font-size: 12px; color: var(--ink3)">MCP 占 92%；linear 等未测量的 MCP 未计入</span></div>
+<a href="Project.dc.html" class="btn btn-g">打开项目</a>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { fixed: false };
+}
+renderVals() {
+const self = this;
+const fixed = this.state.fixed;
+return {
+theme: this.props.theme ?? 'light',
+fixed: fixed,
+notFixed: !fixed,
+fix: function () { self.setState({ fixed: true }); },
+fixAllLabel: fixed ? '没有可自动修复的项' : '一键修复安全项（1）',
+errCount: fixed ? 0 : 1,
+errText: fixed ? 'error · 全部已修复' : 'error · 可安全修复',
+errDot: fixed ? 'var(--ok)' : 'var(--err)',
+errSoft: fixed ? 'var(--ok-soft)' : 'var(--err-soft)',
+atmDot: fixed ? 'var(--ok)' : 'var(--err)'
+};
+}
+}
+</script>
+</body>
+</html>

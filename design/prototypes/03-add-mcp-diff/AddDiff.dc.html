@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>atm · 添加 MCP 确认</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0052CC}a:hover{color:#003E99}
+.lg{--ink:#1A1A1A;--ink2:#4A4A4A;--ink3:#686D76;--accent:#0066FF;--accent-h:#005CE6;--accent-soft:rgba(0,102,255,.12);--accent-ink:#0052CC;--glass:rgba(255,255,255,.58);--glass-2:rgba(255,255,255,.36);--glass-strong:rgba(255,255,255,.86);--edge:rgba(255,255,255,.78);--hi:rgba(255,255,255,.7);--line:rgba(26,26,26,.08);--line2:rgba(26,26,26,.16);--shadow:0 2px 12px rgba(16,24,40,.06),0 16px 40px rgba(16,24,40,.08);--bg:#EDF0F7;--scrim:rgba(26,30,40,.28);--b1:#8DB8FF;--b2:#CDB0FF;--b3:#93E6DF;--b4:#FFC9DE;--mcp-ink:#0052CC;--mcp-soft:rgba(0,102,255,.12);--err:#D92D20;--err-ink:#B42318;--err-soft:rgba(217,45,32,.12);--warn:#DC8A0E;--warn-ink:#8A4B06;--warn-soft:rgba(220,138,14,.16);--ok:#079455;--ok-ink:#067647;--ok-soft:rgba(7,148,85,.12);--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Noto Sans SC","Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;background:var(--bg);color:var(--ink);font-family:var(--sans);position:relative;overflow:hidden;isolation:isolate;transition:background-color .5s,color .5s}
+.lg[data-theme=dark]{--ink:#F2F4F8;--ink2:#C3C8D1;--ink3:#9097A3;--accent:#3D8BFF;--accent-h:#5A9CFF;--accent-soft:rgba(61,139,255,.18);--accent-ink:#8DBBFF;--glass:rgba(28,32,42,.56);--glass-2:rgba(28,32,42,.34);--glass-strong:rgba(32,36,48,.9);--edge:rgba(255,255,255,.12);--hi:rgba(255,255,255,.08);--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.2);--shadow:0 2px 12px rgba(0,0,0,.3),0 16px 40px rgba(0,0,0,.35);--bg:#0D1017;--scrim:rgba(0,0,0,.4);--b1:#1D4ED8;--b2:#6D28D9;--b3:#0E7490;--b4:#9D174D;--mcp-ink:#8DBBFF;--mcp-soft:rgba(61,139,255,.18);--err-ink:#FF8A80;--err-soft:rgba(255,99,88,.16);--warn-ink:#FFC266;--warn-soft:rgba(255,184,77,.16);--ok-ink:#5CE0A0;--ok-soft:rgba(92,224,160,.14)}
+.mesh{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.blob{position:absolute;border-radius:42% 58% 63% 37%/45% 41% 59% 55%;filter:blur(64px);opacity:.75;animation:morph 22s ease-in-out infinite alternate}
+.blob.b2{animation-duration:26s;animation-direction:alternate-reverse}.blob.b3{animation-duration:30s}
+@keyframes morph{0%{transform:translate(0,0) rotate(0) scale(1)}50%{transform:translate(60px,-40px) rotate(40deg) scale(1.12)}100%{transform:translate(-40px,30px) rotate(-20deg) scale(.94)}}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:1px solid var(--edge);box-shadow:var(--shadow),inset 0 1px 0 var(--hi)}
+.iri{position:relative}.iri::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:linear-gradient(120deg,#6FA8FF,#C7A6FF 30%,#8EE6E0 60%,#FFB8D5);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.9}
+.ca{text-shadow:-.7px 0 rgba(255,40,120,.38),.7px 0 rgba(0,150,255,.38)}
+.pop{animation:pop .5s cubic-bezier(.34,1.4,.64,1) both}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+.btn{height:44px;padding:0 18px;box-sizing:border-box;border-radius:12px;font:600 14px var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;transition:transform .2s,background-color .2s,box-shadow .2s;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-p{background:var(--accent);color:#FFFFFF;border:0}.btn-p:hover{background:var(--accent-h);color:#FFFFFF;box-shadow:0 8px 20px rgba(0,102,255,.28)}
+.btn-g{background:var(--glass-2);color:var(--ink);border:1.5px solid var(--line2)}.btn-g:hover{background:var(--glass-strong);color:var(--ink)}
+.btn-t{background:transparent;color:var(--ink2);border:0}
+.mono{font-family:var(--mono)}
+.chip{height:22px;padding:0 9px;border-radius:999px;font:600 11px var(--mono);display:inline-flex;align-items:center;letter-spacing:.02em;white-space:nowrap}
+.cap{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.agt{min-height:48px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line2);background:var(--glass-2);display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;cursor:pointer}
+.agt input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.tab{min-height:40px;padding:0 14px;border-radius:12px;font:500 13px var(--mono);display:inline-flex;align-items:center;gap:8px;cursor:pointer;transition:background-color .3s,color .3s,border-color .3s}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</helmet>
+<div class="lg" data-theme="{{theme}}" style="min-height: 1000px; box-sizing: border-box; padding: 48px 16px; display: flex; justify-content: center; align-items: flex-start">
+<div class="mesh" aria-hidden="true">
+<div class="blob" style="width: 50%; height: 60%; top: -10%; left: 5%; background: var(--b1)"></div>
+<div class="blob b2" style="width: 40%; height: 55%; top: 20%; left: 60%; background: var(--b2)"></div>
+<div class="blob b3" style="width: 45%; height: 50%; top: 60%; left: 20%; background: var(--b3)"></div>
+<div class="blob" style="width: 30%; height: 40%; top: 70%; left: 75%; background: var(--b4)"></div>
+<div style="position: absolute; inset: 0; background: var(--scrim)"></div>
+</div>
+
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-title" class="glass iri pop" style="width: 100%; max-width: 1080px; border-radius: 24px; background: var(--glass-strong); display: flex; flex-direction: column; box-shadow: 0 32px 80px rgba(10,14,30,.35), inset 0 1px 0 var(--hi)">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 22px 26px; border-bottom: 1px solid var(--line)">
+<div style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 320px">
+<span class="cap">web-app · 添加工具</span>
+<h1 id="dlg-title" style="margin: 0; font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 12px"><span class="chip" style="background: var(--mcp-soft); color: var(--mcp-ink)">MCP</span><span class="mono ca">linear</span></h1>
+</div>
+<ol aria-label="步骤" style="margin: 0; padding: 4px; list-style: none; display: flex; gap: 4px; font-size: 13px; border-radius: 999px; background: var(--line)">
+<li style="height: 32px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; gap: 6px; color: var(--ink3)"><span class="mono">1</span>选择</li>
+<li aria-current="step" style="height: 32px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; gap: 6px; background: var(--glass-strong); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.08)"><span class="mono" style="color: var(--accent-ink)">2</span>预览 diff</li>
+<li style="height: 32px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; gap: 6px; color: var(--ink3)"><span class="mono">3</span>写入</li>
+</ol>
+<a href="Project.dc.html" aria-label="关闭" class="btn btn-t" style="width: 44px; padding: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+</header>
+
+<div style="display: flex; flex-wrap: wrap">
+
+<aside style="flex: 4 1 300px; box-sizing: border-box; padding: 22px 26px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 class="cap" style="margin: 0">定义 · registry/linear.json</h2>
+<dl style="margin: 0; display: grid; grid-template-columns: 84px 1fr; row-gap: 10px; font-size: 13px">
+<dt style="color: var(--ink3)">transport</dt><dd class="mono" style="margin: 0">http</dd>
+<dt style="color: var(--ink3)">url</dt><dd class="mono" style="margin: 0; word-break: break-all">https://mcp.linear.app/mcp</dd>
+<dt style="color: var(--ink3)">headers</dt><dd class="mono" style="margin: 0; word-break: break-all">Authorization: Bearer ${LINEAR_TOKEN}</dd>
+</dl>
+</div>
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend class="cap" style="padding: 0 0 10px">写入到</legend>
+<label class="agt"><input type="checkbox" checked="">Claude Code<code class="mono" style="margin-left: auto; font-size: 12px; font-weight: 400; color: var(--ink3)">.mcp.json</code></label>
+<label class="agt"><input type="checkbox" checked="">Cursor<code class="mono" style="margin-left: auto; font-size: 12px; font-weight: 400; color: var(--ink3)">.cursor/mcp.json</code></label>
+<label class="agt" style="border-style: dashed; color: var(--ink3); background: transparent; cursor: not-allowed"><input type="checkbox" disabled="">Codex<span style="margin-left: auto; font-size: 12px; font-weight: 400">项目未启用</span></label>
+</fieldset>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h2 class="cap" style="margin: 0">环境变量</h2>
+<div style="min-height: 44px; padding: 0 14px; border-radius: 12px; background: var(--ok-soft); display: flex; align-items: center; gap: 8px"><span class="mono" style="font-size: 13px">LINEAR_TOKEN</span><span style="margin-left: auto; font-size: 12px; font-weight: 600; color: var(--ok-ink); display: inline-flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok)"></span>已设置</span></div>
+<p style="margin: 0; font-size: 12px; line-height: 1.6; color: var(--ink3)">只引用变量，配置文件不含密钥值，可以安全提交。</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h2 class="cap" style="margin: 0">上下文影响</h2>
+<div style="display: flex; align-items: baseline; gap: 10px"><span class="mono ca" style="font-size: 26px; font-weight: 600">6.1k → ?</span><span style="font-size: 12px; color: var(--ink3)">linear 尚未测量</span></div>
+<button type="button" class="btn btn-g" style="align-self: flex-start; height: 36px">启动并测量</button>
+</div>
+</aside>
+
+<section style="flex: 7 1 520px; min-width: 0; box-sizing: border-box; padding: 22px 26px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">将要写入的文件 <span style="font-weight: 400; color: var(--ink3)">· 4</span></h2>
+<span class="chip" style="background: var(--mcp-soft); color: var(--mcp-ink); font-weight: 500">dryRun=1 · 尚未写入</span>
+</div>
+<div role="tablist" aria-label="文件" style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{files}}" as="f" hint-placeholder-count="4">
+<button type="button" role="tab" class="tab" aria-selected="{{f.selected}}" onClick="{{f.pick}}" style="border: 1.5px solid {{f.border}}; background: {{f.bg}}; color: {{f.color}}">{{f.name}}<span style="font-size: 11px; opacity: .75">{{f.stat}}</span></button>
+</sc-for>
+</div>
+<div role="tabpanel" style="border-radius: 16px; overflow: hidden; border: 1px solid var(--line2); background: var(--glass-2)">
+<div class="mono" style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--ink2)"><span>{{cur.path}}</span><span style="font-family: var(--sans)">{{cur.mode}}</span></div>
+<div style="overflow-x: auto; padding: 8px 0">
+<sc-for list="{{cur.lines}}" as="l" hint-placeholder-count="8">
+<div class="mono" style="display: flex; min-width: max-content; background: {{l.bg}}; color: {{l.color}}; font-size: 13px; line-height: 1.8"><span style="width: 32px; flex-shrink: 0; text-align: center; opacity: .8">{{l.sign}}</span><span style="white-space: pre; padding-right: 16px">{{l.text}}</span></div>
+</sc-for>
+</div>
+</div>
+<sc-if value="{{cur.hasNote}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--warn-soft); font-size: 13px; line-height: 1.6; color: var(--ink)"><span style="width: 8px; height: 8px; margin-top: 7px; border-radius: 1px; background: var(--warn); transform: rotate(45deg); flex-shrink: 0"></span><span>{{cur.note}}</span></div>
+</sc-if>
+<p style="margin: 0; font-size: 12px; line-height: 1.6; color: var(--ink3)">合并写入只改动 lock.managed 中列出的条目，文件里手写的 MCP 保持原样。写入采用临时文件 + rename，失败时清单与 lock 都不变。</p>
+</section>
+</div>
+
+<footer style="display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; padding: 18px 26px; border-top: 1px solid var(--line)">
+<span class="mono" style="margin-right: auto; font-size: 12px; color: var(--ink3)">等价命令：atm add mcp linear --agents claude-code,cursor</span>
+<a href="Project.dc.html" class="btn btn-t">取消</a>
+<a href="Project.dc.html" class="btn btn-p">写入 4 个文件</a>
+</footer>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { tab: 2 };
+}
+renderVals() {
+const self = this;
+const L = function (k, text) {
+const m = {
+a: { bg: 'var(--ok-soft)', color: 'var(--ok-ink)', sign: '+' },
+d: { bg: 'var(--err-soft)', color: 'var(--err-ink)', sign: '−' },
+c: { bg: 'transparent', color: 'var(--ink3)', sign: '' }
+}[k];
+return Object.assign({ text: text }, m);
+};
+const raw = [
+{ name: 'tools.json', path: '.agents/tools.json', mode: '清单 · 提交', stat: '+2 −1', lines: [
+L('c', '  "mcp": ['), L('c', '    "figma",'),
+L('d', '    { "name": "playwright", "agents": ["claude-code"] }'),
+L('a', '    { "name": "playwright", "agents": ["claude-code"] },'),
+L('a', '    "linear"'), L('c', '  ],')
+] },
+{ name: 'tools.lock.json', path: '.agents/tools.lock.json', mode: '锁文件 · 提交', stat: '+2 −2', lines: [
+L('c', '  "managed": {'), L('c', '    "claude-code": {'),
+L('d', '      "mcp": ["figma", "playwright"],'),
+L('a', '      "mcp": ["figma", "playwright", "linear"],'),
+L('c', '      "plugins": ["security-guidance@claude-plugins-official"]'),
+L('c', '    },'),
+L('d', '    "cursor":      { "mcp": ["figma"] }'),
+L('a', '    "cursor":      { "mcp": ["figma", "linear"] }'),
+L('c', '  }')
+] },
+{ name: '.mcp.json', path: '.mcp.json', mode: 'Claude Code · 提交', stat: '+6 −1', lines: [
+L('c', '{'), L('c', '  "mcpServers": {'), L('c', '    "figma": { … },'),
+L('d', '    "playwright": { … }'),
+L('a', '    "playwright": { … },'),
+L('a', '    "linear": {'),
+L('a', '      "type": "http",'),
+L('a', '      "url": "https://mcp.linear.app/mcp",'),
+L('a', '      "headers": { "Authorization": "Bearer ${LINEAR_TOKEN}" }'),
+L('a', '    }'),
+L('c', '  }'), L('c', '}')
+] },
+{ name: '.cursor/mcp.json', path: '.cursor/mcp.json', mode: 'Cursor · 提交', stat: '+5 −1', note: 'Cursor 的变量引用写法 ${env:VAR} 尚待验证（技术方案 §13-2），写入后建议在 Cursor 中确认一次。', lines: [
+L('c', '{'), L('c', '  "mcpServers": {'),
+L('d', '    "figma": { … }'),
+L('a', '    "figma": { … },'),
+L('a', '    "linear": {'),
+L('a', '      "url": "https://mcp.linear.app/mcp",'),
+L('a', '      "headers": { "Authorization": "Bearer ${env:LINEAR_TOKEN}" }'),
+L('a', '    }'),
+L('c', '  }'), L('c', '}')
+] }
+];
+const tab = this.state.tab;
+const files = raw.map(function (f, i) {
+const sel = i === tab;
+return {
+name: f.name, stat: f.stat,
+selected: sel ? 'true' : 'false',
+border: sel ? 'var(--accent)' : 'var(--line2)',
+bg: sel ? 'var(--accent-soft)' : 'var(--glass-2)',
+color: sel ? 'var(--accent-ink)' : 'var(--ink)',
+pick: function () { self.setState({ tab: i }); }
+};
+});
+const c = raw[tab];
+return {
+theme: this.props.theme ?? 'light',
+files: files,
+cur: { path: c.path, mode: c.mode, lines: c.lines, hasNote: !!c.note, note: c.note || '' }
+};
+}
+}
+</script>
+</body>
+</html>

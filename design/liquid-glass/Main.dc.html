@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Liquid Glass 设计系统</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0052CC}a:hover{color:#003E99}
+.lg{--ink:#1A1A1A;--ink2:#4A4A4A;--ink3:#686D76;--accent:#0066FF;--accent-h:#005CE6;--accent-soft:rgba(0,102,255,.12);--accent-ink:#0052CC;--glass:rgba(255,255,255,.58);--glass-2:rgba(255,255,255,.36);--glass-strong:rgba(255,255,255,.82);--edge:rgba(255,255,255,.78);--hi:rgba(255,255,255,.7);--line:rgba(26,26,26,.08);--line2:rgba(26,26,26,.16);--shadow:0 2px 12px rgba(16,24,40,.06),0 16px 40px rgba(16,24,40,.08);--bg:#EDF0F7;--b1:#8DB8FF;--b2:#CDB0FF;--b3:#93E6DF;--b4:#FFC9DE;--skill:#3FB8C9;--skill-ink:#0A6474;--skill-soft:rgba(63,184,201,.18);--mcp:#0066FF;--mcp-ink:#0052CC;--mcp-soft:rgba(0,102,255,.12);--plugin:#4B22A0;--plugin-ink:#5B2BB5;--plugin-soft:rgba(91,43,181,.12);--err:#D92D20;--err-ink:#B42318;--err-soft:rgba(217,45,32,.12);--warn:#DC8A0E;--warn-ink:#8A4B06;--warn-soft:rgba(220,138,14,.16);--ok:#079455;--ok-ink:#067647;--ok-soft:rgba(7,148,85,.12);--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Noto Sans SC","Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;background:var(--bg);color:var(--ink);font-family:var(--sans);position:relative;overflow:hidden;isolation:isolate;transition:background-color .5s,color .5s}
+.lg[data-theme=dark]{--ink:#F2F4F8;--ink2:#C3C8D1;--ink3:#9097A3;--accent:#3D8BFF;--accent-h:#5A9CFF;--accent-soft:rgba(61,139,255,.18);--accent-ink:#8DBBFF;--glass:rgba(28,32,42,.56);--glass-2:rgba(28,32,42,.34);--glass-strong:rgba(36,40,52,.86);--edge:rgba(255,255,255,.12);--hi:rgba(255,255,255,.08);--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.2);--shadow:0 2px 12px rgba(0,0,0,.3),0 16px 40px rgba(0,0,0,.35);--bg:#0D1017;--b1:#1D4ED8;--b2:#6D28D9;--b3:#0E7490;--b4:#9D174D;--skill:#5FD3E2;--skill-ink:#86E3EE;--skill-soft:rgba(95,211,226,.16);--mcp:#3D8BFF;--mcp-ink:#8DBBFF;--mcp-soft:rgba(61,139,255,.18);--plugin:#B795FF;--plugin-ink:#C9AEFF;--plugin-soft:rgba(183,149,255,.16);--err-ink:#FF8A80;--err-soft:rgba(255,99,88,.16);--warn-ink:#FFC266;--warn-soft:rgba(255,184,77,.16);--ok-ink:#5CE0A0;--ok-soft:rgba(92,224,160,.14)}
+.mesh{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.blob{position:absolute;border-radius:42% 58% 63% 37%/45% 41% 59% 55%;filter:blur(64px);opacity:.75;animation:morph 22s ease-in-out infinite alternate}
+.blob.b2{animation-duration:26s;animation-direction:alternate-reverse}.blob.b3{animation-duration:30s}
+@keyframes morph{0%{transform:translate(0,0) rotate(0) scale(1)}50%{transform:translate(60px,-40px) rotate(40deg) scale(1.12)}100%{transform:translate(-40px,30px) rotate(-20deg) scale(.94)}}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:1px solid var(--edge);box-shadow:var(--shadow),inset 0 1px 0 var(--hi)}
+.iri{position:relative}.iri::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:linear-gradient(120deg,#6FA8FF,#C7A6FF 30%,#8EE6E0 60%,#FFB8D5);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.9}
+.ca{text-shadow:-.7px 0 rgba(255,40,120,.38),.7px 0 rgba(0,150,255,.38)}
+.rise{animation:rise .48s cubic-bezier(.2,.8,.2,1) both}.d1{animation-delay:.1s}.d2{animation-delay:.2s}.d3{animation-delay:.3s}.d4{animation-delay:.4s}.d5{animation-delay:.5s}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.lift{transition:transform .2s ease,box-shadow .2s ease}.lift:hover{transform:scale(1.03)}
+.btn{height:40px;padding:0 16px;box-sizing:border-box;border-radius:12px;font:600 14px var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;transition:transform .2s,background-color .2s,box-shadow .2s;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-p{background:var(--accent);color:#FFFFFF;border:0}.btn-p:hover{background:var(--accent-h);color:#FFFFFF;box-shadow:0 8px 20px rgba(0,102,255,.28)}
+.btn-g{background:var(--glass-2);color:var(--ink);border:1.5px solid var(--line2)}.btn-g:hover{background:var(--glass-strong);color:var(--ink)}
+.btn-d{background:transparent;color:var(--err-ink);border:1.5px solid var(--err-soft)}
+.mono{font-family:var(--mono)}
+.chip{height:22px;padding:0 9px;border-radius:999px;font:600 11px var(--mono);display:inline-flex;align-items:center;letter-spacing:.02em;white-space:nowrap}
+.c-skill{background:var(--skill-soft);color:var(--skill-ink)}.c-mcp{background:var(--mcp-soft);color:var(--mcp-ink)}.c-plugin{background:var(--plugin-soft);color:var(--plugin-ink)}
+.cap{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.sw{width:40px;height:24px;border-radius:999px;border:0;padding:0;position:relative;cursor:pointer;flex-shrink:0;transition:background-color .4s}
+.sw span{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#FFFFFF;box-shadow:0 2px 6px rgba(0,0,0,.22);transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
+.sw[aria-checked=true]{background:var(--accent)}.sw[aria-checked=true] span{transform:translateX(16px)}.sw[aria-checked=false]{background:var(--line2)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</helmet>
+<div class="lg" data-theme="{{theme}}" style="width: 1440px; height: 2080px; box-sizing: border-box; padding: 72px 80px; display: flex; flex-direction: column; gap: 64px">
+<div class="mesh" aria-hidden="true">
+<div class="blob" style="width: 640px; height: 560px; top: -160px; left: 520px; background: var(--b1)"></div>
+<div class="blob b2" style="width: 520px; height: 520px; top: 120px; left: 980px; background: var(--b2)"></div>
+<div class="blob b3" style="width: 560px; height: 480px; top: 900px; left: -120px; background: var(--b3)"></div>
+<div class="blob" style="width: 520px; height: 520px; top: 1480px; left: 900px; background: var(--b4)"></div>
+<div class="blob b2" style="width: 420px; height: 380px; top: 640px; left: 1100px; background: var(--b3)"></div>
+</div>
+
+<header style="display: grid; grid-template-columns: 7fr 5fr; gap: 48px; align-items: center">
+<div class="rise" style="display: flex; flex-direction: column; gap: 20px">
+<span class="cap">atm · Agent Tool Manager · GUI v1</span>
+<h1 class="ca" style="margin: 0; font-size: 64px; line-height: 1.02; font-weight: 700; letter-spacing: -0.03em">Liquid Glass<br>设计系统</h1>
+<p style="margin: 0; font-size: 17px; line-height: 1.6; color: var(--ink2); max-width: 60ch">每个项目的工具清单浮在一层会流动的玻璃上：内容清晰锐利，背景只负责氛围。半透明给出层级，彩虹描边只留给需要被注意的东西。</p>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<span class="glass" style="height: 36px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent)"></span>清单即真相</span>
+<span class="glass" style="height: 36px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent)"></span>先 diff 后写入</span>
+<span class="glass" style="height: 36px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent)"></span>上下文是预算</span>
+</div>
+</div>
+<div class="rise d2" style="position: relative; height: 340px">
+<div class="glass" style="position: absolute; top: 0; left: 40px; right: 0; height: 200px; border-radius: 24px; background: var(--glass-2)"></div>
+<div class="glass iri" style="position: absolute; top: 60px; left: 0; right: 40px; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 14px; background: var(--glass-strong)">
+<div style="display: flex; justify-content: space-between; align-items: center"><span class="mono" style="font-size: 17px; font-weight: 600">web-app</span><span class="chip" style="background: var(--warn-soft); color: var(--warn-ink)">1 warn</span></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 13px; color: var(--ink2)">常驻上下文</span><span class="mono" style="font-size: 24px; font-weight: 600">≈ 6.1k</span></div>
+<div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--line); gap: 2px"><div style="width: 2%; background: var(--skill)"></div><div style="width: 56%; background: var(--mcp)"></div><div style="width: 3%; background: var(--plugin)"></div></div>
+<div style="display: flex; gap: 8px"><span class="chip c-skill">SKILL 2</span><span class="chip c-mcp">MCP 2</span><span class="chip c-plugin">PLUGIN 1</span></div>
+</div>
+</div>
+</header>
+
+<section class="rise d1" style="display: grid; grid-template-columns: 5fr 4fr 3fr; gap: 20px">
+<div class="glass" style="border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<span class="cap">基础色</span>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border-radius: 12px; background: #1A1A1A"></div><span style="font-size: 13px; font-weight: 500">primary</span><span class="mono" style="font-size: 11px; color: var(--ink3)">#1A1A1A</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border-radius: 12px; background: #4A4A4A"></div><span style="font-size: 13px; font-weight: 500">secondary</span><span class="mono" style="font-size: 11px; color: var(--ink3)">#4A4A4A</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border-radius: 12px; background: #0066FF"></div><span style="font-size: 13px; font-weight: 500">accent</span><span class="mono" style="font-size: 11px; color: var(--ink3)">#0066FF</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="height: 72px; border-radius: 12px; background: #FFFFFF; border: 1px solid var(--line2); box-sizing: border-box"></div><span style="font-size: 13px; font-weight: 500">neutral</span><span class="mono" style="font-size: 11px; color: var(--ink3)">#FFFFFF</span></div>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink2)">不用纯黑。蓝色只出现在主按钮、选中态、焦点环和 MCP 上；彩色光斑只留在背景里，不进入内容层。</p>
+</div>
+<div class="glass" style="border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<span class="cap">工具类型 · 明度递进</span>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 12px"><div style="width: 56px; height: 36px; border-radius: 10px; background: var(--skill)"></div><span class="chip c-skill">SKILL</span><span class="mono" style="margin-left: auto; font-size: 11px; color: var(--ink3)">#3FB8C9</span></div>
+<div style="display: flex; align-items: center; gap: 12px"><div style="width: 56px; height: 36px; border-radius: 10px; background: var(--mcp)"></div><span class="chip c-mcp">MCP</span><span class="mono" style="margin-left: auto; font-size: 11px; color: var(--ink3)">#0066FF</span></div>
+<div style="display: flex; align-items: center; gap: 12px"><div style="width: 56px; height: 36px; border-radius: 10px; background: var(--plugin)"></div><span class="chip c-plugin">PLUGIN</span><span class="mono" style="margin-left: auto; font-size: 11px; color: var(--ink3)">#4B22A0</span></div>
+</div>
+</div>
+<div class="glass" style="border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<span class="cap">doctor 级别</span>
+<span class="chip" style="height: 32px; justify-content: flex-start; gap: 8px; background: var(--err-soft); color: var(--err-ink); font-size: 12px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--err)"></span>error</span>
+<span class="chip" style="height: 32px; justify-content: flex-start; gap: 8px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12px"><span style="width: 8px; height: 8px; border-radius: 1px; background: var(--warn); transform: rotate(45deg)"></span>warn</span>
+<span class="chip" style="height: 32px; justify-content: flex-start; gap: 8px; background: var(--line); color: var(--ink2); font-size: 12px"><span style="width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--ink2); box-sizing: border-box"></span>info</span>
+<span class="chip" style="height: 32px; justify-content: flex-start; gap: 8px; background: var(--ok-soft); color: var(--ok-ink); font-size: 12px"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--ok)"></span>ok</span>
+</div>
+</section>
+
+<section class="rise d2" style="display: grid; grid-template-columns: 7fr 5fr; gap: 20px">
+<div class="glass" style="border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+<span class="cap">材质</span>
+<div style="position: relative; height: 200px; border-radius: 16px; overflow: hidden; background: linear-gradient(110deg, var(--b1), var(--b2) 35%, var(--b3) 65%, var(--b4)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 20px; box-sizing: border-box">
+<div class="glass" style="border-radius: 14px; background: var(--glass-2); padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px"><strong style="font-size: 14px">glass-2</strong><span class="mono" style="font-size: 11px; color: var(--ink2)">36% · 背景层</span></div>
+<div class="glass" style="border-radius: 14px; padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px"><strong style="font-size: 14px">glass</strong><span class="mono" style="font-size: 11px; color: var(--ink2)">58% · 卡片</span></div>
+<div class="glass iri" style="border-radius: 14px; background: var(--glass-strong); padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px"><strong style="font-size: 14px">glass-strong + 彩虹描边</strong><span class="mono" style="font-size: 11px; color: var(--ink2)">82% · 焦点 / 对话框</span></div>
+</div>
+<div style="display: grid; grid-template-columns: 5fr 7fr; gap: 20px; align-items: center">
+<span class="ca" style="font-size: 40px; font-weight: 700; letter-spacing: -0.02em">6.1k</span>
+<p style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink2)">blur 24px + saturate 180%，顶部 1px 内高光模拟玻璃边缘。色差（±0.7px 红 / 蓝偏移）只用于大号展示数字与标题，正文永远保持干净。</p>
+</div>
+</div>
+<div class="glass" style="border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<span class="cap">动效</span>
+<svg viewBox="0 0 280 90" style="width: 100%; height: 90px" role="img" aria-label="弹簧曲线：先越过终点再回落"><path d="M4 84 C 70 84, 90 4, 170 10 S 240 22, 276 18" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"></path><line x1="4" y1="18" x2="276" y2="18" stroke="var(--line2)" stroke-dasharray="4 4"></line></svg>
+<div style="display: flex; flex-direction: column">
+<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px"><span>悬停</span><span class="mono" style="color: var(--ink2)">scale 1.03 · 200ms</span></div>
+<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px"><span>入场</span><span class="mono" style="color: var(--ink2)">y 16→0 · 480ms · 间隔 100ms</span></div>
+<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px"><span>开关 / 形变</span><span class="mono" style="color: var(--ink2)">spring 120/20 · 400–600ms</span></div>
+<div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 13px"><span>页面切换</span><span class="mono" style="color: var(--ink2)">fade + slide · 300ms</span></div>
+</div>
+<p style="margin: 0; font-size: 12px; line-height: 1.6; color: var(--ink3)">只动 transform 与 opacity。系统开启「减少动态效果」时，背景光斑停止，入场改为纯淡入。</p>
+</div>
+</section>
+
+<section class="rise d3" style="display: grid; grid-template-columns: 6fr 6fr; gap: 20px">
+<div class="glass" style="border-radius: 20px; padding: 8px 24px; display: flex; flex-direction: column">
+<div style="padding: 16px 0 8px"><span class="cap">字体 · 系统字体栈 + JetBrains Mono</span></div>
+<div style="display: flex; align-items: baseline; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--line)"><span class="mono" style="width: 110px; flex-shrink: 0; font-size: 11px; color: var(--ink3)">Hero 64/700</span><span style="font-size: 40px; font-weight: 700; letter-spacing: -0.03em">工具清单</span></div>
+<div style="display: flex; align-items: baseline; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--line)"><span class="mono" style="width: 110px; flex-shrink: 0; font-size: 11px; color: var(--ink3)">H1 36/700</span><span style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em">web-app</span></div>
+<div style="display: flex; align-items: baseline; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--line)"><span class="mono" style="width: 110px; flex-shrink: 0; font-size: 11px; color: var(--ink3)">H2 24/600</span><span style="font-size: 22px; font-weight: 600">Skills · MCP · 插件</span></div>
+<div style="display: flex; align-items: baseline; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--line)"><span class="mono" style="width: 110px; flex-shrink: 0; font-size: 11px; color: var(--ink3)">Body 16/1.6</span><span style="font-size: 16px; line-height: 1.6">每个项目用一份清单声明所需的工具。</span></div>
+<div style="display: flex; align-items: baseline; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--line)"><span class="mono" style="width: 110px; flex-shrink: 0; font-size: 11px; color: var(--ink3)">Label 12/500</span><span class="cap">已注册项目</span></div>
+<div style="display: flex; align-items: baseline; gap: 20px; padding: 12px 0 18px"><span class="mono" style="width: 110px; flex-shrink: 0; font-size: 11px; color: var(--ink3)">Mono 13</span><span class="mono" style="font-size: 13px">a1b2c3d · ${FIGMA_API_KEY}</span></div>
+</div>
+<div class="glass" style="border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+<span class="cap">形状与间距</span>
+<div style="display: flex; gap: 20px; align-items: flex-end">
+<div style="display: flex; flex-direction: column; gap: 8px; align-items: center"><div style="width: 64px; height: 44px; border: 1.5px solid var(--ink); border-radius: 8px"></div><span class="mono" style="font-size: 11px; color: var(--ink3)">8 · 单元格</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px; align-items: center"><div style="width: 64px; height: 44px; border: 1.5px solid var(--ink); border-radius: 12px"></div><span class="mono" style="font-size: 11px; color: var(--ink3)">12 · 按钮 / 卡片</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px; align-items: center"><div style="width: 64px; height: 44px; border: 1.5px solid var(--ink); border-radius: 20px"></div><span class="mono" style="font-size: 11px; color: var(--ink3)">20 · 面板</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px; align-items: center"><div style="width: 64px; height: 44px; border: 1.5px solid var(--ink); border-radius: 999px"></div><span class="mono" style="font-size: 11px; color: var(--ink3)">full · 标签</span></div>
+</div>
+<div style="display: flex; gap: 14px; align-items: flex-end">
+<div style="width: 8px; height: 8px; border-radius: 3px; background: var(--accent)"></div>
+<div style="width: 16px; height: 16px; border-radius: 4px; background: var(--accent)"></div>
+<div style="width: 24px; height: 24px; border-radius: 6px; background: var(--accent)"></div>
+<div style="width: 32px; height: 32px; border-radius: 8px; background: var(--accent)"></div>
+<div style="width: 48px; height: 48px; border-radius: 10px; background: var(--accent)"></div>
+<div style="width: 64px; height: 64px; border-radius: 12px; background: var(--accent)"></div>
+<span class="mono" style="font-size: 11px; color: var(--ink3)">8 的倍数</span>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink2)">内容区最大宽度 1280px，左右留白 24px。768px 以下全部单列，导航收为顶部横排。</p>
+</div>
+</section>
+
+<section class="rise d4" style="display: grid; grid-template-columns: 7fr 5fr; gap: 20px">
+<div class="glass" style="border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+<span class="cap">组件</span>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+<button type="button" class="btn btn-p"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>添加</button>
+<button type="button" class="btn btn-g">查看 diff</button>
+<button type="button" class="btn btn-d">移除</button>
+<button type="button" class="btn btn-g" aria-label="刷新" style="width: 40px; padding: 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></svg></button>
+<span style="width: 1px; height: 28px; background: var(--line2)"></span>
+<button type="button" class="sw" role="switch" aria-checked="true" aria-label="开关示例：开"><span></span></button>
+<button type="button" class="sw" role="switch" aria-checked="false" aria-label="开关示例：关"><span></span></button>
+</div>
+<div class="glass" style="display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 0 16px; border-radius: 14px; background: var(--glass-strong)">
+<button type="button" class="sw" role="switch" aria-checked="true" aria-label="启用 figma"><span></span></button>
+<span class="chip c-mcp">MCP</span>
+<div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0"><span class="mono" style="font-size: 14px; font-weight: 500">figma</span><span style="font-size: 12px; color: var(--ink3)">registry · stdio · Claude Code · Cursor</span></div>
+<span class="mono" style="font-size: 14px; font-weight: 600">4.2k</span>
+</div>
+<div style="display: grid; grid-template-columns: 6fr 5fr; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="ds-search" style="font-size: 13px; font-weight: 500; color: var(--ink2)">搜索工具</label>
+<input id="ds-search" type="search" placeholder="名称、仓库或描述" style="height: 40px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line2); background: var(--glass-strong); color: var(--ink); font: 14px var(--sans)">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; font-weight: 500; color: var(--ink2)">矩阵单元格</span>
+<div style="display: flex; gap: 8px">
+<span style="width: 48px; height: 40px; border-radius: 10px; background: var(--accent); color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>
+<span style="width: 48px; height: 40px; border-radius: 10px; border: 1px solid var(--line2); box-sizing: border-box"></span>
+<span style="width: 48px; height: 40px; border-radius: 10px; border: 1.5px dashed var(--accent); background: var(--accent-soft); color: var(--accent-ink); box-sizing: border-box; display: flex; align-items: center; justify-content: center; font: 600 16px var(--mono)">+</span>
+<span style="width: 48px; height: 40px; border-radius: 10px; background: repeating-linear-gradient(135deg, var(--line) 0 4px, transparent 4px 8px); border: 1px solid var(--line2); box-sizing: border-box"></span>
+</div>
+</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div class="glass" style="border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<span class="cap">上下文占用条</span>
+<div style="display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--line); gap: 2px"><div style="width: 3%; background: var(--skill)"></div><div style="width: 56%; background: var(--mcp)"></div><div style="width: 3%; background: var(--plugin)"></div><div style="width: 8%; background: repeating-linear-gradient(135deg, var(--line2) 0 3px, transparent 3px 6px)"></div></div>
+<div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink2)"><span>Skill 184</span><span>MCP 5.6k</span><span>插件 0.3k</span><span>未测量 ?</span></div>
+</div>
+<div class="glass" style="border-radius: 20px; overflow: hidden">
+<div style="display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--line); font: 12px var(--mono); color: var(--ink2)"><span>.mcp.json</span><span>+3 −0</span></div>
+<div class="mono" style="padding: 8px 0; font-size: 12px; line-height: 1.8">
+<div style="padding: 0 16px; color: var(--ink3)">  "mcpServers": {</div>
+<div style="padding: 0 16px; background: var(--ok-soft); color: var(--ok-ink)">+   "linear": {</div>
+<div style="padding: 0 16px; background: var(--ok-soft); color: var(--ok-ink)">+     "type": "http",</div>
+<div style="padding: 0 16px; background: var(--ok-soft); color: var(--ok-ink)">+     "headers": { … "${LINEAR_TOKEN}" }</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":2080}}'>
+class Component extends DCLogic {
+renderVals() { return { theme: this.props.theme ?? 'light' }; }
+}
+</script>
+</body>
+</html>

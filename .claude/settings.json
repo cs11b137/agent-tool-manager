@@ -1,0 +1,13 @@
+{
+  "enabledPlugins": {
+    "sdd@dev-workflow": true
+  },
+  "extraKnownMarketplaces": {
+    "dev-workflow": {
+      "source": {
+        "source": "github",
+        "repo": "cs11b137/dev-workflow"
+      }
+    }
+  }
+}
