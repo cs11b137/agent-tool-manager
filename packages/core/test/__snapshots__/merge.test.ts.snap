@@ -1,0 +1,94 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`adapter rendering > claude-code .claude/settings.json enabledPlugins 1`] = `
+"{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)"
+    ]
+  },
+  "enabledPlugins": {
+    "mine@x": false,
+    "security-guidance@claude-plugins-official": true
+  }
+}
+"
+`;
+
+exports[`adapter rendering > claude-code .mcp.json 1`] = `
+"{
+  "mcpServers": {
+    "figma": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "figma-developer-mcp",
+        "--stdio"
+      ],
+      "env": {
+        "FIGMA_API_KEY": "\${FIGMA_API_KEY}"
+      }
+    },
+    "linear": {
+      "type": "http",
+      "url": "https://mcp.linear.app/mcp",
+      "headers": {
+        "Authorization": "Bearer \${LINEAR_TOKEN}"
+      }
+    },
+    "plain": {
+      "command": "my-mcp"
+    }
+  }
+}
+"
+`;
+
+exports[`adapter rendering > codex .codex/config.toml 1`] = `
+"model = "gpt-5"
+
+[mcp_servers.figma]
+command = "npx"
+args = [ "-y", "figma-developer-mcp", "--stdio" ]
+
+[mcp_servers.figma.env]
+FIGMA_API_KEY = "$FIGMA_API_KEY"
+
+[mcp_servers.linear]
+url = "https://mcp.linear.app/mcp"
+
+[mcp_servers.linear.http_headers]
+Authorization = "Bearer $LINEAR_TOKEN"
+
+[mcp_servers.plain]
+command = "my-mcp"
+"
+`;
+
+exports[`adapter rendering > cursor .cursor/mcp.json 1`] = `
+"{
+  "mcpServers": {
+    "figma": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "figma-developer-mcp",
+        "--stdio"
+      ],
+      "env": {
+        "FIGMA_API_KEY": "\${env:FIGMA_API_KEY}"
+      }
+    },
+    "linear": {
+      "url": "https://mcp.linear.app/mcp",
+      "headers": {
+        "Authorization": "Bearer \${env:LINEAR_TOKEN}"
+      }
+    },
+    "plain": {
+      "command": "my-mcp"
+    }
+  }
+}
+"
+`;

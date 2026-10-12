@@ -1,0 +1,114 @@
+import path from 'node:path';
+import type { PluginContents } from '../types.js';
+import type { Ctx } from '../context.js';
+import { exists, listDir, readJson } from '../fs/walk.js';
+import { scanSkills } from '../skills/discover.js';
+
+export interface InstalledPlugin {
+  name: string;
+  marketplace: string;
+  scope?: string;
+  installPath?: string;
+  version?: string;
+}
+
+export interface PluginIndex {
+  installed: Map<string, InstalledPlugin>;
+  /** `~/.claude/settings.json` enabledPlugins 中为 true 的插件 */
+  globallyEnabled: Set<string>;
+  contents(name: string): Promise<PluginContents | undefined>;
+  contextTokens(name: string): Promise<number | null>;
+}
+
+export function pluginPaths(ctx: Ctx) {
+  return {
+    installed: path.join(ctx.home, '.claude', 'plugins', 'installed_plugins.json'),
+    settings: path.join(ctx.home, '.claude', 'settings.json'),
+    globalSkills: path.join(ctx.home, '.claude', 'skills'),
+  };
+}
+
+export function splitPluginId(id: string): { plugin: string; marketplace: string } {
+  const at = id.lastIndexOf('@');
+  return at > 0 ? { plugin: id.slice(0, at), marketplace: id.slice(at + 1) } : { plugin: id, marketplace: '' };
+}
+
+async function safeJson(p: string): Promise<unknown> {
+  try {
+    return await readJson(p);
+  } catch {
+    return null;
+  }
+}
+
+export async function readPluginContents(installPath: string): Promise<PluginContents> {
+  const skills = (await scanSkills(path.join(installPath, 'skills'))).map((s) => {
+    const o: PluginContents['skills'][number] = { name: s.name, contextTokens: s.contextTokens };
+    if (s.description) o.description = s.description;
+    return o;
+  });
+  const mcpJson = (await safeJson(path.join(installPath, '.mcp.json'))) as { mcpServers?: Record<string, unknown> } | null;
+  let mcp = Object.keys(mcpJson?.mcpServers ?? {});
+  if (!mcp.length) {
+    const manifest = (await safeJson(path.join(installPath, '.claude-plugin', 'plugin.json'))) as { mcpServers?: unknown } | null;
+    if (manifest?.mcpServers && typeof manifest.mcpServers === 'object') mcp = Object.keys(manifest.mcpServers);
+  }
+  const md = async (sub: string) =>
+    (await listDir(path.join(installPath, sub))).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3));
+  return {
+    skills,
+    mcp: mcp.sort(),
+    commands: await md('commands'),
+    agents: await md('agents'),
+    hooks: await exists(path.join(installPath, 'hooks')),
+  };
+}
+
+/** 读 `installed_plugins.json`（version 2：`plugins[name] = [{ scope, installPath, version }]`）与全局 enabledPlugins。 */
+export async function loadPluginIndex(ctx: Ctx): Promise<PluginIndex> {
+  const p = pluginPaths(ctx);
+  const installed = new Map<string, InstalledPlugin>();
+  const raw = (await safeJson(p.installed)) as { plugins?: Record<string, unknown> } | null;
+  for (const [name, v] of Object.entries(raw?.plugins ?? {})) {
+    const entries = Array.isArray(v) ? v : [v];
+    const first = entries.find((e) => e && typeof e === 'object') as Record<string, unknown> | undefined;
+    const item: InstalledPlugin = { name, marketplace: splitPluginId(name).marketplace };
+    if (first) {
+      if (typeof first.scope === 'string') item.scope = first.scope;
+      if (typeof first.installPath === 'string') item.installPath = first.installPath.startsWith('~/') ? path.join(ctx.home, first.installPath.slice(2)) : first.installPath;
+      if (typeof first.version === 'string') item.version = first.version;
+    }
+    installed.set(name, item);
+  }
+  const settings = (await safeJson(p.settings)) as { enabledPlugins?: Record<string, unknown> } | null;
+  const globallyEnabled = new Set(
+    Object.entries(settings?.enabledPlugins ?? {})
+      .filter(([, on]) => on === true)
+      .map(([n]) => n),
+  );
+  const cache = new Map<string, Promise<PluginContents | undefined>>();
+  const contents = (name: string): Promise<PluginContents | undefined> => {
+    let c = cache.get(name);
+    if (!c) {
+      const ip = installed.get(name)?.installPath;
+      c = ip ? readPluginContents(ip) : Promise.resolve(undefined);
+      cache.set(name, c);
+    }
+    return c;
+  };
+  return {
+    installed,
+    globallyEnabled,
+    contents,
+    async contextTokens(name) {
+      const c = await contents(name);
+      return c ? c.skills.reduce((a, s) => a + s.contextTokens, 0) : null;
+    },
+  };
+}
+
+/** `~/.claude/skills` 下的全局 Skill 名。 */
+export async function globalSkillNames(ctx: Ctx): Promise<string[]> {
+  return (await listDir(pluginPaths(ctx).globalSkills)).filter((n) => !n.startsWith('.'));
+}
+

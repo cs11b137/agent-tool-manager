@@ -463,3 +463,49 @@ export interface AtmErrorJson {
     candidates?: string[];
   };
 }
+
+// ───────────────────────────── core 公共接口（追加） ─────────────────────────────
+
+/** `saveMcpDef` 的保存位置：全局 registry，或某个项目的 `.agents/mcp/`（projectDir 可以是项目 id 或路径）。 */
+export type McpDefScope = 'registry' | { projectDir: string };
+
+/**
+ * `createAtm()` 返回的对象（契约 §2）。所有接收 `dir` 的方法也接受项目 id。
+ * 除 `projectId` / `watch` 外全部返回 Promise。
+ */
+export interface Atm {
+  config(): Promise<GlobalConfig>;
+  saveConfig(patch: Partial<GlobalConfig>): Promise<GlobalConfig>;
+  projects(): Promise<ProjectSummary[]>;
+  registerProject(dir: string): Promise<ProjectSummary>;
+  unregisterProject(idOrDir: string): Promise<void>;
+  relocateProject(id: string, newDir: string): Promise<ProjectSummary>;
+  resolveProject(idOrDir: string): Promise<string>;
+  /** `sha1(absolutePath).slice(0, 12)` */
+  projectId(path: string): string;
+
+  init(dir: string, opts?: WriteOptions): Promise<WriteResult>;
+  add(dir: string, spec: AddSpec, opts?: WriteOptions): Promise<WriteResult>;
+  remove(dir: string, name: string, opts?: WriteOptions & { kind?: ToolKind }): Promise<WriteResult>;
+  install(dir: string, opts?: InstallOptions): Promise<WriteResult>;
+  /** 修改清单的 agents 并按 install 流程重新渲染（server `PATCH /api/projects/:id` 用） */
+  setAgents(dir: string, agents: AgentId[], opts?: WriteOptions): Promise<WriteResult>;
+  sync(repos?: string[], opts?: WriteOptions): Promise<SyncResult>;
+  list(dir: string): Promise<ProjectDetail>;
+  doctor(target: string | 'all', opts?: { measure?: boolean }): Promise<DoctorReport>;
+  fix(issueIds: string[], opts?: WriteOptions): Promise<WriteResult>;
+  measure(dir: string, mcpName: string): Promise<MeasureResult>;
+  pin(dir: string, skillName: string, rev: string, opts?: WriteOptions): Promise<WriteResult>;
+
+  library(): Promise<LibraryItem[]>;
+  search(query: string): Promise<SearchResult>;
+  repos(): Promise<RepoStatus[]>;
+  cloneRepo(repo: string): Promise<RepoStatus>;
+  saveMcpDef(def: McpDef, scope: McpDefScope): Promise<{ path: string }>;
+  global(): Promise<GlobalReport>;
+  migrate(spec: MigrateSpec, opts?: WriteOptions): Promise<WriteResult>;
+  batch(ops: BatchOp[], opts?: WriteOptions): Promise<BatchResult>;
+  diffGenerated(dir: string): Promise<FileChange[]>;
+  /** 监听项目（空数组 = 全部已注册项目）与 registry；同步返回停止函数（`await` 它也可以） */
+  watch(dirs: string[], cb: (e: AtmEvent) => void): () => void;
+}
