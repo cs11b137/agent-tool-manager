@@ -3,21 +3,31 @@ import type { SyncResult, WriteOptions } from '../types.js';
 import { projectId, type Ctx } from '../context.js';
 import { loadConfig } from '../config.js';
 import { errorMessage } from '../errors.js';
-import { atomicWrite } from '../fs/atomic.js';
+import { applyOps } from '../fs/atomic.js';
 import { withLock } from '../fs/lock.js';
 import { exists, isDir } from '../fs/walk.js';
 import { git } from '../git.js';
 import { paths, readProjectFiles, serializeLock } from '../manifest.js';
 import { discoverSkills } from '../skills/discover.js';
 import { parseRepo } from '../skills/repo.js';
-import { locateRepoDir, pickSkill } from '../skills/resolver.js';
+import { locateRepo, locateRepoDir, pickSkill } from '../skills/resolver.js';
+import { Planner } from './planner.js';
+import { planSkillLink } from './project.js';
 import { notifyWrite } from './write.js';
 
 type RepoRow = SyncResult['repos'][number];
 
-/** 对涉及的仓库 `git pull --ff-only`；dirty 跳过；更新引用该仓库的所有已注册项目的 lock。 */
+/** 对涉及的仓库 `git pull --ff-only`；dirty 跳过；更新引用该仓库的所有已注册项目的 lock（Skill 在仓库内移动时同时改软链）。 */
 export async function syncRepos(ctx: Ctx, repos?: string[], opts: WriteOptions = {}): Promise<SyncResult> {
   const cfg = await loadConfig(ctx);
+  const rows: RepoRow[] = [];
+  // 仓库目录被别的仓库占用：不碰它，直接记为 failed
+  const unlocatable = new Map<string, RepoRow>(); // spec -> row
+  const noteUnlocatable = (spec: string, dir: string | null, reason: string | undefined) => {
+    if (unlocatable.has(spec)) return;
+    unlocatable.set(spec, { repo: spec, dir: dir ?? '', status: 'failed', message: `${reason ?? 'cannot locate repository'}; skipped` });
+  };
+
   // 收集已注册项目引用的仓库
   const projectRepos = new Map<string, Set<string>>(); // repoDir -> specs
   const projects: Array<{ dir: string }> = [];
@@ -27,10 +37,14 @@ export async function syncRepos(ctx: Ctx, repos?: string[], opts: WriteOptions =
     if (!files?.manifest) continue;
     projects.push({ dir });
     for (const s of files.manifest.skills) {
-      const repoDir = await locateRepoDir(ctx, cfg.root, s.repo);
-      const set = projectRepos.get(repoDir) ?? new Set<string>();
+      const loc = await locateRepo(ctx, cfg.root, s.repo);
+      if (!loc.dir) {
+        noteUnlocatable(s.repo, loc.expected, loc.reason);
+        continue;
+      }
+      const set = projectRepos.get(loc.dir) ?? new Set<string>();
       set.add(s.repo);
-      projectRepos.set(repoDir, set);
+      projectRepos.set(loc.dir, set);
     }
   }
   const targets = new Map<string, string>(); // repoDir -> spec
@@ -41,13 +55,15 @@ export async function syncRepos(ctx: Ctx, repos?: string[], opts: WriteOptions =
         targets.set(asDir, r);
         continue;
       }
-      targets.set(await locateRepoDir(ctx, cfg.root, r), r);
+      const loc = await locateRepo(ctx, cfg.root, r);
+      if (loc.dir) targets.set(loc.dir, r);
+      else rows.push({ repo: r, dir: loc.expected ?? '', status: 'failed', message: `${loc.reason ?? 'cannot locate repository'}; skipped` });
     }
   } else {
     for (const [dir, specs] of projectRepos) targets.set(dir, [...specs][0]!);
+    rows.push(...unlocatable.values());
   }
 
-  const rows: RepoRow[] = [];
   const changed = new Set<string>();
   for (const [dir, spec] of targets) {
     const row: RepoRow = { repo: spec, dir, status: 'up-to-date' };
@@ -97,37 +113,44 @@ export async function syncRepos(ctx: Ctx, repos?: string[], opts: WriteOptions =
   if (!opts.dryRun && changed.size) {
     ctx.emit({ type: 'library.changed' });
     for (const { dir } of projects) {
-      const didUpdate = await withLock(paths.writeLock(dir), async () => {
+      const planner = await withLock(paths.writeLock(dir), async () => {
         const files = await readProjectFiles(dir);
-        if (!files.manifest) return false;
+        if (!files.manifest) return null;
+        const p = new Planner(ctx, dir);
+        const lock = { ...files.lock, skills: { ...files.lock.skills } };
         let touched = false;
         for (const s of files.manifest.skills) {
-          const locked = files.lock.skills[s.name];
+          const locked = lock.skills[s.name];
           if (!locked || locked.worktree) continue;
           const repoDir = await locateRepoDir(ctx, cfg.root, s.repo);
-          if (!changed.has(repoDir)) continue;
+          if (!repoDir || !changed.has(repoDir)) continue;
           const head = await git.head(repoDir, ctx.signal);
           if (head === locked.commit) continue;
+          touched = true;
           try {
             const skill = pickSkill(await discoverSkills(ctx, repoDir, path.basename(repoDir)), s);
-            files.lock.skills[s.name] = { ...locked, path: skill.path, commit: head, contextTokens: skill.contextTokens };
+            lock.skills[s.name] = { ...locked, path: skill.path, commit: head, contextTokens: skill.contextTokens };
+            if (skill.path !== locked.path) {
+              // 上游移动了 Skill：软链跟着改指向（与 install 同一套软链规划）
+              try {
+                await planSkillLink(p, dir, s.name, path.join(repoDir, skill.path));
+              } catch (e) {
+                p.warn(`${s.name}: ${errorMessage(e)}`);
+              }
+            }
           } catch {
-            files.lock.skills[s.name] = { ...locked, commit: head };
+            lock.skills[s.name] = { ...locked, commit: head };
           }
-          touched = true;
         }
-        if (!touched) return false;
-        await atomicWrite(paths.lock(dir), serializeLock(files.lock));
-        return true;
+        if (!touched) return null;
+        p.write(paths.lock(dir), files.lockText, serializeLock(lock));
+        if (!p.ops.length) return null;
+        await applyOps(p.ops);
+        return p;
       });
-      if (didUpdate) {
+      if (planner) {
         updatedProjects.push(projectId(dir));
-        notifyWrite(
-          ctx,
-          dir,
-          { applied: true, files: [{ path: paths.lock(dir), relPath: '.agents/tools.lock.json', type: 'file', before: null, after: null, diff: '', additions: 0, deletions: 0 }], warnings: [] },
-          { message: 'Updated lock after sync', kind: 'skill' },
-        );
+        notifyWrite(ctx, dir, { applied: true, files: planner.files(), warnings: [...planner.warnings] }, { message: 'Updated lock after sync', kind: 'skill' });
       }
     }
   }

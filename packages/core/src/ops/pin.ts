@@ -5,7 +5,7 @@ import { AtmError } from '../errors.js';
 import { linkState } from '../fs/symlink.js';
 import { exists } from '../fs/walk.js';
 import { git } from '../git.js';
-import { paths, requireManifest } from '../manifest.js';
+import { paths, relativeWorktree, requireManifest } from '../manifest.js';
 import { contextFor } from './inspect.js';
 import { planManifestAndLock } from './project.js';
 import { executeWrite, withFlags } from './write.js';
@@ -64,7 +64,8 @@ export async function pinSkill(ctx: Ctx, dir: string, skillName: string, rev: st
       planner.symlink(linkPath, st.kind === 'symlink' ? st.target : null, path.join(wt, relPath));
       const manifest = { ...files.manifest, skills: files.manifest.skills.map((s) => (s.name === skillName ? { ...s, rev } : s)) };
       const lock = { ...files.lock, skills: { ...files.lock.skills } };
-      lock.skills[skillName] = { repo: ref.repo, path: relPath, commit, rev, contextTokens: tokens, worktree: wt };
+      // lock 会被提交：worktree 存相对 <root> 的路径（`.worktrees/<repo>@<rev>`），不存本机绝对路径
+      lock.skills[skillName] = { repo: ref.repo, path: relPath, commit, rev, contextTokens: tokens, worktree: relativeWorktree(cfg.root, wt) };
       await planManifestAndLock(planner, abs, files, manifest, lock);
       return { contextAfter: await contextFor(ctx, manifest, lock) };
     },

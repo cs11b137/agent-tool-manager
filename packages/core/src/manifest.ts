@@ -15,6 +15,51 @@ export const paths = {
   writeLock: (dir: string) => path.join(dir, '.agents', '.lock'),
 };
 
+/** Skill / MCP 名：会被拼进路径（`.agents/skills/<name>`、`.agents/mcp/<name>.json`），必须是单个安全的路径段。 */
+export const TOOL_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+/** 插件 id：`<plugin>@<marketplace>` */
+export const PLUGIN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+export function isToolName(name: unknown): name is string {
+  return typeof name === 'string' && TOOL_NAME.test(name) && name !== '.' && name !== '..';
+}
+
+export function isPluginId(id: unknown): id is string {
+  return typeof id === 'string' && PLUGIN_ID.test(id);
+}
+
+export const NAME_RULE = 'letters, digits, ".", "_" or "-", starting with a letter or digit';
+
+/** 校验写操作传入的名字（add / batch）。 */
+export function assertToolName(kind: 'skill' | 'mcp' | 'plugin', name: string): void {
+  const ok = kind === 'plugin' ? isPluginId(name) : isToolName(name);
+  if (!ok) {
+    throw new AtmError('INVALID_MANIFEST', kind === 'plugin' ? `invalid plugin id ${JSON.stringify(name)} (expected <plugin>@<marketplace>, each part ${NAME_RULE})` : `invalid ${kind} name ${JSON.stringify(name)} (${NAME_RULE})`, {
+      nextCommand: kind === 'skill' ? 'atm search <name>' : 'atm list',
+    });
+  }
+}
+
+/**
+ * lock 中的 worktree（相对 `<root>`）→ 绝对路径。
+ * 拒绝解析到 `<root>` 之外的值；旧版本写下的、位于 `<root>` 内的绝对路径仍然接受。
+ */
+export function resolveWorktree(root: string, worktree: string): string {
+  const abs = path.resolve(root, worktree);
+  const rel = path.relative(root, abs);
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new AtmError('INVALID_MANIFEST', `.agents/tools.lock.json: worktree ${JSON.stringify(worktree)} resolves outside ${root}`, {
+      nextCommand: 'remove the worktree field from .agents/tools.lock.json, then atm install',
+    });
+  }
+  return abs;
+}
+
+/** worktree 的绝对路径 → 写进 lock 的相对 `<root>` 形式。 */
+export function relativeWorktree(root: string, abs: string): string {
+  return path.relative(root, resolveWorktree(root, abs));
+}
+
 function invalid(file: string, msg: string): AtmError {
   return new AtmError('INVALID_MANIFEST', `${file}: ${msg}`, { nextCommand: `fix ${file} and run atm install` });
 }
@@ -42,6 +87,7 @@ export function validateManifest(raw: unknown, file = '.agents/tools.json'): Too
       const o = s as Record<string, unknown>;
       if (typeof o.repo !== 'string' || !o.repo) throw invalid(file, `skills[${i}].repo must be a non-empty string`);
       if (typeof o.name !== 'string' || !o.name) throw invalid(file, `skills[${i}].name must be a non-empty string`);
+      if (!isToolName(o.name)) throw invalid(file, `skills[${i}].name ${JSON.stringify(o.name)} is not a valid name (${NAME_RULE})`);
       if (o.rev !== undefined && typeof o.rev !== 'string') throw invalid(file, `skills[${i}].rev must be a string`);
       if (skills.some((x) => x.name === o.name)) throw invalid(file, `duplicate skill ${o.name}`);
       const ref: SkillRef = { repo: o.repo, name: o.name };
@@ -61,6 +107,7 @@ export function validateManifest(raw: unknown, file = '.agents/tools.json'): Too
         if (o.agents !== undefined) ref.agents = agentList(o.agents, file, `mcp[${i}].agents`);
       } else throw invalid(file, `mcp[${i}] must be a name or { name, agents? }`);
       const name = mcpRefName(ref);
+      if (!isToolName(name)) throw invalid(file, `mcp[${i}] name ${JSON.stringify(name)} is not a valid name (${NAME_RULE})`);
       if (mcp.some((x) => mcpRefName(x) === name)) throw invalid(file, `duplicate mcp ${name}`);
       mcp.push(ref);
     }
@@ -70,6 +117,7 @@ export function validateManifest(raw: unknown, file = '.agents/tools.json'): Too
     if (!Array.isArray(r.plugins)) throw invalid(file, 'plugins must be an array');
     for (const [i, p] of r.plugins.entries()) {
       if (typeof p !== 'string' || !p) throw invalid(file, `plugins[${i}] must be a non-empty string`);
+      if (!isPluginId(p)) throw invalid(file, `plugins[${i}] ${JSON.stringify(p)} is not a valid plugin id (expected <plugin>@<marketplace>)`);
       if (!plugins.includes(p)) plugins.push(p);
     }
   }
@@ -116,6 +164,7 @@ export function validateLock(raw: unknown, file = '.agents/tools.lock.json'): Lo
   const skills = (r.skills ?? {}) as Record<string, unknown>;
   if (typeof skills !== 'object' || Array.isArray(skills)) throw invalid(file, 'skills must be an object');
   for (const [name, v] of Object.entries(skills)) {
+    if (!isToolName(name)) throw invalid(file, `skill name ${JSON.stringify(name)} is not a valid name (${NAME_RULE})`);
     const o = v as Record<string, unknown>;
     if (!o || typeof o.repo !== 'string' || typeof o.path !== 'string') throw invalid(file, `skills.${name} needs repo and path`);
     const s: LockedSkill = {
@@ -125,12 +174,20 @@ export function validateLock(raw: unknown, file = '.agents/tools.lock.json'): Lo
       contextTokens: typeof o.contextTokens === 'number' ? o.contextTokens : 0,
     };
     if (typeof o.rev === 'string') s.rev = o.rev;
-    if (typeof o.worktree === 'string') s.worktree = o.worktree;
+    if (typeof o.worktree === 'string') {
+      // 与 <root> 无关的部分在这里就能拒绝：`..` 逃逸；绝对路径（旧格式）留到使用时按 <root> 校验
+      const norm = path.normalize(o.worktree);
+      if (!path.isAbsolute(norm) && (norm === '.' || norm === '..' || norm.startsWith('..' + path.sep))) {
+        throw invalid(file, `skills.${name}.worktree ${JSON.stringify(o.worktree)} must stay inside the shared repo root`);
+      }
+      s.worktree = o.worktree;
+    }
     lock.skills[name] = s;
   }
   const mcp = (r.mcp ?? {}) as Record<string, unknown>;
   if (typeof mcp !== 'object' || Array.isArray(mcp)) throw invalid(file, 'mcp must be an object');
   for (const [name, v] of Object.entries(mcp)) {
+    if (!isToolName(name)) throw invalid(file, `mcp name ${JSON.stringify(name)} is not a valid name (${NAME_RULE})`);
     const o = v as Record<string, unknown>;
     if (!o || typeof o.hash !== 'string') throw invalid(file, `mcp.${name} needs hash`);
     const m: LockedMcp = { hash: o.hash };

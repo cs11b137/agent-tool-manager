@@ -5,7 +5,7 @@ import { loadConfig } from '../config.js';
 import { AtmError, errorMessage } from '../errors.js';
 import { isDir } from '../fs/walk.js';
 import { mcpRefName, readProjectFiles, requireManifest } from '../manifest.js';
-import { scanServer } from '../mcp/secrets.js';
+import { hitLevel, scanServer } from '../mcp/secrets.js';
 import { countIssues, inspectProject, loadShared, missingProjectIssue, zeroContext } from './inspect.js';
 import { installSkillLinks } from './install.js';
 import { measureMcp } from './measure.js';
@@ -60,15 +60,16 @@ export async function runDoctor(ctx: Ctx, deps: DoctorDeps, target: string, opts
     // registry 中所有定义的明文密钥（不论是否被引用）
     for (const r of shared.registry.raw) {
       const name = path.basename(r.file, '.json');
-      if (scanServer(name, r.raw).length && !issues.some((i) => i.code === 'plaintext-secret' && i.name?.startsWith(`${name}@`))) {
+      const level = hitLevel(scanServer(name, r.raw));
+      if (level && !issues.some((i) => i.code === 'plaintext-secret' && i.name?.startsWith(`${name}@`))) {
         issues.push({
           id: `plaintext-secret:::mcp:${name}`,
-          level: 'error',
+          level,
           code: 'plaintext-secret',
           kind: 'mcp',
           name,
-          title: `Plaintext secret in registry definition ${name}`,
-          detail: `${r.file} contains a literal secret; use \${VAR} instead`,
+          title: `${level === 'error' ? 'Plaintext secret' : 'Possible secret'} in registry definition ${name}`,
+          detail: level === 'error' ? `${r.file} contains a literal secret; use \${VAR} instead` : `${r.file} has a secret-looking value in args/url; use \${VAR} instead`,
           nextCommand: `edit ${r.file}`,
           fixable: false,
         });
@@ -90,12 +91,20 @@ export async function runFix(ctx: Ctx, deps: DoctorDeps, issueIds: string[], opt
     else if (issue.projectId) projectIds.add(issue.projectId);
   }
   const out: WriteResult = { applied: !opts.dryRun, files: [], warnings, command: 'atm install' };
+  let appliedAny = false;
   for (const pid of projectIds) {
-    const dir = await deps.resolveProject(pid);
-    const r = await installSkillLinks(ctx, dir, opts);
-    out.files.push(...r.files);
-    out.warnings.push(...r.warnings);
+    // 单个项目失败（CONFLICT 等）不影响其他项目：记进 warnings 继续
+    try {
+      const dir = await deps.resolveProject(pid);
+      const r = await installSkillLinks(ctx, dir, opts);
+      out.files.push(...r.files);
+      out.warnings.push(...r.warnings);
+      appliedAny = true;
+    } catch (e) {
+      const name = report.projects.find((p) => p.id === pid)?.name ?? pid;
+      out.warnings.push(`fix ${name} failed: ${errorMessage(e)}${e instanceof AtmError ? ` (next: ${e.nextCommand})` : ''}`);
+    }
   }
-  if (!projectIds.size) out.applied = false;
+  if (!appliedAny) out.applied = false;
   return out;
 }

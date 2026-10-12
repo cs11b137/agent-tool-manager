@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import type { McpDef } from '../types.js';
 import type { Env } from '../context.js';
 import { AtmError } from '../errors.js';
@@ -27,6 +27,26 @@ function checkVars(def: McpDef, env: Env): void {
   }
 }
 
+/** SIGTERM 整个进程组，2s 后仍在则 SIGKILL。 */
+function killTree(child: ChildProcess): void {
+  const pid = child.pid;
+  if (pid === undefined) return;
+  const signalGroup = (sig: NodeJS.Signals) => {
+    try {
+      process.kill(-pid, sig);
+    } catch {
+      try {
+        child.kill(sig);
+      } catch {
+        // 已退出
+      }
+    }
+  };
+  signalGroup('SIGTERM');
+  const t = setTimeout(() => signalGroup('SIGKILL'), 2_000);
+  t.unref();
+}
+
 /** stdio：spawn → initialize → notifications/initialized → tools/list（支持分页），newline-delimited JSON-RPC。 */
 export function listToolsStdio(def: Extract<McpDef, { transport: 'stdio' }>, env: Env, signal?: AbortSignal, timeoutMs = MEASURE_TIMEOUT_MS): Promise<unknown[]> {
   checkVars(def, env);
@@ -36,7 +56,10 @@ export function listToolsStdio(def: Extract<McpDef, { transport: 'stdio' }>, env
   const args = (def.args ?? []).map((a) => expand(a, env));
 
   return new Promise((resolve, reject) => {
-    const child = spawn(expand(def.command, env), args, { env: childEnv, stdio: ['pipe', 'pipe', 'pipe'] });
+    // detached：子进程自成进程组，超时/结束时整组杀掉（npx → node 这类会再 fork 的 server 不会留下孤儿）
+    const child = spawn(expand(def.command, env), args, { env: childEnv, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
     let settled = false;
     let buf = '';
     let stderr = '';
@@ -50,7 +73,7 @@ export function listToolsStdio(def: Extract<McpDef, { transport: 'stdio' }>, env
       clearTimeout(timer);
       signal?.removeEventListener('abort', onAbort);
       child.stdin.end();
-      child.kill();
+      killTree(child);
       if (err) reject(err);
       else resolve(value ?? []);
     };
@@ -76,13 +99,14 @@ export function listToolsStdio(def: Extract<McpDef, { transport: 'stdio' }>, env
     };
 
     child.on('error', (e) => fail(e.message));
-    child.on('exit', (code) => fail(`server exited (code ${code})`));
+    // close（而不是 exit）在 stdout 读完之后才触发，不会抢在最后一条响应之前判失败
+    child.on('close', (code) => fail(`server exited (code ${code})`));
     child.stdin.on('error', () => undefined);
-    child.stderr.on('data', (d: Buffer) => {
-      stderr += d.toString();
+    child.stderr.on('data', (d: string) => {
+      stderr += d;
     });
-    child.stdout.on('data', (d: Buffer) => {
-      buf += d.toString();
+    child.stdout.on('data', (d: string) => {
+      buf += d;
       let nl;
       while ((nl = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, nl).trim();

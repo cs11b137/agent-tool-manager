@@ -58,7 +58,10 @@ export interface LockedSkill {
   commit: string;
   rev?: string;
   contextTokens: number;
-  /** `atm pin` 后指向的 worktree 目录（绝对路径） */
+  /**
+   * `atm pin` 后指向的 worktree 目录，相对共享仓库根目录 `<root>`（如 `.worktrees/<repo>@<rev>`）。
+   * lock 会被提交，因此不存机器相关的绝对路径；解析到 `<root>` 之外的值会被拒绝。
+   */
   worktree?: string;
 }
 
@@ -264,7 +267,9 @@ export type DoctorCode =
   | 'repo-dirty' // info：共享仓库有未提交或未推送的改动
   | 'plugin-global-only' // info：全局启用、但只有本项目在用的插件
   | 'context-total' // info：本项目工具总上下文占用
-  | 'project-missing'; // error：注册表中的项目目录不存在
+  | 'project-missing' // error：注册表中的项目目录不存在
+  | 'config-unparseable' // error：Agent 配置文件（.mcp.json 等）无法解析，未能做密钥扫描
+  | 'skill-dir-conflict'; // error：`.agents/skills/<name>` 或 `.claude/skills` 是实体目录/文件，不能自动修复
 
 export interface DoctorIssue {
   /** 稳定 id：`${code}:${projectId}:${kind}:${name}` 的组合，供「一键修复」引用 */
@@ -281,7 +286,7 @@ export interface DoctorIssue {
   detail?: string;
   /** 下一步该执行的命令 */
   nextCommand?: string;
-  /** 能否被 `fix` 安全修复（目前只有 broken-link / missing-link） */
+  /** 能否被 `fix` 安全修复（只有缺失或断掉的软链：missing-link / broken-link 的子集） */
   fixable: boolean;
 }
 

@@ -5,9 +5,9 @@ import { ADAPTERS } from '../adapters/index.js';
 import { mergeIntoFile } from '../adapters/merge.js';
 import { AtmError } from '../errors.js';
 import { linkState } from '../fs/symlink.js';
-import { exists, isDir, readText } from '../fs/walk.js';
+import { exists, isDir, listDir, readText } from '../fs/walk.js';
 import { git } from '../git.js';
-import { emptyLock, mcpRefAgents, mcpRefName, paths, serializeLock, serializeManifest, type ProjectFiles } from '../manifest.js';
+import { emptyLock, mcpRefAgents, mcpRefName, paths, relativeWorktree, resolveWorktree, serializeLock, serializeManifest, type ProjectFiles } from '../manifest.js';
 import { hashMcpDef, loadDefs, requireDef } from '../mcp/registry.js';
 import { locateRepoDir, type SkillResolver } from '../skills/resolver.js';
 import type { Planner } from './planner.js';
@@ -26,6 +26,8 @@ export interface ProjectPlanInput {
   forceResolve?: Set<string>;
   /** 追加 .gitignore（init / install） */
   gitignore?: boolean;
+  /** init 本次把实体 Skill 目录迁移进了 `.agents/skills/`（磁盘上还没有） */
+  migratedRealDirs?: boolean;
   /** 由调用方处理的入口软链（init 迁移） */
   skipEntries?: Set<string>;
   /** 只规划 Skill 部分（fix） */
@@ -36,8 +38,31 @@ export interface ProjectPlanInput {
 
 export const ENTRY_TARGET = path.join('..', '.agents', 'skills');
 
-function skillTarget(repoDir: string, s: LockedSkill): string {
-  return s.worktree ? path.join(s.worktree, s.path) : path.join(repoDir, s.path);
+function skillTarget(root: string, repoDir: string, s: LockedSkill): string {
+  return s.worktree ? path.join(resolveWorktree(root, s.worktree), s.path) : path.join(repoDir, s.path);
+}
+
+/**
+ * 规划单个 `.agents/skills/<name>` 软链指向 `target`（install / add / sync 共用）。
+ * 已是软链 → 改指向；不存在 → 新建（`requireTarget` 时目标不存在只给警告）；实体目录/文件 → CONFLICT。
+ */
+export async function planSkillLink(p: Planner, dir: string, name: string, target: string, requireTarget = false): Promise<void> {
+  const linkPath = path.join(paths.skillsDir(dir), name);
+  const st = await linkState(linkPath);
+  if (st.kind === 'symlink') {
+    if (st.target !== target) p.symlink(linkPath, st.target, target);
+  } else if (st.kind === 'missing') {
+    if (requireTarget && !(await exists(target))) {
+      // 未重新解析且仓库不在本机：不建断链，提示 install
+      p.warn(`${name}: ${p.rel(target)} does not exist; run atm install`);
+    } else {
+      p.symlink(linkPath, null, target);
+    }
+  } else {
+    throw new AtmError('CONFLICT', `.agents/skills/${name} is a real ${st.kind === 'dir' ? 'directory' : 'file'}, not a symlink`, {
+      nextCommand: `move .agents/skills/${name} away, then atm install`,
+    });
+  }
 }
 
 async function planSkills(p: Planner, input: ProjectPlanInput, lockOut: LockFile): Promise<void> {
@@ -52,22 +77,24 @@ async function planSkills(p: Planner, input: ProjectPlanInput, lockOut: LockFile
     let locked: LockedSkill;
     let target: string;
     let resolvedNow = false;
+    const located = old && sameRef && !force && !old.worktree && !input.resolveAll ? await locateRepoDir(p.ctx, cfg.root, ref.repo) : undefined;
     if (old && sameRef && old.worktree && !force) {
-      // 已 pin：保持指向 worktree
-      locked = { ...old };
-      target = skillTarget('', old);
-      if (input.resolveAll && !(await exists(old.worktree))) {
+      // 已 pin：保持指向 worktree（lock 里存相对 <root> 的路径；旧版绝对路径顺便改写成相对形式）
+      const wt = resolveWorktree(cfg.root, old.worktree);
+      locked = { ...old, worktree: relativeWorktree(cfg.root, wt) };
+      target = path.join(wt, old.path);
+      if (input.resolveAll && !(await exists(wt))) {
         const co = await resolver.checkout(ref.repo);
-        const wt = old.worktree;
         p.exec(wt, `git worktree add ${p.rel(wt)} ${old.rev ?? old.commit}`, async () => {
           await git.worktreeAdd(co.dir, wt, old.rev ?? old.commit);
         });
         resolvedNow = true;
       }
-    } else if (old && sameRef && !force && !input.resolveAll) {
+    } else if (old && sameRef && located) {
       locked = { ...old };
-      target = skillTarget(await locateRepoDir(p.ctx, cfg.root, ref.repo), old);
+      target = skillTarget(cfg.root, located, old);
     } else {
+      // 包括「仓库目录被别的仓库占用」（located === null）：resolver 会给出带 nextCommand 的 CONFLICT
       const r = await resolver.resolve(ref);
       resolvedNow = true;
       for (const w of r.warnings) p.warn(w);
@@ -81,26 +108,10 @@ async function planSkills(p: Planner, input: ProjectPlanInput, lockOut: LockFile
         // install 不改写 lock 中的 commit（由 sync 更新）
         locked.commit = old.commit || locked.commit;
       }
-      target = skillTarget(r.checkout.dir, locked);
+      target = skillTarget(cfg.root, r.checkout.dir, locked);
     }
     lockOut.skills[ref.name] = locked;
-
-    const linkPath = path.join(skillsDir, ref.name);
-    const st = await linkState(linkPath);
-    if (st.kind === 'symlink') {
-      if (st.target !== target) p.symlink(linkPath, st.target, target);
-    } else if (st.kind === 'missing') {
-      if (!resolvedNow && !(await exists(target))) {
-        // 未重新解析且仓库不在本机：不建断链，提示 install
-        p.warn(`${ref.name}: ${p.rel(target)} does not exist; run atm install`);
-      } else {
-        p.symlink(linkPath, null, target);
-      }
-    } else {
-      throw new AtmError('CONFLICT', `.agents/skills/${ref.name} is a real ${st.kind === 'dir' ? 'directory' : 'file'}, not a symlink`, {
-        nextCommand: `move .agents/skills/${ref.name} away, then atm install`,
-      });
-    }
+    await planSkillLink(p, dir, ref.name, target, !resolvedNow);
   }
 
   // 清单里已删除、lock 里还记录着的 Skill：删软链（只删软链，不碰实体目录）
@@ -122,7 +133,8 @@ async function planEntryLinks(p: Planner, input: ProjectPlanInput): Promise<void
     if (st.kind === 'symlink') {
       if (st.target === ENTRY_TARGET) continue;
       if (st.resolved === paths.skillsDir(dir)) continue;
-      if (!opts.force) {
+      // 断链（目标不存在）可以安全替换；指向别处的有效软链需要 --force
+      if (!opts.force && !st.broken) {
         throw new AtmError('CONFLICT', `${entry} points to ${st.target}, expected ${ENTRY_TARGET}`, {
           nextCommand: `${input.retryCommand} --force`,
         });
@@ -206,8 +218,18 @@ async function planPlugins(p: Planner, input: ProjectPlanInput, lockOut: LockFil
   lockOut.managed['claude-code'] = entry;
 }
 
-export function gitignoreLines(agents: AgentId[]): string[] {
-  const lines = ['.agents/skills/'];
+export interface GitignoreMode {
+  /**
+   * `.agents/skills/` 里有（或本次迁移进来）提交过的实体 Skill 目录：
+   * 不能整体忽略，只忽略 atm 管理的软链（逐个名字）。
+   */
+  perName: boolean;
+  /** perName 时需要忽略的 atm 管理软链名 */
+  managedNames: string[];
+}
+
+export function gitignoreLines(agents: AgentId[], mode: GitignoreMode = { perName: false, managedNames: [] }): string[] {
+  const lines = mode.perName ? mode.managedNames.map((n) => `.agents/skills/${n}`) : ['.agents/skills/'];
   for (const a of agents) {
     const entry = ADAPTERS[a].skillEntry;
     if (entry) lines.push(entry);
@@ -215,11 +237,25 @@ export function gitignoreLines(agents: AgentId[]): string[] {
   return lines;
 }
 
-export async function planGitignore(p: Planner, dir: string, agents: AgentId[]): Promise<void> {
+/** `.agents/skills/` 下是否有实体（非软链）条目。 */
+export async function hasRealSkillDirs(dir: string): Promise<boolean> {
+  const skillsDir = paths.skillsDir(dir);
+  for (const name of await listDir(skillsDir)) {
+    if (name === '.DS_Store' || name === '.gitkeep') continue;
+    const st = await linkState(path.join(skillsDir, name));
+    if (st.kind === 'dir' || st.kind === 'file') return true;
+  }
+  return false;
+}
+
+export async function planGitignore(p: Planner, dir: string, agents: AgentId[], mode?: GitignoreMode): Promise<void> {
   const file = path.join(dir, '.gitignore');
   const before = await readText(file);
   const have = new Set((before ?? '').split(/\r?\n/).map((l) => l.trim()));
-  const missing = gitignoreLines(agents).filter((l) => !have.has(l) && !have.has(l.replace(/\/$/, '')) && !have.has(`/${l}`));
+  const blanket = ['.agents/skills/', '.agents/skills', '/.agents/skills/', '/.agents/skills'].some((l) => have.has(l));
+  const missing = gitignoreLines(agents, mode).filter(
+    (l) => !have.has(l) && !have.has(l.replace(/\/$/, '')) && !have.has(`/${l}`) && !(blanket && l.startsWith('.agents/skills/')),
+  );
   if (!missing.length) return;
   let after = before ?? '';
   if (after && !after.endsWith('\n')) after += '\n';
@@ -243,7 +279,13 @@ export async function planProject(p: Planner, input: ProjectPlanInput): Promise<
     await planMcp(p, input, lockOut);
     await planPlugins(p, input, lockOut);
   }
-  if (input.gitignore) await planGitignore(p, input.dir, input.manifest.agents);
+  const perName = Boolean(input.migratedRealDirs) || (await hasRealSkillDirs(input.dir));
+  const mode: GitignoreMode = { perName, managedNames: input.manifest.skills.map((s) => s.name) };
+  if (input.gitignore) await planGitignore(p, input.dir, input.manifest.agents, mode);
+  else if (perName && input.manifest.skills.length) {
+    // 混合模式（有提交的实体 Skill）：新增的软链要逐个忽略，否则会被误提交
+    await planGitignore(p, input.dir, [], mode);
+  }
   await planManifestAndLock(p, input.dir, input.files, input.manifest, lockOut);
   return lockOut;
 }

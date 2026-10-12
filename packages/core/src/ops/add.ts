@@ -2,7 +2,7 @@ import path from 'node:path';
 import type { AddSpec, McpRef, ToolsManifest, WriteOptions, WriteResult } from '../types.js';
 import type { Ctx } from '../context.js';
 import { AtmError } from '../errors.js';
-import { mcpRefName, requireManifest } from '../manifest.js';
+import { assertToolName, mcpRefName, requireManifest } from '../manifest.js';
 import { loadDefs, requireDef } from '../mcp/registry.js';
 import { loadPluginIndex } from '../plugins/index.js';
 import { contextFor } from './inspect.js';
@@ -17,6 +17,8 @@ export function addCommand(spec: AddSpec): string {
 
 /** 在内存中把 spec 应用到清单上（纯函数）。 */
 export function applyAddToManifest(manifest: ToolsManifest, spec: AddSpec): ToolsManifest {
+  // skill 名在解析时由 pickSkill 校验（能给出目录名作为候选）
+  if (spec.kind !== 'skill') assertToolName(spec.kind, spec.name);
   const next: ToolsManifest = { ...manifest, skills: [...manifest.skills], mcp: [...manifest.mcp], plugins: [...manifest.plugins] };
   if (spec.kind === 'skill') {
     const existing = next.skills.findIndex((s) => s.name === spec.name);

@@ -8,6 +8,8 @@ import { paths } from '../manifest.js';
 
 export const VAR_REF = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 const EXACT_VAR = /^\$\{[A-Za-z_][A-Za-z0-9_]*\}$/;
+/** header 值：恰好一个 `${VAR}`，可带短前缀（`Bearer ` / `Basic ` / `token `） */
+const HEADER_VAR = /^(?:(?:Bearer|Basic|token) )?\$\{[A-Za-z_][A-Za-z0-9_]*\}$/;
 const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 function bad(msg: string, file?: string): AtmError {
@@ -57,7 +59,9 @@ export function validateMcpDef(raw: unknown, file?: string, fallbackName?: strin
     if (typeof r.url !== 'string' || !/^https?:\/\//.test(r.url)) throw bad('http definition needs an http(s) "url"', file);
     const headers = stringRecord(r.headers, 'headers', file);
     for (const [k, v] of Object.entries(headers ?? {})) {
-      if (!new RegExp(VAR_REF.source).test(v)) throw bad(`headers.${k} must reference a \${VAR}, not a literal value`, file);
+      if (!HEADER_VAR.test(v)) {
+        throw bad(`headers.${k} must be exactly one \${VAR} reference, optionally prefixed with "Bearer ", "Basic " or "token " — no other literal text`, file);
+      }
     }
     const def: McpHttpDef = { name, transport: 'http', url: r.url };
     if (typeof r.description === 'string') def.description = r.description;

@@ -3,9 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import type { LockedSkill, SkillRef } from '../types.js';
 import { checkAbort, displayPath, type Ctx } from '../context.js';
-import { AtmError } from '../errors.js';
+import { AtmError, errorMessage } from '../errors.js';
 import { exists } from '../fs/walk.js';
 import { git } from '../git.js';
+import { isToolName, NAME_RULE } from '../manifest.js';
 import { discoverSkills, scanSkills, type DiscoveredSkill } from './discover.js';
 import { normalizeRemote, parseRepo, type RepoSpec } from './repo.js';
 
@@ -56,22 +57,53 @@ export function repoDirCandidates(root: string, repo: RepoSpec): string[] {
   return dirs;
 }
 
-/** 不克隆、不报错地找出仓库所在目录（用于 list / doctor 等只读场景）。 */
-export async function locateRepoDir(ctx: Ctx, root: string, spec: string): Promise<string> {
+export interface RepoLocation {
+  /** 仓库所在目录；被别的仓库占用 / 无法解析时为 null */
+  dir: string | null;
+  /** 期望的目录（`<root>/<name>`），无法解析时为 null */
+  expected: string | null;
+  /** dir 为 null 时的原因 */
+  reason?: string;
+}
+
+/**
+ * 判断已存在的目录是否就是请求的仓库：本地路径指向它自身，或 origin remote 与请求一致。
+ * 没有 origin remote 的目录不算匹配（视为被占用）。
+ */
+async function matchesRepo(ctx: Ctx, repo: RepoSpec, dir: string): Promise<{ ok: boolean; remote: string | null }> {
+  if (await isSelf(repo, dir)) return { ok: true, remote: null };
+  const remote = await git.remoteUrl(dir, ctx.signal);
+  return { ok: Boolean(remote) && (await sameRemote(ctx.home, remote!, repo.url)), remote };
+}
+
+function occupiedReason(ctx: Ctx, dir: string, remote: string | null): string {
+  const shown = displayPath(ctx.home, null, dir);
+  return remote ? `${shown} is already used by another repository (origin ${remote})` : `${shown} exists but has no origin remote, so it cannot be verified as this repository`;
+}
+
+/** 不克隆、不报错地找出仓库所在目录（用于 list / doctor / sync 等只读场景）。 */
+export async function locateRepo(ctx: Ctx, root: string, spec: string): Promise<RepoLocation> {
   let repo: RepoSpec;
   try {
     repo = parseRepo(spec, ctx.home);
-  } catch {
-    return path.join(root, spec.replace(/[\\/:]/g, '-'));
+  } catch (e) {
+    return { dir: null, expected: null, reason: errorMessage(e) };
   }
   const cands = repoDirCandidates(root, repo);
+  let firstOccupied: { dir: string; remote: string | null } | null = null;
   for (const d of cands) {
     if (!(await exists(d))) continue;
-    if (await isSelf(repo, d)) return d;
-    const remote = await git.remoteUrl(d, ctx.signal);
-    if (!remote || (await sameRemote(ctx.home, remote, repo.url))) return d;
+    const m = await matchesRepo(ctx, repo, d);
+    if (m.ok) return { dir: d, expected: cands[0]! };
+    firstOccupied ??= { dir: d, remote: m.remote };
   }
-  return cands[0]!;
+  // 首选目录空着：仓库应该（将会）克隆在那里
+  if (!(await exists(cands[0]!))) return { dir: cands[0]!, expected: cands[0]! };
+  return { dir: null, expected: cands[0]!, reason: occupiedReason(ctx, firstOccupied!.dir, firstOccupied!.remote) };
+}
+
+export async function locateRepoDir(ctx: Ctx, root: string, spec: string): Promise<string | null> {
+  return (await locateRepo(ctx, root, spec)).dir;
 }
 
 async function isSelf(repo: RepoSpec, dir: string): Promise<boolean> {
@@ -113,18 +145,17 @@ export class SkillResolver {
     const { ctx } = this;
     const repo = parseRepo(spec, ctx.home);
     const cands = repoDirCandidates(this.root, repo);
+    let occupied: { dir: string; remote: string | null } | null = null;
     for (const d of cands) {
       if (!(await exists(d))) continue;
-      if (await isSelf(repo, d)) return { repo, dir: d, scanDir: d, cloned: false, head: (await git.tryHead(d, ctx.signal)) ?? '' };
-      const remote = await git.remoteUrl(d, ctx.signal);
-      if (!remote || (await sameRemote(ctx.home, remote, repo.url))) {
-        return { repo, dir: d, scanDir: d, cloned: false, head: (await git.tryHead(d, ctx.signal)) ?? '' };
-      }
+      const m = await matchesRepo(ctx, repo, d);
+      if (m.ok) return { repo, dir: d, scanDir: d, cloned: false, head: (await git.tryHead(d, ctx.signal)) ?? '' };
+      occupied ??= { dir: d, remote: m.remote };
     }
     const target = cands[0]!;
     if (await exists(target)) {
       const alt = repo.owner ? path.join(this.root, `${repo.owner}-${repo.name}`) : `${target}-2`;
-      throw new AtmError('CONFLICT', `${displayPath(ctx.home, null, target)} is already used by another repository`, {
+      throw new AtmError('CONFLICT', occupiedReason(ctx, target, occupied?.dir === target ? occupied.remote : await git.remoteUrl(target, ctx.signal)), {
         nextCommand: `git clone ${repo.url} ${displayPath(ctx.home, null, alt)}`,
       });
     }
@@ -179,6 +210,14 @@ export class SkillResolver {
 
 /** 按 frontmatter name 匹配；没有则兜底目录名。0 个 / 多个都报错并给出候选。 */
 export function pickSkill(skills: DiscoveredSkill[], ref: SkillRef): DiscoveredSkill {
+  if (!isToolName(ref.name)) {
+    // 名字会成为 `.agents/skills/<name>`：frontmatter 里带空格、斜杠等的名字不能直接用，建议目录名
+    const dirs = [...new Set(skills.filter((s) => s.name === ref.name).map((s) => path.basename(s.path)).filter(isToolName))].sort();
+    throw new AtmError('NOT_FOUND', `skill name ${JSON.stringify(ref.name)} is not a valid name (${NAME_RULE})${dirs.length ? `; use the directory name ${dirs.join(' / ')}` : ''}`, {
+      candidates: dirs,
+      nextCommand: dirs.length ? `atm add skill ${ref.repo} ${dirs[0]}` : `atm search ${ref.name}`,
+    });
+  }
   const byName = skills.filter((s) => s.declaredName && s.name === ref.name);
   const pool = byName.length ? byName : skills.filter((s) => path.basename(s.path) === ref.name || (!s.declaredName && s.name === ref.name));
   if (pool.length === 1) return pool[0]!;

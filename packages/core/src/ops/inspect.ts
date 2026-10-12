@@ -14,15 +14,16 @@ import type {
 import { ADAPTERS } from '../adapters/index.js';
 import { parseDoc } from '../adapters/merge.js';
 import { compactHome, projectId, type Ctx } from '../context.js';
+import { errorMessage } from '../errors.js';
 import { linkState } from '../fs/symlink.js';
 import { isDir, readText } from '../fs/walk.js';
 import { git } from '../git.js';
-import { emptyLock, mcpRefAgents, mcpRefName, paths, readProjectFiles } from '../manifest.js';
+import { emptyLock, mcpRefAgents, mcpRefName, paths, readProjectFiles, resolveWorktree } from '../manifest.js';
 import { envVarStatus, hashMcpDef, loadDefs, type DefSet } from '../mcp/registry.js';
-import { scanServer, scanServers } from '../mcp/secrets.js';
+import { hitLevel, scanServer, scanServers, type SecretHit } from '../mcp/secrets.js';
 import { globalSkillNames, loadPluginIndex, splitPluginId, type PluginIndex } from '../plugins/index.js';
 import { readSkillMeta } from '../skills/discover.js';
-import { locateRepoDir } from '../skills/resolver.js';
+import { locateRepo, type RepoLocation } from '../skills/resolver.js';
 import { skillTokens } from '../tokens.js';
 import { ENTRY_TARGET } from './project.js';
 
@@ -35,6 +36,27 @@ export interface Shared {
   /** 所有已注册且已初始化项目的清单 */
   manifests: Map<string, { dir: string; manifest: ToolsManifest }>;
   repoInfo: Map<string, Promise<RepoInfo>>;
+  /** repo spec → 本机目录（被别的仓库占用时 dir 为 null） */
+  repoLocs: Map<string, Promise<RepoLocation>>;
+}
+
+export function repoLocation(ctx: Ctx, shared: Shared, spec: string): Promise<RepoLocation> {
+  let p = shared.repoLocs.get(spec);
+  if (!p) {
+    p = locateRepo(ctx, shared.cfg.root, spec);
+    shared.repoLocs.set(spec, p);
+  }
+  return p;
+}
+
+/** lock 里的 worktree → 绝对路径；解析到 `<root>` 之外时返回错误信息。 */
+function worktreeOf(root: string, worktree: string | undefined): { dir: string | null; error?: string } {
+  if (!worktree) return { dir: null };
+  try {
+    return { dir: resolveWorktree(root, worktree) };
+  } catch (e) {
+    return { dir: null, error: errorMessage(e) };
+  }
 }
 
 interface RepoInfo {
@@ -60,6 +82,7 @@ export async function loadShared(ctx: Ctx, cfg: GlobalConfig): Promise<Shared> {
     globalSkills: new Set(await globalSkillNames(ctx)),
     manifests,
     repoInfo: new Map(),
+    repoLocs: new Map(),
   };
 }
 
@@ -80,8 +103,9 @@ export function zeroContext(): ContextBreakdown {
   return { skill: 0, mcp: 0, plugin: 0, total: 0, unmeasured: 0 };
 }
 
-export function contextOf(tools: ToolEntry[]): ContextBreakdown {
+export function contextOf(tools: ToolEntry[], extraUnmeasured = 0): ContextBreakdown {
   const c = zeroContext();
+  c.unmeasured = extraUnmeasured;
   for (const t of tools) {
     if (t.contextTokens === null) {
       c.unmeasured++;
@@ -110,18 +134,20 @@ export async function buildTools(
   const tools: ToolEntry[] = [];
   for (const ref of manifest.skills) {
     const locked = lock.skills[ref.name];
-    const repoDir = await locateRepoDir(ctx, shared.cfg.root, ref.repo);
     const relPath = locked?.path ?? ref.name;
-    const target = locked?.worktree ? path.join(locked.worktree, relPath) : path.join(repoDir, relPath);
+    const wt = worktreeOf(shared.cfg.root, locked?.worktree);
+    // 仓库目录被别的仓库占用 / worktree 不合法：不读那里的内容，按断链/缺链报告
+    const loc = locked?.worktree ? null : await repoLocation(ctx, shared, ref.repo);
+    const expected = wt.dir ? path.join(wt.dir, relPath) : loc?.dir ? path.join(loc.dir, relPath) : null;
     const st = await linkState(path.join(paths.skillsDir(dir), ref.name));
-    const meta = await readSkillMeta(st.kind === 'symlink' && !st.broken ? st.resolved : target);
+    const meta = expected ? await readSkillMeta(st.kind === 'symlink' && !st.broken ? st.resolved : expected) : null;
     const info: NonNullable<ToolEntry['skill']> = {
       repo: ref.repo,
       path: relPath,
       commit: locked?.commit ?? '',
-      target: st.kind === 'symlink' ? st.resolved : target,
+      target: st.kind === 'symlink' ? st.resolved : (expected ?? ''),
       linked: st.kind === 'symlink',
-      broken: st.kind === 'symlink' && st.broken,
+      broken: st.kind === 'symlink' && (st.broken || expected === null),
     };
     if (ref.rev) info.rev = ref.rev;
     if (meta?.description) info.description = meta.description;
@@ -179,7 +205,7 @@ export async function buildTools(
       name,
       source: info.marketplace ? `@${info.marketplace}` : 'plugin',
       agents: manifest.agents.includes('claude-code') ? ['claude-code'] : [],
-      contextTokens: await shared.plugins.contextTokens(name),
+      contextTokens: await shared.plugins.contextTokens(name, lock.mcp),
       enabled: true,
       plugin: info,
     });
@@ -202,7 +228,8 @@ function issue(
     level,
     code,
     title,
-    fixable: code === 'broken-link' || code === 'missing-link',
+    // 只有缺失 / 断掉的软链可以安全修复，由调用方显式标记
+    fixable: false,
     ...extra,
   };
   if (pid) out.projectId = pid;
@@ -212,8 +239,13 @@ function issue(
   return out;
 }
 
-async function scanGeneratedConfigs(dir: string): Promise<Array<{ file: string; server: string }>> {
-  const hits: Array<{ file: string; server: string }> = [];
+interface ConfigScan {
+  hits: Array<{ file: string; server: string; level: 'error' | 'warn' }>;
+  unparseable: Array<{ file: string; agent: AgentId; error: string }>;
+}
+
+async function scanGeneratedConfigs(dir: string): Promise<ConfigScan> {
+  const out: ConfigScan = { hits: [], unparseable: [] };
   for (const agent of Object.keys(ADAPTERS) as AgentId[]) {
     const a = ADAPTERS[agent];
     const text = await readText(path.join(dir, a.mcpFile));
@@ -221,12 +253,15 @@ async function scanGeneratedConfigs(dir: string): Promise<Array<{ file: string; 
     let doc: Record<string, unknown>;
     try {
       doc = parseDoc(text, a.format, a.mcpFile);
-    } catch {
+    } catch (e) {
+      out.unparseable.push({ file: a.mcpFile, agent, error: errorMessage(e) });
       continue;
     }
-    for (const h of scanServers(doc[a.serversKey])) hits.push({ file: a.mcpFile, server: h.server });
+    const byServer = new Map<string, SecretHit[]>();
+    for (const h of scanServers(doc[a.serversKey])) byServer.set(h.server, [...(byServer.get(h.server) ?? []), h]);
+    for (const [server, hits] of byServer) out.hits.push({ file: a.mcpFile, server, level: hitLevel(hits)! });
   }
-  return hits;
+  return out;
 }
 
 /** 单个项目的 doctor 检查（不含 measure）。 */
@@ -244,18 +279,36 @@ export async function projectIssues(
   const issues: DoctorIssue[] = [];
   const add = (...args: Parameters<typeof issue>) => issues.push(issue(...args));
 
-  // 软链
+  // 软链：只有「缺失」或「断掉」的软链标记为 fixable（fix = 对该项目执行 install 的 Skill 部分）
   for (const t of tools) {
     if (t.kind !== 'skill' || !t.skill) continue;
-    if (!t.skill.linked) {
-      add('missing-link', 'error', pid, pname, 'skill', t.name, `Skill ${t.name} is not linked`, {
-        detail: `.agents/skills/${t.name} does not exist`,
-        nextCommand: 'atm install',
+    const rel = `.agents/skills/${t.name}`;
+    const st = await linkState(path.join(paths.skillsDir(dir), t.name));
+    const locked = lock.skills[t.name];
+    const wt = worktreeOf(shared.cfg.root, locked?.worktree);
+    const loc = locked?.worktree ? null : await repoLocation(ctx, shared, t.skill.repo);
+    const unresolvable = wt.error ?? (loc && !loc.dir ? (loc.reason ?? `cannot locate ${t.skill.repo}`) : undefined);
+    if (st.kind === 'dir' || st.kind === 'file') {
+      add('skill-dir-conflict', 'error', pid, pname, 'skill', t.name, `${rel} is a real ${st.kind === 'dir' ? 'directory' : 'file'}, not a symlink`, {
+        detail: `atm manages ${rel} as a symlink into the shared repo; a real ${st.kind === 'dir' ? 'directory' : 'file'} is in the way and will not be touched automatically`,
+        nextCommand: `move ${rel} away (or rename the skill), then atm install`,
       });
-    } else if (t.skill.broken) {
-      add('broken-link', 'error', pid, pname, 'skill', t.name, `Skill ${t.name} link is broken`, {
-        detail: `.agents/skills/${t.name} -> ${t.skill.target} does not exist`,
+    } else if (unresolvable) {
+      add(st.kind === 'symlink' ? 'broken-link' : 'missing-link', 'error', pid, pname, 'skill', t.name, `Skill ${t.name}: shared repo ${t.skill.repo} cannot be used`, {
+        detail: unresolvable,
+        nextCommand: wt.error ? 'remove the worktree field from .agents/tools.lock.json, then atm install' : `move the occupying directory away (or clone ${t.skill.repo} elsewhere), then atm install`,
+      });
+    } else if (st.kind === 'missing') {
+      add('missing-link', 'error', pid, pname, 'skill', t.name, `Skill ${t.name} is not linked`, {
+        detail: `${rel} does not exist`,
         nextCommand: 'atm install',
+        fixable: true,
+      });
+    } else if (st.broken) {
+      add('broken-link', 'error', pid, pname, 'skill', t.name, `Skill ${t.name} link is broken`, {
+        detail: `${rel} -> ${t.skill.target} does not exist`,
+        nextCommand: 'atm install',
+        fixable: true,
       });
     }
   }
@@ -264,11 +317,25 @@ export async function projectIssues(
     if (!entry) continue;
     const st = await linkState(path.join(dir, entry));
     if (st.kind === 'missing') {
-      add('missing-link', 'error', pid, pname, 'skill', entry, `${entry} is missing`, { nextCommand: 'atm install' });
-    } else if (st.kind === 'symlink' && (st.broken || (st.target !== ENTRY_TARGET && st.resolved !== paths.skillsDir(dir)))) {
-      add('broken-link', 'error', pid, pname, 'skill', entry, `${entry} does not point to .agents/skills`, {
-        detail: `${entry} -> ${st.target}`,
+      add('missing-link', 'error', pid, pname, 'skill', entry, `${entry} is missing`, { nextCommand: 'atm install', fixable: true });
+    } else if (st.kind === 'symlink' && st.broken) {
+      add('broken-link', 'error', pid, pname, 'skill', entry, `${entry} is a broken symlink`, {
+        detail: `${entry} -> ${st.target} does not exist`,
         nextCommand: 'atm install',
+        fixable: true,
+      });
+    } else if (st.kind === 'symlink' && st.target !== ENTRY_TARGET && st.resolved !== paths.skillsDir(dir)) {
+      add('broken-link', 'error', pid, pname, 'skill', entry, `${entry} does not point to .agents/skills`, {
+        detail: `${entry} -> ${st.target}; replacing a working symlink needs --force`,
+        nextCommand: 'atm install --force',
+      });
+    } else if (st.kind === 'dir' || st.kind === 'file') {
+      add('skill-dir-conflict', 'error', pid, pname, 'skill', entry, `${entry} is a real ${st.kind === 'dir' ? 'directory' : 'file'}`, {
+        detail:
+          st.kind === 'dir'
+            ? `${entry} should be a symlink to .agents/skills; atm init migrates its contents into .agents/skills`
+            : `${entry} should be a symlink to .agents/skills; remove the file first`,
+        nextCommand: st.kind === 'dir' ? 'atm init' : `rm ${entry} && atm install`,
       });
     }
   }
@@ -278,17 +345,31 @@ export async function projectIssues(
   for (const r of defs.raw) {
     const name = path.basename(r.file, '.json');
     if (r.origin === 'registry' && !usedMcp.has(name)) continue;
-    if (scanServer(name, r.raw).length) {
-      add('plaintext-secret', 'error', pid, pname, 'mcp', `${name}@${compactHome(ctx.home, r.file)}`, `Plaintext secret in MCP definition ${name}`, {
-        detail: `${compactHome(ctx.home, r.file)} contains a literal secret; use \${VAR} instead`,
+    const level = hitLevel(scanServer(name, r.raw));
+    if (level) {
+      add('plaintext-secret', level, pid, pname, 'mcp', `${name}@${compactHome(ctx.home, r.file)}`, `${level === 'error' ? 'Plaintext secret' : 'Possible secret'} in MCP definition ${name}`, {
+        detail:
+          level === 'error'
+            ? `${compactHome(ctx.home, r.file)} contains a literal secret; use \${VAR} instead`
+            : `${compactHome(ctx.home, r.file)} has a secret-looking value in args/url; use \${VAR} instead`,
         nextCommand: `edit ${compactHome(ctx.home, r.file)}`,
       });
     }
   }
-  for (const h of await scanGeneratedConfigs(dir)) {
-    add('plaintext-secret', 'error', pid, pname, 'mcp', `${h.server}@${h.file}`, `Plaintext secret in ${h.file} (${h.server})`, {
-      detail: `${h.file} → ${h.server} contains a literal secret; use a variable reference instead`,
+  const scan = await scanGeneratedConfigs(dir);
+  for (const h of scan.hits) {
+    add('plaintext-secret', h.level, pid, pname, 'mcp', `${h.server}@${h.file}`, `${h.level === 'error' ? 'Plaintext secret' : 'Possible secret'} in ${h.file} (${h.server})`, {
+      detail:
+        h.level === 'error'
+          ? `${h.file} → ${h.server} contains a literal secret; use a variable reference instead`
+          : `${h.file} → ${h.server} has a secret-looking value in args/url; use a variable reference instead`,
       nextCommand: `edit ${h.file}`,
+    });
+  }
+  for (const u of scan.unparseable) {
+    add('config-unparseable', 'error', pid, pname, undefined, u.file, `${u.file} cannot be parsed`, {
+      detail: `${u.error} — atm cannot update it or scan it for secrets`,
+      nextCommand: `fix the syntax of ${u.file}`,
     });
   }
 
@@ -337,11 +418,13 @@ export async function projectIssues(
   const repoDirs = new Map<string, string>();
   for (const s of manifest.skills) {
     const locked = lock.skills[s.name];
-    const repoDir = await locateRepoDir(ctx, shared.cfg.root, s.repo);
-    if (!(await isDir(repoDir))) continue;
+    const repoDir = (await repoLocation(ctx, shared, s.repo)).dir;
+    if (!repoDir || !(await isDir(repoDir))) continue;
     repoDirs.set(repoDir, s.repo);
     if (!locked?.commit) continue;
-    const head = locked.worktree ? await git.tryHead(locked.worktree, ctx.signal) : (await repoInfo(ctx, shared, repoDir)).head;
+    const wt = worktreeOf(shared.cfg.root, locked.worktree);
+    if (locked.worktree && !wt.dir) continue;
+    const head = wt.dir ? await git.tryHead(wt.dir, ctx.signal) : (await repoInfo(ctx, shared, repoDir)).head;
     if (head && !head.startsWith(locked.commit) && !locked.commit.startsWith(head)) {
       add('rev-mismatch', 'warn', pid, pname, 'skill', s.name, `Skill ${s.name}: repo is at ${head.slice(0, 7)}, lock has ${locked.commit.slice(0, 7)}`, {
         nextCommand: `atm add skill ${s.repo} ${s.name}`,
@@ -358,7 +441,7 @@ export async function projectIssues(
     }
   }
 
-  const ctxSum = contextOf(tools);
+  const ctxSum = contextOf(tools, await pluginUnmeasured(shared.plugins, manifest, lock));
   add('context-total', 'info', pid, pname, undefined, undefined, `Context ≈ ${ctxSum.total} tokens${ctxSum.unmeasured ? ` (+${ctxSum.unmeasured} unmeasured)` : ''}`, {
     detail: `skills ${ctxSum.skill} · mcp ${ctxSum.mcp} · plugins ${ctxSum.plugin}`,
     ...(ctxSum.unmeasured ? { nextCommand: 'atm doctor --measure' } : {}),
@@ -406,7 +489,7 @@ export async function inspectProject(ctx: Ctx, shared: Shared, dir: string): Pro
     initialized: true,
     agents: [...manifest.agents],
     counts: { skills: manifest.skills.length, mcp: manifest.mcp.length, plugins: manifest.plugins.length },
-    context: contextOf(tools),
+    context: contextOf(tools, await pluginUnmeasured(shared.plugins, manifest, lock)),
     doctor: countIssues(issues),
   };
   return { summary, detail: { ...summary, manifestPath: paths.manifest(dir), tools, issues } };
@@ -417,6 +500,13 @@ export function missingProjectIssue(dir: string): DoctorIssue {
   return issue('project-missing', 'error', pid, path.basename(dir), undefined, undefined, `Project directory not found: ${dir}`, {
     nextCommand: 'relocate or unregister the project (atm ui)',
   });
+}
+
+/** 清单中插件内含、但未测量的 MCP 数量。 */
+export async function pluginUnmeasured(idx: PluginIndex, manifest: ToolsManifest, lock: LockFile): Promise<number> {
+  let n = 0;
+  for (const name of manifest.plugins) n += await idx.unmeasuredMcp(name, lock.mcp);
+  return n;
 }
 
 /** 只根据清单 + lock 估算上下文（写操作的 contextAfter）。 */
@@ -430,9 +520,10 @@ export async function contextFor(ctx: Ctx, manifest: ToolsManifest, lock: LockFi
     else c.mcp += t;
   }
   for (const name of manifest.plugins) {
-    const t = await idx.contextTokens(name);
+    const t = await idx.contextTokens(name, lock.mcp);
     if (t === null) c.unmeasured++;
     else c.plugin += t;
+    c.unmeasured += await idx.unmeasuredMcp(name, lock.mcp);
   }
   c.total = c.skill + c.mcp + c.plugin;
   return c;

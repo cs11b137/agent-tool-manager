@@ -17,8 +17,17 @@ export interface PluginIndex {
   /** `~/.claude/settings.json` enabledPlugins 中为 true 的插件 */
   globallyEnabled: Set<string>;
   contents(name: string): Promise<PluginContents | undefined>;
-  contextTokens(name: string): Promise<number | null>;
+  /**
+   * 插件常驻上下文 = 内含 Skill 之和 + 内含 MCP 中已测量的部分（`measured` 按 MCP 名给出测量值，通常来自项目 lock）。
+   * 未安装为 null。
+   */
+  contextTokens(name: string, measured?: MeasuredMcp): Promise<number | null>;
+  /** 插件内含、但没有测量值的 MCP 数量（项目级 `unmeasured` 要加上它） */
+  unmeasuredMcp(name: string, measured?: MeasuredMcp): Promise<number>;
 }
+
+/** MCP 名 → 测量得到的 token 数 */
+export type MeasuredMcp = Record<string, { contextTokens?: number } | undefined>;
 
 export function pluginPaths(ctx: Ctx) {
   return {
@@ -100,9 +109,16 @@ export async function loadPluginIndex(ctx: Ctx): Promise<PluginIndex> {
     installed,
     globallyEnabled,
     contents,
-    async contextTokens(name) {
+    async contextTokens(name, measured) {
       const c = await contents(name);
-      return c ? c.skills.reduce((a, s) => a + s.contextTokens, 0) : null;
+      if (!c) return null;
+      const skills = c.skills.reduce((a, s) => a + s.contextTokens, 0);
+      const mcp = c.mcp.reduce((a, m) => a + (measured?.[m]?.contextTokens ?? 0), 0);
+      return skills + mcp;
+    },
+    async unmeasuredMcp(name, measured) {
+      const c = await contents(name);
+      return c ? c.mcp.filter((m) => measured?.[m]?.contextTokens === undefined).length : 0;
     },
   };
 }

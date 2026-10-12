@@ -53,7 +53,11 @@ export const git = {
     }
   },
   clone(url: string, dir: string, signal?: AbortSignal): Promise<string> {
-    return runGit(['clone', '--quiet', url, dir], { signal });
+    if (url.startsWith('-') || dir.startsWith('-')) {
+      return Promise.reject(new AtmError('NOT_FOUND', `refusing to clone "${url}": repository specs must not start with "-"`, { nextCommand: 'atm add skill <owner/repo> <name>' }));
+    }
+    // `--` 之后的参数不会被当成选项（防止 `--upload-pack=…` 之类的注入）
+    return runGit(['clone', '--quiet', '--', url, dir], { signal });
   },
   head(dir: string, signal?: AbortSignal): Promise<string> {
     return runGit(['rev-parse', 'HEAD'], { cwd: dir, signal });

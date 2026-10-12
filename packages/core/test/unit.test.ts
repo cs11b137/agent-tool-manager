@@ -67,7 +67,16 @@ describe('skill discovery', () => {
     await writeFiles(repo, { 'skills/comic/SKILL.md': skillMd('Baoyu Comic', 'x') });
     const skills = await scanSkills(repo);
     expect(pickSkill(skills, { repo: 'o/r', name: 'comic' }).path).toBe(path.join('skills', 'comic'));
-    expect(pickSkill(skills, { repo: 'o/r', name: 'Baoyu Comic' }).path).toBe(path.join('skills', 'comic'));
+    // frontmatter 名带空格，不能作为 `.agents/skills/<name>`：NOT_FOUND，并建议目录名
+    const err = (() => {
+      try {
+        pickSkill(skills, { repo: 'o/r', name: 'Baoyu Comic' });
+        return null;
+      } catch (e) {
+        return e;
+      }
+    })();
+    expect(err).toMatchObject({ code: 'NOT_FOUND', candidates: ['comic'] });
   });
 
   it('throws AMBIGUOUS with candidate paths and NOT_FOUND with names', async () => {

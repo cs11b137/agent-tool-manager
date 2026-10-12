@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { AtmError, type AtmEvent } from '../src/index.js';
 import { acquireLock } from '../src/fs/lock.js';
 import { applyOps, type Op } from '../src/fs/atomic.js';
+import { createCtx } from '../src/context.js';
+import { executeWrite } from '../src/ops/write.js';
 import { exists, git, makeRemote, readJson, setup, skillMd, write, writeInstalledPlugins } from './helpers.js';
 
 const FAKE_SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'fake-mcp-server.mjs');
@@ -17,7 +19,9 @@ describe('file lock', () => {
     const lockPath = path.join(dir, '.agents/.lock');
     const held = await acquireLock(lockPath);
     await expect(acquireLock(lockPath)).rejects.toMatchObject({ code: 'LOCKED' });
-    await expect(env.atm.add(dir, { kind: 'plugin', name: 'x@y' }, {})).rejects.toBeInstanceOf(AtmError);
+    const addErr = await env.atm.add(dir, { kind: 'plugin', name: 'x@y' }, {}).catch((e: unknown) => e);
+    expect(addErr).toBeInstanceOf(AtmError);
+    expect(addErr).toMatchObject({ code: 'LOCKED' });
     const err = await env.atm.install(dir).catch((e: unknown) => e);
     expect(err).toMatchObject({ code: 'LOCKED' });
     // dryRun 不需要锁
@@ -30,6 +34,39 @@ describe('file lock', () => {
     await fs.utimes(lockPath, old, old);
     const taken = await acquireLock(lockPath);
     await taken.release();
+  });
+
+  it('concurrent stale-lock takeover: exactly one of two takers wins', async () => {
+    const env = await setup();
+    const lockPath = path.join(env.base, '.agents/.lock');
+    for (let round = 0; round < 10; round++) {
+      await write(lockPath, '999999 dead-token old');
+      const old = new Date(Date.now() - 60_000);
+      await fs.utimes(lockPath, old, old);
+      const results = await Promise.allSettled([acquireLock(lockPath), acquireLock(lockPath)]);
+      const won = results.filter((r) => r.status === 'fulfilled');
+      const lost = results.filter((r) => r.status === 'rejected');
+      expect(won).toHaveLength(1);
+      expect(lost).toHaveLength(1);
+      expect((lost[0] as PromiseRejectedResult).reason).toMatchObject({ code: 'LOCKED' });
+      await (won[0] as PromiseFulfilledResult<Awaited<ReturnType<typeof acquireLock>>>).value.release();
+      expect(await exists(lockPath)).toBe(false);
+    }
+  });
+
+  it('release() does not delete a lock that was taken over by someone else', async () => {
+    const env = await setup();
+    const lockPath = path.join(env.base, '.agents/.lock');
+    const first = await acquireLock(lockPath);
+    // first 卡住超过 30s：second 视为过期并接管
+    const old = new Date(Date.now() - 60_000);
+    await fs.utimes(lockPath, old, old);
+    const second = await acquireLock(lockPath);
+    await first.release();
+    expect(await exists(lockPath)).toBe(true);
+    await expect(acquireLock(lockPath)).rejects.toMatchObject({ code: 'LOCKED' });
+    await second.release();
+    expect(await exists(lockPath)).toBe(false);
   });
 });
 
@@ -46,6 +83,48 @@ describe('atomic apply', () => {
     await expect(applyOps(ops)).rejects.toThrow();
     expect(await fs.readFile(a, 'utf8')).toBe('old');
     expect(await exists(path.join(env.base, 'b.txt'))).toBe(false);
+  });
+
+  it('executeWrite: a failure mid-apply leaves manifest/lock byte-identical and undoes symlink/unlink/mkdir', async () => {
+    const env = await setup();
+    const remote = await makeRemote(env.base, 'kit', { 'x/SKILL.md': skillMd('x', 'x') });
+    const dir = await env.project();
+    await env.atm.init(dir);
+    await env.atm.add(dir, { kind: 'skill', repo: remote.bare, name: 'x' });
+    const manifestPath = path.join(dir, '.agents/tools.json');
+    const lockPath = path.join(dir, '.agents/tools.lock.json');
+    const manifestBefore = await fs.readFile(manifestPath, 'utf8');
+    const lockBefore = await fs.readFile(lockPath, 'utf8');
+    const skills = path.join(dir, '.agents/skills');
+    await fs.symlink('/old/target', path.join(skills, 'repoint'));
+    await fs.symlink('/gone/target', path.join(skills, 'gone'));
+    const xTarget = await fs.readlink(path.join(skills, 'x'));
+
+    const ctx = createCtx({ home: env.home });
+    const err = await executeWrite(ctx, {
+      dir,
+      command: 'test',
+      activity: { message: 'test' },
+      async plan({ planner }) {
+        planner.mkdir(path.join(dir, 'newdir', 'sub'));
+        planner.symlink(path.join(skills, 'fresh'), null, '/fresh/target');
+        planner.symlink(path.join(skills, 'repoint'), '/old/target', '/new/target');
+        planner.unlink(path.join(skills, 'gone'), '/gone/target');
+        planner.unlink(path.join(skills, 'x'), xTarget);
+        planner.write(manifestPath, manifestBefore, manifestBefore.replace('"skills"', '"skills" ').concat('\n'));
+        planner.write(lockPath, lockBefore, '{"broken": true}\n');
+        planner.exec(dir, 'injected failure', () => Promise.reject(new Error('injected failure')));
+      },
+    }).catch((e: unknown) => e);
+    expect(err).toMatchObject({ message: expect.stringContaining('injected failure') });
+    expect(await fs.readFile(manifestPath, 'utf8')).toBe(manifestBefore);
+    expect(await fs.readFile(lockPath, 'utf8')).toBe(lockBefore);
+    expect(await exists(path.join(dir, 'newdir'))).toBe(false);
+    expect(await exists(path.join(skills, 'fresh'))).toBe(false);
+    expect(await fs.readlink(path.join(skills, 'repoint'))).toBe('/old/target');
+    expect(await fs.readlink(path.join(skills, 'gone'))).toBe('/gone/target');
+    expect(await fs.readlink(path.join(skills, 'x'))).toBe(xTarget);
+    expect(await exists(path.join(dir, '.agents/.lock'))).toBe(false);
   });
 });
 
@@ -146,7 +225,9 @@ describe('pin', () => {
     expect(await fs.readlink(path.join(dir, '.agents/skills/x'))).toBe(path.join(wt, 'x'));
     expect(await fs.readFile(path.join(dir, '.agents/skills/x/SKILL.md'), 'utf8')).toContain('v1');
     const lock = await readJson(path.join(dir, '.agents/tools.lock.json'));
-    expect(lock.skills.x).toMatchObject({ rev: 'v1', commit: v1, worktree: wt });
+    // lock 会被提交：worktree 存相对 <root> 的路径，而不是本机绝对路径
+    expect(lock.skills.x).toMatchObject({ rev: 'v1', commit: v1, worktree: '.worktrees/skills@v1' });
+    expect(JSON.stringify(lock)).not.toContain(env.root);
     expect((await readJson(path.join(dir, '.agents/tools.json'))).skills[0]).toEqual({ repo: remote.bare, name: 'x', rev: 'v1' });
     // install 保持 pin，不产生变化
     expect((await env.atm.install(dir)).files).toEqual([]);
@@ -276,5 +357,38 @@ describe('resolver edge cases', () => {
     const err = await env.atm.add(dir, { kind: 'skill', repo: other.bare, name: 'y' }).catch((e: unknown) => e);
     expect(err).toMatchObject({ code: 'CONFLICT' });
     expect((err as AtmError).nextCommand).toMatch(/^git clone /);
+  });
+
+  it('a real folder at the skill symlink path is a CONFLICT and is left untouched', async () => {
+    const env = await setup();
+    const remote = await makeRemote(env.base, 'skills', { 'x/SKILL.md': skillMd('x', 'v1') });
+    const dir = await env.project();
+    await env.atm.init(dir);
+    await write(path.join(dir, '.agents/skills/x/SKILL.md'), 'hand-written');
+    const manifestBefore = await fs.readFile(path.join(dir, '.agents/tools.json'), 'utf8');
+    const err = await env.atm.add(dir, { kind: 'skill', repo: remote.bare, name: 'x' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AtmError);
+    expect(err).toMatchObject({ code: 'CONFLICT', message: expect.stringContaining('real directory') });
+    expect(await fs.readFile(path.join(dir, '.agents/skills/x/SKILL.md'), 'utf8')).toBe('hand-written');
+    expect(await fs.readFile(path.join(dir, '.agents/tools.json'), 'utf8')).toBe(manifestBefore);
+  });
+
+  it('a folder without an origin remote is not accepted as the requested repo (CONFLICT)', async () => {
+    const env = await setup();
+    const remote = await makeRemote(env.base, 'skills', { 'x/SKILL.md': skillMd('x', 'v1') });
+    // <root>/skills 存在，但不是这个仓库的克隆（没有 origin）
+    const squatter = path.join(env.root, 'skills');
+    await write(path.join(squatter, 'x/SKILL.md'), skillMd('x', 'impostor'));
+    git(squatter, 'init', '-q');
+    const dir = await env.project();
+    await env.atm.init(dir);
+    const err = await env.atm.add(dir, { kind: 'skill', repo: remote.bare, name: 'x' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AtmError);
+    expect(err).toMatchObject({ code: 'CONFLICT', message: expect.stringContaining('no origin remote') });
+    expect(await exists(path.join(dir, '.agents/skills/x'))).toBe(false);
+    // 请求的就是这个本地目录本身时可以用
+    const ok = await env.atm.add(dir, { kind: 'skill', repo: squatter, name: 'x' });
+    expect(ok.applied).toBe(true);
+    expect(await fs.readlink(path.join(dir, '.agents/skills/x'))).toBe(path.join(squatter, 'x'));
   });
 });
