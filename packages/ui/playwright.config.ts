@@ -4,6 +4,8 @@ const PORT = Number(process.env.ATM_E2E_PORT ?? 4179);
 
 export default defineConfig({
   testDir: './e2e',
+  // e2e/real runs against the real server: see playwright.real.config.ts
+  testIgnore: ['**/real/**'],
   outputDir: './test-results',
   timeout: 60_000,
   fullyParallel: false,

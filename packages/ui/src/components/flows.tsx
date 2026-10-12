@@ -174,7 +174,10 @@ export function AddToolFlow({
     [library, kind, single],
   );
 
-  const spec = item ? specFor(item, item.kind === 'mcp' && single ? effAgents : undefined) : null;
+  // Only pass `agents` when the user narrowed the selection: otherwise the manifest gets `{ name, agents }`
+  // instead of the plain `"name"` that `atm add mcp <name>` writes.
+  const narrowed = !!single && agents !== null && !(effAgents.length === single.agents.length && single.agents.every((a) => effAgents.includes(a)));
+  const spec = item ? specFor(item, item.kind === 'mcp' && narrowed ? effAgents : undefined) : null;
   const previewKey = JSON.stringify([spec, projectIds]);
 
   const eyebrow = `${targets.length === 1 ? single!.name : `${targets.length} 个项目`} · 添加工具`;
