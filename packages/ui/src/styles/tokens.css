@@ -1,0 +1,145 @@
+/*
+ * Liquid Glass design tokens — values from design/liquid-glass/Main.dc.html.
+ * Light is the default; dark applies via <html data-theme="dark">.
+ */
+:root {
+  --ink: #1a1a1a;
+  --ink2: #4a4a4a;
+  --ink3: #686d76;
+  --accent: #0066ff;
+  --accent-h: #005ce6;
+  --accent-soft: rgba(0, 102, 255, 0.12);
+  --accent-ink: #0052cc;
+  --glass: rgba(255, 255, 255, 0.58);
+  --glass-2: rgba(255, 255, 255, 0.36);
+  --glass-strong: rgba(255, 255, 255, 0.82);
+  --glass-dialog: rgba(255, 255, 255, 0.86);
+  --edge: rgba(255, 255, 255, 0.78);
+  --hi: rgba(255, 255, 255, 0.7);
+  --line: rgba(26, 26, 26, 0.08);
+  --line2: rgba(26, 26, 26, 0.16);
+  --shadow: 0 2px 12px rgba(16, 24, 40, 0.06), 0 16px 40px rgba(16, 24, 40, 0.08);
+  --bg: #edf0f7;
+  --scrim: rgba(26, 30, 40, 0.28);
+  --b1: #8db8ff;
+  --b2: #cdb0ff;
+  --b3: #93e6df;
+  --b4: #ffc9de;
+  --skill: #3fb8c9;
+  --skill-ink: #0a6474;
+  --skill-soft: rgba(63, 184, 201, 0.18);
+  --mcp: #0066ff;
+  --mcp-ink: #0052cc;
+  --mcp-soft: rgba(0, 102, 255, 0.12);
+  --plugin: #4b22a0;
+  --plugin-ink: #5b2bb5;
+  --plugin-soft: rgba(91, 43, 181, 0.12);
+  --err: #d92d20;
+  --err-ink: #b42318;
+  --err-soft: rgba(217, 45, 32, 0.12);
+  --warn: #dc8a0e;
+  --warn-ink: #8a4b06;
+  --warn-soft: rgba(220, 138, 14, 0.16);
+  --ok: #079455;
+  --ok-ink: #067647;
+  --ok-soft: rgba(7, 148, 85, 0.12);
+  --iri: linear-gradient(120deg, #6fa8ff, #c7a6ff 30%, #8ee6e0 60%, #ffb8d5);
+  --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC',
+    'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-hover: 200ms;
+  --dur-rise: 480ms;
+  --dur-page: 300ms;
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --ink: #f2f4f8;
+  --ink2: #c3c8d1;
+  --ink3: #9097a3;
+  --accent: #3d8bff;
+  --accent-h: #5a9cff;
+  --accent-soft: rgba(61, 139, 255, 0.18);
+  --accent-ink: #8dbbff;
+  --glass: rgba(28, 32, 42, 0.56);
+  --glass-2: rgba(28, 32, 42, 0.34);
+  --glass-strong: rgba(36, 40, 52, 0.86);
+  --glass-dialog: rgba(32, 36, 48, 0.9);
+  --edge: rgba(255, 255, 255, 0.12);
+  --hi: rgba(255, 255, 255, 0.08);
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.2);
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.35);
+  --bg: #0d1017;
+  --scrim: rgba(0, 0, 0, 0.4);
+  --b1: #1d4ed8;
+  --b2: #6d28d9;
+  --b3: #0e7490;
+  --b4: #9d174d;
+  --skill: #5fd3e2;
+  --skill-ink: #86e3ee;
+  --skill-soft: rgba(95, 211, 226, 0.16);
+  --mcp: #3d8bff;
+  --mcp-ink: #8dbbff;
+  --mcp-soft: rgba(61, 139, 255, 0.18);
+  --plugin: #b795ff;
+  --plugin-ink: #c9aeff;
+  --plugin-soft: rgba(183, 149, 255, 0.16);
+  --err-ink: #ff8a80;
+  --err-soft: rgba(255, 99, 88, 0.16);
+  --warn-ink: #ffc266;
+  --warn-soft: rgba(255, 184, 77, 0.16);
+  --ok-ink: #5ce0a0;
+  --ok-soft: rgba(92, 224, 160, 0.14);
+
+  color-scheme: dark;
+}
+
+/* Expose tokens to Tailwind utilities (bg-glass, text-ink3, border-line2, font-mono, rounded-panel …). */
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-ink3: var(--ink3);
+  --color-accent: var(--accent);
+  --color-accent-h: var(--accent-h);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-glass: var(--glass);
+  --color-glass-2: var(--glass-2);
+  --color-glass-strong: var(--glass-strong);
+  --color-edge: var(--edge);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-bg: var(--bg);
+  --color-skill: var(--skill);
+  --color-skill-ink: var(--skill-ink);
+  --color-skill-soft: var(--skill-soft);
+  --color-mcp: var(--mcp);
+  --color-mcp-ink: var(--mcp-ink);
+  --color-mcp-soft: var(--mcp-soft);
+  --color-plugin: var(--plugin);
+  --color-plugin-ink: var(--plugin-ink);
+  --color-plugin-soft: var(--plugin-soft);
+  --color-err: var(--err);
+  --color-err-ink: var(--err-ink);
+  --color-err-soft: var(--err-soft);
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-soft: var(--warn-soft);
+  --color-ok: var(--ok);
+  --color-ok-ink: var(--ok-ink);
+  --color-ok-soft: var(--ok-soft);
+  --font-sans: var(--sans);
+  --font-mono: var(--mono);
+  --radius-cell: 8px;
+  --radius-card: 12px;
+  --radius-tile: 16px;
+  --radius-panel: 20px;
+  --radius-dialog: 24px;
+  --shadow-glass: var(--shadow);
+}

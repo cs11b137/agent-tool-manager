@@ -1,0 +1,41 @@
+/** Re-exports of the shared core contract (type-only; erased at build time). */
+export type {
+  ActivityEntry,
+  AddSpec,
+  AgentId,
+  AtmErrorCode,
+  AtmErrorJson,
+  AtmEvent,
+  BatchOp,
+  BatchResult,
+  ContextBreakdown,
+  DoctorCode,
+  DoctorCounts,
+  DoctorIssue,
+  DoctorLevel,
+  DoctorReport,
+  EnvVarStatus,
+  FileChange,
+  GlobalConfig,
+  GlobalReport,
+  LibraryItem,
+  McpDef,
+  McpHttpDef,
+  McpStdioDef,
+  MigrateSpec,
+  PluginContents,
+  ProjectDetail,
+  ProjectSummary,
+  RepoStatus,
+  ToolEntry,
+  ToolKind,
+  ToolMcpInfo,
+  ToolPluginInfo,
+  ToolSkillInfo,
+  WriteResult,
+} from '@atm/core/types';
+
+import type { AgentId } from '@atm/core/types';
+
+/** Runtime copy of core's ALL_AGENTS (the core module is type-only from the UI's point of view). */
+export const ALL_AGENTS: readonly AgentId[] = ['claude-code', 'cursor', 'codex'];
