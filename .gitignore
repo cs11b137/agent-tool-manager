@@ -6,3 +6,7 @@ coverage/
 .vite/
 test-results/
 playwright-report/
+
+# atm (agent tool manager): symlinks are machine-specific
+.agents/skills/
+.claude/skills

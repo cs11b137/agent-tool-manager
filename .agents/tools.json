@@ -1,0 +1,18 @@
+{
+  "$schema": "https://atm.dev/schema/tools.v1.json",
+  "agents": [
+    "claude-code"
+  ],
+  "skills": [
+    {
+      "repo": "kaankiziltug/logo-design-skill",
+      "name": "logo-design"
+    },
+    {
+      "repo": "durmazoguzhan/svg-logo-maker",
+      "name": "svg-logo-maker"
+    }
+  ],
+  "mcp": [],
+  "plugins": []
+}
