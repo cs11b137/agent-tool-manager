@@ -5,6 +5,7 @@ import { useDoctor, useProjects } from '../api/queries';
 import { useApi } from '../api/context';
 import { useTheme } from '../lib/theme';
 import { useConnection } from './LiveProvider';
+import { AtmMark } from './AtmMark';
 import { LevelGlyph, worstLevel } from './ui';
 
 type Blob = [w: number, h: number, top: number, left: number, color: 'b1' | 'b2' | 'b3' | 'b4'];
@@ -43,12 +44,7 @@ export function MeshBackground({ page }: { page: string }) {
 function Logo() {
   return (
     <div className="flex items-center gap-2.5 px-2">
-      <span
-        className="mono flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[12px] font-semibold text-white"
-        style={{ background: 'linear-gradient(135deg, #0066FF, #8E6CFF)' }}
-      >
-        atm
-      </span>
+      <AtmMark size={32} className="shrink-0" />
       <strong className="text-[15px] leading-tight">Agent Tool Manager</strong>
     </div>
   );
