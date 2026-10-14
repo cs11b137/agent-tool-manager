@@ -1,11 +1,13 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { useState } from 'react';
+import { Monitor, Moon, Settings, Sun } from 'lucide-react';
 import { useDoctor, useProjects } from '../api/queries';
 import { useApi } from '../api/context';
 import { useTheme } from '../lib/theme';
 import { useConnection } from './LiveProvider';
 import { AtmMark } from './AtmMark';
+import { SettingsDialog } from './dialogs';
 import { LevelGlyph, worstLevel } from './ui';
 
 type Blob = [w: number, h: number, top: number, left: number, color: 'b1' | 'b2' | 'b3' | 'b4'];
@@ -47,6 +49,18 @@ function Logo() {
       <AtmMark size={32} className="shrink-0" />
       <strong className="text-[15px] leading-tight">Agent Tool Manager</strong>
     </div>
+  );
+}
+
+function SettingsButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="btn btn-t !h-7 !w-7 !rounded-[8px] !p-0" aria-label="设置" title="设置" onClick={() => setOpen(true)}>
+        <Settings size={14} aria-hidden />
+      </button>
+      {open && <SettingsDialog onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
@@ -138,7 +152,10 @@ function ConnectionFooter() {
         <span className="mono truncate" title={api.kind === 'mock' ? 'VITE_ATM_MOCK=1：使用内存中的演示数据' : undefined}>
           {host}
         </span>
-        <ThemeToggle />
+        <span className="flex items-center gap-1">
+          <SettingsButton />
+          <ThemeToggle />
+        </span>
       </span>
     </div>
   );
@@ -165,15 +182,11 @@ export function Shell({ children }: { children: ReactNode }) {
         </nav>
         {/* <768: top nav */}
         <nav aria-label="主导航" className="glass sticky top-2 z-30 flex items-center gap-2 rounded-[16px] px-2 py-2 md:hidden">
-          <span
-            className="mono flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[12px] font-semibold text-white"
-            style={{ background: 'linear-gradient(135deg, #0066FF, #8E6CFF)' }}
-          >
-            atm
-          </span>
+          <AtmMark size={32} className="shrink-0" />
           <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto">
             <NavItems compact />
           </div>
+          <SettingsButton />
           <ThemeToggle />
         </nav>
         <main className="min-w-0 flex-1 px-0 py-2 md:px-2 md:py-4">

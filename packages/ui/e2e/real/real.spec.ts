@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { atm, readState } from './env';
+import { atm, git, readState } from './env';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SHOTS = path.join(here, '..', 'screenshots');
@@ -213,4 +213,60 @@ test('8. matrix: toggle baoyu-cover on for proj-gui → diff → write', async (
   const manifest = readJson(path.join(S.projGui, '.agents', 'tools.json'));
   expect(manifest.skills).toContainEqual({ repo: S.repo, name: 'baoyu-cover' });
   expect(fs.readlinkSync(path.join(S.projGui, '.agents', 'skills', 'baoyu-cover'))).toBe(path.join(S.root, 'baoyu-skills', 'skills', 'baoyu-cover'));
+});
+
+test('9. pin a skill from the project page (atm pin <skill> <rev>)', async () => {
+  const sha = git(S.home, S.repo, 'rev-parse', 'HEAD');
+  await openProject('proj-gui');
+  await page.getByRole('button', { name: '固定 baoyu-comic 的版本' }).click();
+  await page.getByLabel(/^版本/).fill(sha);
+  await page.getByRole('button', { name: '下一步：预览 diff' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('tab').first()).toBeVisible();
+  await dialog.getByRole('button', { name: /写入 \d+ 个文件/ }).click();
+  await expect(dialog.getByText(/已写入 \d+ 个文件/)).toBeVisible();
+  await dialog.getByRole('button', { name: '完成' }).click();
+  const manifest = readJson(path.join(S.projGui, '.agents', 'tools.json'));
+  expect(manifest.skills).toContainEqual({ repo: S.repo, name: 'baoyu-comic', rev: sha });
+  expect(fs.readlinkSync(path.join(S.projGui, '.agents', 'skills', 'baoyu-comic'))).toContain('.worktrees');
+});
+
+test('10. hand-written MCP clash: CONFLICT until「接管」(--adopt) is ticked', async () => {
+  // proj-cli has figma managed but not linear: hand-write a `linear` entry into its .mcp.json first
+  const mcpPath = path.join(S.projCli, '.mcp.json');
+  const mcp = readJson(mcpPath);
+  mcp.mcpServers.linear = { type: 'http', url: 'https://example.invalid/mcp' };
+  fs.writeFileSync(mcpPath, JSON.stringify(mcp, null, 2) + '\n');
+
+  await openProject('proj-cli');
+  await page.getByRole('button', { name: '+ 添加' }).nth(1).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('radio', { name: /linear/ }).check();
+  await dialog.getByRole('button', { name: '下一步：预览 diff' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('hand-written entry "linear"');
+  await expect(dialog.getByRole('alert')).toContainText('接管同名的手写条目');
+  await expect(dialog.getByRole('button', { name: /写入/ })).toBeDisabled();
+  await dialog.getByRole('checkbox', { name: /接管同名的手写条目/ }).check();
+  await expect(dialog.getByRole('tab', { name: tabName('.mcp.json') })).toBeVisible();
+  await dialog.getByRole('button', { name: /写入 \d+ 个文件/ }).click();
+  await expect(dialog.getByText(/已写入 \d+ 个文件/)).toBeVisible();
+  await dialog.getByRole('button', { name: '完成' }).click();
+  expect(readJson(path.join(S.projCli, '.agents', 'tools.json')).mcp).toContain('linear');
+  expect(readJson(mcpPath).mcpServers.linear.url).not.toBe('https://example.invalid/mcp');
+});
+
+test('11. settings dialog edits the global config; Library syncs a single repo', async () => {
+  await page.getByRole('button', { name: '设置' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByLabel('共享仓库目录')).toHaveValue(/GitHub/);
+  await dialog.getByRole('checkbox', { name: /Cursor/ }).check();
+  await dialog.getByRole('button', { name: '保存' }).click();
+  await expect(dialog).toHaveCount(0);
+  const cfg = readJson(path.join(S.home, '.config', 'atm', 'config.json'));
+  expect(cfg.defaultAgents).toContain('cursor');
+
+  await nav('工具库');
+  await expect(page.getByRole('region', { name: '共享仓库' })).toBeVisible();
+  await page.getByRole('button', { name: /^sync / }).first().click();
+  await expect(page.getByText(/sync 失败/)).toHaveCount(0);
 });

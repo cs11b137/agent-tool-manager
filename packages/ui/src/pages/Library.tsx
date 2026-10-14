@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
-import { useLibrary, useProjects } from '../api/queries';
+import { useApi } from '../api/context';
+import { useLibrary, useProjects, useRepos } from '../api/queries';
 import type { LibraryItem, ProjectSummary, ToolKind } from '../api/types';
 import { Empty, ErrorBox, KindChip, Loading, PageHeader } from '../components/ui';
 import { AddToolFlow } from '../components/flows';
 import { CloneRepoDialog, NewMcpDialog } from '../components/dialogs';
-import { displayName, fmtTokShort } from '../lib/format';
+import { useToast } from '../components/Toaster';
+import { displayName, fmtTokShort, shortHash, tildify } from '../lib/format';
 
 type Filter = 'all' | ToolKind;
 const FILTERS: Array<[Filter, string]> = [
@@ -16,6 +18,55 @@ const FILTERS: Array<[Filter, string]> = [
 
 const key = (i: LibraryItem) => `${i.kind}:${i.name}`;
 const GRID = '84px minmax(0, 2.2fr) minmax(0, 1.4fr) 96px 64px';
+
+/** 共享仓库：`atm sync [repo...]` 的逐仓库入口。 */
+function RepoList() {
+  const api = useApi();
+  const toast = useToast();
+  const repos = useRepos();
+  const [busy, setBusy] = useState<string | null>(null);
+  const sync = (repo: string) => {
+    setBusy(repo);
+    api
+      .sync([repo])
+      .catch((e: unknown) => toast.push({ tone: 'err', title: `sync ${repo} 失败`, detail: (e as Error).message }))
+      .finally(() => setBusy(null));
+  };
+  if (!repos.data?.length) return null;
+  return (
+    <section aria-label="共享仓库" className="glass rise d3 overflow-hidden rounded-[20px]">
+      <div className="flex items-center gap-2.5 border-b border-line px-[18px] py-4">
+        <h2 className="m-0 text-[16px] font-semibold">共享仓库</h2>
+        <span className="mono text-[13px] text-ink3">{repos.data.length}</span>
+      </div>
+      {repos.data.map((r) => (
+        <div key={r.repo} className="hover-row flex flex-wrap items-center gap-3 border-b border-line px-[18px] py-3 last:border-0">
+          <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-0.5">
+            <span className="mono truncate text-[14px] font-medium">{r.repo}</span>
+            <span className="mono truncate text-[12px] text-ink3">{tildify(r.dir)}</span>
+          </div>
+          <span className="mono text-[12px] text-ink2">
+            {r.branch ?? 'HEAD'} · {shortHash(r.head)}
+          </span>
+          {r.dirty && (
+            <span className="chip" style={{ background: 'var(--warn-soft)', color: 'var(--warn-ink)' }}>
+              有未提交改动
+            </span>
+          )}
+          {r.ahead > 0 && (
+            <span className="chip" style={{ background: 'var(--warn-soft)', color: 'var(--warn-ink)' }}>
+              领先远端 {r.ahead}
+            </span>
+          )}
+          <span className="text-[12px] text-ink3">{r.usedBy.length} 个项目在用</span>
+          <button type="button" className="btn btn-g btn-sm" disabled={busy === r.repo} aria-label={`sync ${r.repo}`} onClick={() => sync(r.repo)}>
+            sync
+          </button>
+        </div>
+      ))}
+    </section>
+  );
+}
 
 export function sourceLabel(i: LibraryItem): string {
   if (i.kind === 'mcp' && i.mcp) return `${i.mcp.origin} · ${i.mcp.transport}`;
@@ -180,6 +231,8 @@ export function LibraryPage() {
         </section>
         {selected && projects.data && <AddPanel key={key(selected)} item={selected} projects={projects.data} />}
       </div>
+
+      <RepoList />
 
       {dialog === 'clone' && <CloneRepoDialog onClose={() => setDialog(null)} />}
       {dialog === 'mcp' && <NewMcpDialog onClose={() => setDialog(null)} />}

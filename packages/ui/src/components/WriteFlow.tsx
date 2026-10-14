@@ -9,6 +9,24 @@ import { fileStat } from '../lib/changes';
 
 export type FlowStep = 'select' | 'preview' | 'write';
 
+/** CLI flags the user can toggle on the preview step; passed to `preview` and `commit`. */
+export interface WriteOpts {
+  /** `--adopt`: take over hand-written entries with the same name */
+  adopt: boolean;
+  /** `--force`: overwrite conflicting directories / links */
+  force: boolean;
+  /** `install --strict`: fail instead of warn when lock and repo HEAD disagree */
+  strict: boolean;
+}
+
+export const NO_OPTS: WriteOpts = { adopt: false, force: false, strict: false };
+
+const OPTION_INFO: Record<keyof WriteOpts, { flag: string; label: string; hint: string }> = {
+  adopt: { flag: '--adopt', label: '接管同名的手写条目', hint: 'Agent 配置里已有同名条目时，改由 atm 管理（不勾选会报 CONFLICT）' },
+  force: { flag: '--force', label: '覆盖冲突', hint: '占用目标位置的软链或克隆目录会被替换' },
+  strict: { flag: '--strict', label: '严格模式', hint: 'lock 的 commit 与共享仓库 HEAD 不一致时报错，而不是警告' },
+};
+
 export interface WriteFlowProps {
   open: boolean;
   onClose: () => void;
@@ -19,11 +37,13 @@ export interface WriteFlowProps {
   select?: { content: ReactNode; canContinue: boolean };
   /** Left column shown next to the diff (definition, agents, env vars, context impact). */
   aside?: ReactNode;
-  /** dryRun call(s). Re-run whenever `previewKey` changes. */
-  preview: () => Promise<WritePreview>;
+  /** Which CLI flags to offer (`--adopt` / `--force` / `--strict`). Omit for flows with no such conflicts. */
+  writeOptions?: Array<keyof WriteOpts>;
+  /** dryRun call(s). Re-run whenever `previewKey` or a write option changes. */
+  preview: (o: WriteOpts) => Promise<WritePreview>;
   previewKey?: string;
   /** The real write (same call without dryRun). */
-  commit: () => Promise<unknown>;
+  commit: (o: WriteOpts) => Promise<unknown>;
   onCommitted?: () => void;
   footnote?: ReactNode;
 }
@@ -39,7 +59,7 @@ type WriteState = { status: 'writing' } | { status: 'done' } | { status: 'error'
 
 /** 添加工具 · diff 确认 — the shared 3-step modal (prototype 03). */
 export function WriteFlow(props: WriteFlowProps) {
-  const { open, onClose, eyebrow, title, select, aside, preview, previewKey = '', commit, onCommitted, footnote } = props;
+  const { open, onClose, eyebrow, title, select, aside, preview, previewKey = '', commit, onCommitted, footnote, writeOptions } = props;
   const qc = useQueryClient();
   const titleId = useId();
   const [step, setStep] = useState<FlowStep>(select ? 'select' : 'preview');
@@ -47,9 +67,14 @@ export function WriteFlow(props: WriteFlowProps) {
   const [ws, setWs] = useState<WriteState>({ status: 'writing' });
   const previewRef = useRef(preview);
   previewRef.current = preview;
+  const [wopts, setWopts] = useState<WriteOpts>(NO_OPTS);
+  const optKey = writeOptions?.map((k) => (wopts[k] ? k : '')).join('|') ?? '';
 
   useEffect(() => {
-    if (open) setStep(select ? 'select' : 'preview');
+    if (open) {
+      setStep(select ? 'select' : 'preview');
+      setWopts(NO_OPTS);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -57,14 +82,15 @@ export function WriteFlow(props: WriteFlowProps) {
     if (!open || step !== 'preview') return;
     let alive = true;
     setPv({ status: 'loading' });
-    previewRef.current().then(
+    previewRef.current(wopts).then(
       (data) => alive && setPv({ status: 'ready', data }),
       (error: unknown) => alive && setPv({ status: 'error', error }),
     );
     return () => {
       alive = false;
     };
-  }, [open, step, previewKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, step, previewKey, optKey]);
 
   const data = pv.status === 'ready' ? pv.data : null;
   const n = data?.files.length ?? 0;
@@ -73,7 +99,7 @@ export function WriteFlow(props: WriteFlowProps) {
     setStep('write');
     setWs({ status: 'writing' });
     try {
-      await commit();
+      await commit(wopts);
       setWs({ status: 'done' });
       await qc.invalidateQueries();
       onCommitted?.();
@@ -139,6 +165,20 @@ export function WriteFlow(props: WriteFlowProps) {
                 dryRun=1 · 尚未写入
               </span>
             </div>
+            {writeOptions && writeOptions.length > 0 && (
+              <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
+                <legend className="cap pb-1.5">写入选项</legend>
+                {writeOptions.map((k) => (
+                  <label key={k} className="flex items-start gap-2.5 text-[13px] leading-[1.5]">
+                    <input type="checkbox" className="mt-[3px]" checked={wopts[k]} onChange={(e) => setWopts({ ...wopts, [k]: e.target.checked })} />
+                    <span>
+                      {OPTION_INFO[k].label} <code className="mono text-[12px] text-ink3">{OPTION_INFO[k].flag}</code>
+                      <span className="block text-[12px] text-ink3">{OPTION_INFO[k].hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+            )}
             {pv.status === 'loading' && <Loading label="正在计算 diff（dryRun）…" className="!px-0" />}
             {pv.status === 'error' && <ErrorBox error={pv.error} />}
             {data && (

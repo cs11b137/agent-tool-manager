@@ -105,7 +105,8 @@ export function MatrixPage() {
     setFlow({
       eyebrow: `矩阵 · ${pendingProjects.size} 个项目`,
       title: <span>{ops.length} 处改动</span>,
-      run: (dryRun) => api.batch(ops, { dryRun }),
+      run: (dryRun, o) => api.batch(ops, { dryRun, adopt: o.adopt, force: o.force }),
+      writeOptions: ['adopt', 'force'],
       onCommitted: () => setDiff(new Set()),
       footnote: '逐项执行，单项失败不影响其他项目。合并写入只改动 lock.managed 中列出的条目，文件里手写的条目保持原样。',
     });

@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type ConnectionStatus, type DryRunOpt, type McpDefScope, type TaskInfo, type TaskRef } from './client';
+import { ApiError, type ApiClient, type ConnectionStatus, type DryRunOpt, type McpDefScope, type TaskInfo, type TaskRef, type WriteOpt } from './client';
 import type {
   ActivityEntry,
   AddSpec,
@@ -102,20 +102,22 @@ export class HttpApiClient implements ApiClient {
   getProject(id: string) {
     return this.req<ProjectDetail>('GET', `/projects/${enc(id)}`);
   }
-  initProject(id: string, opts: DryRunOpt & { force?: boolean } = {}) {
-    return this.req<WriteResult>('POST', `/projects/${enc(id)}/init`, opts);
+  initProject(id: string, opts: WriteOpt = {}) {
+    return this.req<WriteResult>('POST', `/projects/${enc(id)}/init`, undefined, { dryRun: opts.dryRun, adopt: opts.adopt, force: opts.force });
   }
-  addTool(id: string, spec: AddSpec, opts: DryRunOpt & { adopt?: boolean } = {}) {
-    return this.req<WriteResult>('POST', `/projects/${enc(id)}/tools`, spec, { dryRun: opts.dryRun, adopt: opts.adopt });
+  addTool(id: string, spec: AddSpec, opts: WriteOpt = {}) {
+    return this.req<WriteResult>('POST', `/projects/${enc(id)}/tools`, spec, { dryRun: opts.dryRun, adopt: opts.adopt, force: opts.force });
   }
   removeTool(id: string, kind: ToolKind, name: string, opts: DryRunOpt = {}) {
     return this.req<WriteResult>('DELETE', `/projects/${enc(id)}/tools/${kind}/${enc(name)}`, undefined, {
       dryRun: opts.dryRun,
     });
   }
-  install(id: string, opts: DryRunOpt & { strict?: boolean } = {}) {
+  install(id: string, opts: WriteOpt & { strict?: boolean } = {}) {
     return this.req<WriteResult>('POST', `/projects/${enc(id)}/install`, undefined, {
       dryRun: opts.dryRun,
+      adopt: opts.adopt,
+      force: opts.force,
       strict: opts.strict,
     });
   }
@@ -125,8 +127,8 @@ export class HttpApiClient implements ApiClient {
   measure(id: string, mcpName: string) {
     return this.req<TaskRef>('POST', `/projects/${enc(id)}/measure/${enc(mcpName)}`);
   }
-  pin(id: string, skill: string, rev: string) {
-    return this.req<WriteResult>('POST', `/projects/${enc(id)}/pin`, { skill, rev });
+  pin(id: string, skill: string, rev: string, opts: DryRunOpt = {}) {
+    return this.req<WriteResult>('POST', `/projects/${enc(id)}/pin`, { skill, rev }, { dryRun: opts.dryRun });
   }
 
   getDoctor(id?: string, opts?: { measure?: false }): Promise<DoctorReport>;
@@ -155,8 +157,8 @@ export class HttpApiClient implements ApiClient {
     return this.req<{ path: string }>('POST', '/mcp-defs', { def, scope });
   }
 
-  batch(ops: BatchOp[], opts: DryRunOpt = {}) {
-    return this.req<BatchResult>('POST', '/batch', { ops }, { dryRun: opts.dryRun });
+  batch(ops: BatchOp[], opts: WriteOpt = {}) {
+    return this.req<BatchResult>('POST', '/batch', { ops }, { dryRun: opts.dryRun, adopt: opts.adopt, force: opts.force });
   }
   getGlobal() {
     return this.req<GlobalReport>('GET', '/global');

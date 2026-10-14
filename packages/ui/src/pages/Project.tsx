@@ -10,7 +10,7 @@ import { ContextBar, ContextLegend, Empty, ErrorBox, KindChip, LevelGlyph, Loadi
 import { AddToolFlow, OpFlow, agentsRun, type OpFlowConfig } from '../components/flows';
 import { Dialog } from '../components/Dialog';
 import { DiffTabs } from '../components/DiffView';
-import { RelocateDialog, UnregisterDialog } from '../components/dialogs';
+import { PinDialog, RelocateDialog, UnregisterDialog } from '../components/dialogs';
 import { useToast } from '../components/Toaster';
 import { useAcknowledged } from '../lib/ack';
 import { AGENT_LABEL, AGENT_MCP_FILE, agentsLabel, displayName, fmtTok, shortHash, tildify } from '../lib/format';
@@ -47,7 +47,7 @@ function bannerText(i: DoctorIssue): string {
   return `${i.kind ? `${i.kind === 'mcp' ? 'MCP' : i.kind === 'skill' ? 'Skill' : '插件'} ` : ''}${i.name ? `\`${displayName(i.kind ?? 'skill', i.name)}\` ` : ''}${i.title}`;
 }
 
-function ToolRow({ t, on, onToggle }: { t: ToolEntry; on: boolean; onToggle: () => void }) {
+function ToolRow({ t, on, onToggle, onPin }: { t: ToolEntry; on: boolean; onToggle: () => void; onPin?: () => void }) {
   const chip = revChip(t);
   const name = displayName(t.kind, t.name);
   return (
@@ -74,6 +74,11 @@ function ToolRow({ t, on, onToggle }: { t: ToolEntry; on: boolean; onToggle: () 
             </span>
           )}
           <span className="text-[12px] text-ink2">{agentsLabel(t.agents)}</span>
+          {onPin && (
+            <button type="button" className="ml-auto border-0 bg-transparent p-0 text-[12px] font-medium text-accent-ink hover:underline" aria-label={`固定 ${name} 的版本`} onClick={onPin}>
+              固定版本…
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -87,6 +92,7 @@ function Column({
   off,
   onToggle,
   onAdd,
+  onPin,
   footer,
   flex,
   delay,
@@ -97,6 +103,7 @@ function Column({
   off: Set<string>;
   onToggle: (t: ToolEntry) => void;
   onAdd: () => void;
+  onPin?: (t: ToolEntry) => void;
   footer: ReactNode;
   flex: string;
   delay: number;
@@ -113,7 +120,7 @@ function Column({
       </div>
       {tools.length === 0 && <Empty className="border-b border-line">还没有{title}。</Empty>}
       {tools.map((t) => (
-        <ToolRow key={t.name} t={t} on={!off.has(`${t.kind}:${t.name}`)} onToggle={() => onToggle(t)} />
+        <ToolRow key={t.name} t={t} on={!off.has(`${t.kind}:${t.name}`)} onToggle={() => onToggle(t)} {...(onPin && t.kind === 'skill' ? { onPin: () => onPin(t) } : {})} />
       ))}
       <p className="m-0 px-[18px] py-3 text-[12px] leading-[1.5] text-ink3">{footer}</p>
     </section>
@@ -172,6 +179,7 @@ export function ProjectPage() {
   const [showGenerated, setShowGenerated] = useState(false);
   const [relocate, setRelocate] = useState(false);
   const [unregister, setUnregister] = useState(false);
+  const [pinning, setPinning] = useState<ToolEntry | null>(null);
 
   if (isLoading) return <Loading />;
   if (error || !p) return <ErrorBox error={error ?? new Error('项目不存在')} />;
@@ -234,7 +242,7 @@ export function ProjectPage() {
     setFlow({
       eyebrow: `${p.name} · 批量改动`,
       title: <span>{ops.length} 项改动</span>,
-      run: (dryRun) => api.batch(ops, { dryRun }),
+      run: (dryRun, o) => api.batch(ops, { dryRun, adopt: o.adopt, force: o.force }),
       onCommitted: () => setOff(new Set()),
     });
   };
@@ -256,7 +264,8 @@ export function ProjectPage() {
     setFlow({
       eyebrow: `${p.name} · 按清单还原`,
       title: <span className="mono ca">atm install</span>,
-      run: (dryRun) => api.install(p.id, { dryRun }),
+      run: (dryRun, o) => api.install(p.id, { dryRun, adopt: o.adopt, force: o.force, strict: o.strict }),
+      writeOptions: ['strict', 'adopt', 'force'],
       footnote: 'install 是幂等的：只补齐缺失的软链与 Agent 配置，已经一致的文件不会被改写。',
     });
 
@@ -299,7 +308,7 @@ export function ProjectPage() {
             type="button"
             className="btn btn-p"
             onClick={() =>
-              setFlow({ eyebrow: `${p.name} · 初始化`, title: <span className="mono ca">atm init</span>, run: (dryRun) => api.initProject(p.id, { dryRun }) })
+              setFlow({ eyebrow: `${p.name} · 初始化`, title: <span className="mono ca">atm init</span>, run: (dryRun, o) => api.initProject(p.id, { dryRun, force: o.force }), writeOptions: ['force'] })
             }
           >
             atm init
@@ -363,6 +372,7 @@ export function ProjectPage() {
               off={off}
               onToggle={toggle}
               onAdd={() => setAdding('skill')}
+              onPin={setPinning}
               flex="4 1 280px"
               delay={3}
               footer={
@@ -402,6 +412,30 @@ export function ProjectPage() {
       )}
 
       <OpFlow config={flow} onClose={() => setFlow(null)} />
+      {pinning && (
+        <PinDialog
+          project={p}
+          skill={pinning.name}
+          {...(pinning.skill?.rev ? { current: pinning.skill.rev } : {})}
+          onClose={() => setPinning(null)}
+          onSubmit={(rev) => {
+            const skill = pinning.name;
+            setPinning(null);
+            setFlow({
+              eyebrow: `${p.name} · 固定版本`,
+              title: (
+                <>
+                  <KindChip kind="skill" />
+                  <span className="mono ca">{skill}</span>
+                  <span className="mono text-[16px] text-ink3">@ {rev}</span>
+                </>
+              ),
+              run: (dryRun) => api.pin(p.id, skill, rev, { dryRun }),
+              footnote: 'pin 会在共享仓库下建一个 git worktree（.worktrees/<repo>@<rev>），并把项目里的软链指向它；清单和 lock 同步记录。',
+            });
+          }}
+        />
+      )}
       {adding && <AddToolFlow onClose={() => setAdding(null)} projectIds={[p.id]} kind={adding} />}
       {showGenerated && <GeneratedDialog project={p} onClose={() => setShowGenerated(false)} />}
     </>

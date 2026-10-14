@@ -167,11 +167,12 @@ export function OverviewPage() {
   const installFlow = (targets: ProjectSummary[]): OpFlowConfig => ({
     eyebrow: targets.length === 1 ? `${targets[0]!.name} · 按清单还原` : `${targets.length} 个项目 · 按清单还原`,
     title: <span className="mono ca">atm install</span>,
-    run: async (dryRun) => {
+    run: async (dryRun, o) => {
       const out: WriteResult[] = [];
-      for (const p of targets) out.push(await api.install(p.id, { dryRun }));
+      for (const p of targets) out.push(await api.install(p.id, { dryRun, adopt: o.adopt, force: o.force, strict: o.strict }));
       return out;
     },
+    writeOptions: ['strict', 'adopt', 'force'],
     footnote: 'install 是幂等的：只补齐缺失的软链与 Agent 配置，已经一致的文件不会被改写。',
   });
 

@@ -41,6 +41,12 @@ export interface DryRunOpt {
   dryRun?: boolean;
 }
 
+/** `--adopt` / `--force` of the CLI: take over hand-written entries / overwrite conflicting files. */
+export interface WriteOpt extends DryRunOpt {
+  adopt?: boolean;
+  force?: boolean;
+}
+
 export type McpDefScope = 'registry' | { projectId: string };
 
 /**
@@ -60,13 +66,13 @@ export interface ApiClient {
   unregisterProject(id: string): Promise<{ ok: true }>;
   patchProject(id: string, patch: { path?: string; agents?: AgentId[] }, opts?: DryRunOpt): Promise<ProjectDetail | WriteResult>;
   getProject(id: string): Promise<ProjectDetail>;
-  initProject(id: string, opts?: DryRunOpt & { force?: boolean }): Promise<WriteResult>;
-  addTool(id: string, spec: AddSpec, opts?: DryRunOpt & { adopt?: boolean }): Promise<WriteResult>;
+  initProject(id: string, opts?: WriteOpt): Promise<WriteResult>;
+  addTool(id: string, spec: AddSpec, opts?: WriteOpt): Promise<WriteResult>;
   removeTool(id: string, kind: ToolKind, name: string, opts?: DryRunOpt): Promise<WriteResult>;
-  install(id: string, opts?: DryRunOpt & { strict?: boolean }): Promise<WriteResult>;
+  install(id: string, opts?: WriteOpt & { strict?: boolean }): Promise<WriteResult>;
   getGenerated(id: string): Promise<FileChange[]>;
   measure(id: string, mcpName: string): Promise<TaskRef>;
-  pin(id: string, skill: string, rev: string): Promise<WriteResult>;
+  pin(id: string, skill: string, rev: string, opts?: DryRunOpt): Promise<WriteResult>;
 
   // doctor
   getDoctor(id?: string, opts?: { measure?: false }): Promise<DoctorReport>;
@@ -81,9 +87,9 @@ export interface ApiClient {
   saveMcpDef(def: McpDef, scope: McpDefScope): Promise<{ path: string }>;
 
   // matrix / global
-  batch(ops: BatchOp[], opts?: DryRunOpt): Promise<BatchResult>;
+  batch(ops: BatchOp[], opts?: WriteOpt): Promise<BatchResult>;
   getGlobal(): Promise<GlobalReport>;
-  migrate(spec: MigrateSpec, opts?: DryRunOpt): Promise<WriteResult>;
+  migrate(spec: MigrateSpec, opts?: WriteOpt): Promise<WriteResult>;
 
   // activity & tasks
   getActivity(): Promise<ActivityEntry[]>;

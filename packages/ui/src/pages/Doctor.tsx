@@ -173,7 +173,7 @@ export function DoctorPage() {
     if (i.code === 'rev-mismatch' && i.projectId) {
       const pid = i.projectId;
       return (
-        <button type="button" className="btn btn-g" onClick={() => setFlow({ eyebrow: `${i.projectName ?? ''} · install`, title: <span className="mono ca">atm install</span>, run: (dryRun) => api.install(pid, { dryRun }) })}>
+        <button type="button" className="btn btn-g" onClick={() => setFlow({ eyebrow: `${i.projectName ?? ''} · install`, title: <span className="mono ca">atm install</span>, run: (dryRun, o) => api.install(pid, { dryRun, adopt: o.adopt, force: o.force, strict: o.strict }), writeOptions: ['strict', 'adopt', 'force'] })}>
           install
         </button>
       );

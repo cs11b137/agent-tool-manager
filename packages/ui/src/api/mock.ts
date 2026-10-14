@@ -1,4 +1,4 @@
-import { ApiError, type ApiClient, type ConnectionStatus, type DryRunOpt, type McpDefScope, type TaskInfo, type TaskRef } from './client';
+import { ApiError, type ApiClient, type ConnectionStatus, type DryRunOpt, type McpDefScope, type TaskInfo, type TaskRef, type WriteOpt } from './client';
 import { HOME, REGISTRY, ROOT, seed, type McpCat, type McpEntry, type MockProject, type MockState } from './mock-data';
 import type {
   ActivityEntry,
@@ -24,7 +24,7 @@ import type {
   WriteResult,
 } from './types';
 import { unifiedDiff } from '../lib/diff';
-import { AGENT_LABEL, tildify } from '../lib/format';
+import { AGENT_LABEL, AGENT_MCP_FILE, tildify } from '../lib/format';
 
 const clone = <T,>(v: T): T => structuredClone(v);
 const json = (v: unknown) => `${JSON.stringify(v, null, 2)}\n`;
@@ -339,7 +339,7 @@ export class MockApiClient implements ApiClient {
   }
 
   /** Apply spec to a cloned project; returns the command and the def for warnings. */
-  private applyAdd(p: MockProject, spec: AddSpec): { command: string; def?: McpDef } {
+  private applyAdd(p: MockProject, spec: AddSpec, adopt = false): { command: string; def?: McpDef } {
     if (spec.kind === 'skill') {
       const c = this.s.skills.find((x) => x.name === spec.name && (x.repo === spec.repo || !spec.repo));
       if (!c) {
@@ -361,10 +361,19 @@ export class MockApiClient implements ApiClient {
       if (p.mcp.some((e) => mcpName(e) === spec.name)) {
         throw new ApiError('ALREADY_EXISTS', `${p.name} 已经有 MCP ${spec.name}`, { status: 409, nextCommand: 'atm list' });
       }
+      // a same-named hand-written entry in an agent file: CONFLICT unless the caller opted into --adopt
+      const clash = p.agents.filter((a) => p.handwritten[a] && Object.hasOwn(p.handwritten[a]!, spec.name));
+      if (clash.length && !adopt) {
+        throw new ApiError('CONFLICT', `${clash.map((a) => AGENT_MCP_FILE[a]).join('、')} 中已有手写的 MCP \`${spec.name}\`，不在 atm 管理范围内`, {
+          status: 409,
+          nextCommand: `atm add mcp ${spec.name} --adopt`,
+        });
+      }
+      for (const a of clash) delete p.handwritten[a]![spec.name];
       const agents = spec.agents?.filter((a) => p.agents.includes(a));
       const narrowed = agents && agents.length && agents.length < p.agents.length;
       p.mcp.push(narrowed ? { name: spec.name, agents } : spec.name);
-      return { command: `atm add mcp ${spec.name}${spec.agents?.length ? ` --agents ${spec.agents.join(',')}` : ''}`, def: c.def };
+      return { command: `atm add mcp ${spec.name}${spec.agents?.length ? ` --agents ${spec.agents.join(',')}` : ''}${clash.length ? ' --adopt' : ''}`, def: c.def };
     }
     const c = this.s.plugins.find((x) => x.name === spec.name || x.name.startsWith(`${spec.name}@`));
     if (!c) throw new ApiError('NOT_FOUND', `找不到插件 ${spec.name}`, { status: 404, nextCommand: 'claude plugin install ' + spec.name });
@@ -748,7 +757,7 @@ export class MockApiClient implements ApiClient {
     }
   }
 
-  async initProject(id: string, opts: DryRunOpt & { force?: boolean } = {}) {
+  async initProject(id: string, opts: WriteOpt = {}) {
     const p = this.live(id);
     const next = clone(p);
     next.initialized = true;
@@ -757,13 +766,13 @@ export class MockApiClient implements ApiClient {
       this.commit(p.id, next);
       this.log({ level: 'info', projectId: p.id, projectName: p.name, message: '已执行 atm init' });
     }
-    return this.wait<WriteResult>({ applied: !opts.dryRun, files, warnings: [], command: 'atm init', contextAfter: this.context(next) });
+    return this.wait<WriteResult>({ applied: !opts.dryRun, files, warnings: [], command: `atm init${opts.force ? ' --force' : ''}`, contextAfter: this.context(next) });
   }
 
-  async addTool(id: string, spec: AddSpec, opts: DryRunOpt & { adopt?: boolean } = {}) {
+  async addTool(id: string, spec: AddSpec, opts: WriteOpt = {}) {
     const p = this.live(id);
     const next = clone(p);
-    const { command, def } = this.applyAdd(next, spec);
+    const { command, def } = this.applyAdd(next, spec, opts.adopt);
     const files = this.changes(p, next);
     const res: WriteResult = { applied: !opts.dryRun, files, warnings: this.warningsFor(files, def), command, contextAfter: this.context(next) };
     if (!opts.dryRun) {
@@ -787,7 +796,7 @@ export class MockApiClient implements ApiClient {
     return this.wait<WriteResult>({ applied: !opts.dryRun, files, warnings: [], command, contextAfter: this.context(next) });
   }
 
-  async install(id: string, opts: DryRunOpt & { strict?: boolean } = {}) {
+  async install(id: string, opts: WriteOpt & { strict?: boolean } = {}) {
     const p = this.live(id);
     const next = clone(p);
     next.broken = [];
@@ -801,7 +810,7 @@ export class MockApiClient implements ApiClient {
       this.commit(p.id, next);
       this.log({ level: 'info', projectId: p.id, projectName: p.name, message: files.length ? `install 完成，写入 ${files.length} 个文件` : 'install 完成，已是最新' });
     }
-    return this.wait<WriteResult>({ applied: !opts.dryRun, files, warnings: [...new Set(warnings)], command: `atm install${opts.strict ? ' --strict' : ''}`, contextAfter: this.context(next) });
+    return this.wait<WriteResult>({ applied: !opts.dryRun, files, warnings: [...new Set(warnings)], command: `atm install${opts.strict ? ' --strict' : ''}${opts.adopt ? ' --adopt' : ''}${opts.force ? ' --force' : ''}`, contextAfter: this.context(next) });
   }
 
   getGenerated(id: string) {
@@ -828,15 +837,18 @@ export class MockApiClient implements ApiClient {
     return this.wait(ref);
   }
 
-  async pin(id: string, skill: string, rev: string) {
+  async pin(id: string, skill: string, rev: string, opts: DryRunOpt = {}) {
     const p = this.live(id);
     const next = clone(p);
     const s = next.skills.find((x) => x.name === skill);
     if (!s) throw new ApiError('NOT_FOUND', `${p.name} 中没有 Skill ${skill}`, { status: 404, nextCommand: 'atm list' });
     s.rev = rev;
     const files = this.changes(p, next);
-    this.commit(p.id, next);
-    return this.wait<WriteResult>({ applied: true, files, warnings: [], command: `atm pin ${skill} ${rev}` });
+    if (!opts.dryRun) {
+      this.commit(p.id, next);
+      this.log({ level: 'info', kind: 'skill', projectId: p.id, projectName: p.name, message: `已将 \`${skill}\` 固定到 ${rev}` });
+    }
+    return this.wait<WriteResult>({ applied: !opts.dryRun, files, warnings: [], command: `atm pin ${skill} ${rev}` });
   }
 
   getDoctor(id?: string, opts?: { measure?: false }): Promise<DoctorReport>;
@@ -1023,7 +1035,7 @@ export class MockApiClient implements ApiClient {
     return this.wait({ path });
   }
 
-  async batch(ops: BatchOp[], opts: DryRunOpt = {}): Promise<BatchResult> {
+  async batch(ops: BatchOp[], opts: WriteOpt = {}): Promise<BatchResult> {
     const working = new Map<string, MockProject>();
     const results: BatchResult['results'] = [];
     for (const op of ops) {
@@ -1032,7 +1044,7 @@ export class MockApiClient implements ApiClient {
         const next = clone(base);
         let command: string;
         let def: McpDef | undefined;
-        if (op.action === 'add') ({ command, def } = this.applyAdd(next, op.spec as AddSpec));
+        if (op.action === 'add') ({ command, def } = this.applyAdd(next, op.spec as AddSpec, opts.adopt));
         else ({ command } = this.applyRemove(next, op.spec.kind, op.spec.name));
         const files = this.changes(base, next);
         working.set(op.projectId, next);
@@ -1087,7 +1099,7 @@ export class MockApiClient implements ApiClient {
     return json({ enabledPlugins: Object.fromEntries(this.s.plugins.filter((x) => x.globallyEnabled).map((x) => [x.name, true])) });
   }
 
-  async migrate(spec: MigrateSpec, opts: DryRunOpt = {}) {
+  async migrate(spec: MigrateSpec, opts: WriteOpt = {}) {
     if (!spec.projectIds.length) throw new ApiError('INVALID_MANIFEST', '至少选择一个项目', { status: 400, nextCommand: 'atm ui' });
     const files: FileChange[] = [];
     const nexts: Array<[string, MockProject]> = [];

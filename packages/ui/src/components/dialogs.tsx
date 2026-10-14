@@ -2,8 +2,10 @@ import { useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { useApi } from '../api/context';
-import type { McpDef, ProjectSummary } from '../api/types';
-import { tildify } from '../lib/format';
+import type { AgentId, McpDef, ProjectSummary } from '../api/types';
+import { ALL_AGENTS } from '../api/types';
+import { useConfig } from '../api/queries';
+import { AGENT_LABEL, tildify } from '../lib/format';
 import { SimpleDialog } from './Dialog';
 import { ErrorBox, LevelGlyph } from './ui';
 import { useToast } from './Toaster';
@@ -315,6 +317,122 @@ export function NewMcpDialog({ onClose }: { onClose: () => void }) {
         )}
       </form>
       {error != null && <ErrorBox error={error} />}
+    </SimpleDialog>
+  );
+}
+
+/** `atm pin <skill> <rev>`: ask for the revision, then hand over to the dryRun diff flow. */
+export function PinDialog({ project, skill, current, onSubmit, onClose }: { project: ProjectSummary; skill: string; current?: string; onSubmit: (rev: string) => void; onClose: () => void }) {
+  const [rev, setRev] = useState(current ?? '');
+  const ok = rev.trim().length > 0;
+  const go = (e?: FormEvent) => {
+    e?.preventDefault();
+    if (ok) onSubmit(rev.trim());
+  };
+  return (
+    <SimpleDialog
+      open
+      onClose={onClose}
+      cap={`${project.name} · 固定版本`}
+      title={<span className="mono">{skill}</span>}
+      footer={
+        <>
+          <button type="button" className="btn btn-t btn-lg" onClick={onClose}>
+            取消
+          </button>
+          <button type="submit" form="pin-form" className="btn btn-p btn-lg" disabled={!ok}>
+            下一步：预览 diff
+          </button>
+        </>
+      }
+    >
+      <form id="pin-form" className="flex flex-col gap-1.5" onSubmit={go}>
+        <label htmlFor="pin-rev" className="label">
+          版本（tag / 分支 / commit）
+        </label>
+        <input id="pin-rev" data-autofocus className="input input-lg mono" value={rev} onChange={(e) => setRev(e.target.value)} placeholder="v1.2.0" spellCheck={false} />
+        <span className="text-[12px] leading-[1.6] text-ink3">
+          等价于 <code className="mono">atm pin {skill} &lt;rev&gt;</code>：为该版本建一个独立的 git worktree，项目里的软链改为指向它，之后共享仓库升级不会影响这个项目。
+        </span>
+      </form>
+    </SimpleDialog>
+  );
+}
+
+/** Global settings (`~/.config/atm`): shared repo root, MCP registry directory, default agents for new projects. */
+export function SettingsDialog({ onClose }: { onClose: () => void }) {
+  const api = useApi();
+  const toast = useToast();
+  const { data: cfg, error: loadError } = useConfig();
+  const [root, setRoot] = useState<string | null>(null);
+  const [registry, setRegistry] = useState<string | null>(null);
+  const [agents, setAgents] = useState<AgentId[] | null>(null);
+  const curRoot = root ?? (cfg ? tildify(cfg.root) : '');
+  const curRegistry = registry ?? (cfg ? tildify(cfg.mcpRegistry) : '');
+  const curAgents = agents ?? cfg?.defaultAgents ?? [];
+  const dirty =
+    !!cfg && (curRoot !== tildify(cfg.root) || curRegistry !== tildify(cfg.mcpRegistry) || curAgents.length !== cfg.defaultAgents.length || curAgents.some((a) => !cfg.defaultAgents.includes(a)));
+  const { busy, error, submit } = useSubmit(
+    () =>
+      api.patchConfig({
+        ...(cfg && curRoot !== tildify(cfg.root) ? { root: curRoot.trim() } : {}),
+        ...(cfg && curRegistry !== tildify(cfg.mcpRegistry) ? { mcpRegistry: curRegistry.trim() } : {}),
+        ...(agents ? { defaultAgents: curAgents } : {}),
+      }),
+    () => {
+      toast.push({ tone: 'ok', title: '设置已保存' });
+      onClose();
+    },
+  );
+  const toggle = (a: AgentId) => {
+    const on = curAgents.includes(a);
+    if (on && curAgents.length === 1) return;
+    setAgents(on ? curAgents.filter((x) => x !== a) : ALL_AGENTS.filter((x) => x === a || curAgents.includes(x)));
+  };
+  return (
+    <SimpleDialog
+      open
+      onClose={onClose}
+      cap="全局"
+      title="设置"
+      footer={
+        <>
+          <button type="button" className="btn btn-t btn-lg" onClick={onClose}>
+            取消
+          </button>
+          <button type="submit" form="settings-form" className="btn btn-p btn-lg" disabled={busy || !dirty || !curRoot.trim() || !curRegistry.trim()}>
+            保存
+          </button>
+        </>
+      }
+    >
+      <form id="settings-form" className="flex flex-col gap-4" onSubmit={(e) => void submit(e)}>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="cfg-root" className="label">
+            共享仓库目录
+          </label>
+          <input id="cfg-root" className="input input-lg mono" value={curRoot} onChange={(e) => setRoot(e.target.value)} placeholder="~/GitHub" spellCheck={false} disabled={!cfg} />
+          <span className="text-[12px] leading-[1.6] text-ink3">Skill 原件克隆到这里，项目里只放软链。修改后已有项目的软链不会自动迁移，需要重新 install。</span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="cfg-registry" className="label">
+            MCP registry 目录
+          </label>
+          <input id="cfg-registry" className="input input-lg mono" value={curRegistry} onChange={(e) => setRegistry(e.target.value)} placeholder="~/GitHub/mcp-registry" spellCheck={false} disabled={!cfg} />
+        </div>
+        <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+          <legend className="label pb-1.5">新项目默认落地的 Agent</legend>
+          <div className="flex flex-wrap gap-2">
+            {ALL_AGENTS.map((a) => (
+              <label key={a} className={`agt ${curAgents.includes(a) ? '' : 'off'}`}>
+                <input type="checkbox" checked={curAgents.includes(a)} onChange={() => toggle(a)} disabled={!cfg} />
+                {AGENT_LABEL[a]}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      </form>
+      {(error ?? loadError) != null && <ErrorBox error={error ?? loadError} />}
     </SimpleDialog>
   );
 }

@@ -2,12 +2,12 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Search } from 'lucide-react';
 import { useApi } from '../api/context';
 import { useLibrary, useProjects } from '../api/queries';
-import { isWriteResult } from '../api/client';
+import { ApiError, isWriteResult } from '../api/client';
 import type { AddSpec, AgentId, BatchResult, LibraryItem, MigrateSpec, ProjectSummary, ToolKind, WriteResult } from '../api/types';
 import { ALL_AGENTS } from '../api/types';
 import { fromBatch, fromWriteResults, type WritePreview } from '../lib/changes';
 import { AGENT_LABEL, AGENT_MCP_FILE, KIND_TITLE, displayName, fmtTok, fmtTokShort } from '../lib/format';
-import { WriteFlow } from './WriteFlow';
+import { WriteFlow, type WriteOpts } from './WriteFlow';
 import { KindChip, LevelGlyph, Switch } from './ui';
 import { useToast } from './Toaster';
 
@@ -23,7 +23,9 @@ export interface OpFlowConfig {
   eyebrow: string;
   title: ReactNode;
   /** called with dryRun=true for the preview, then dryRun=false on confirm */
-  run: (dryRun: boolean) => Promise<RunResult>;
+  run: (dryRun: boolean, o: WriteOpts) => Promise<RunResult>;
+  /** CLI flags to offer on the preview step */
+  writeOptions?: Array<keyof WriteOpts>;
   aside?: ReactNode;
   footnote?: ReactNode;
   onCommitted?: () => void;
@@ -41,8 +43,9 @@ export function OpFlow({ config, onClose }: { config: OpFlowConfig | null; onClo
       title={config.title}
       aside={config.aside}
       footnote={config.footnote}
-      preview={async () => normalize(await config.run(true), projects)}
-      commit={() => config.run(false)}
+      {...(config.writeOptions ? { writeOptions: config.writeOptions } : {})}
+      preview={async (o) => normalize(await config.run(true, o), projects)}
+      commit={(o) => config.run(false, o)}
       {...(config.onCommitted ? { onCommitted: config.onCommitted } : {})}
     />
   );
@@ -54,8 +57,8 @@ export async function agentsRun(api: ReturnType<typeof useApi>, id: string, agen
   return isWriteResult(r) ? r : { applied: true, files: [], warnings: [] };
 }
 
-export function specFor(item: LibraryItem, agents?: AgentId[]): AddSpec {
-  if (item.kind === 'skill') return { kind: 'skill', repo: item.skill?.repo ?? item.source, name: item.name };
+export function specFor(item: LibraryItem, agents?: AgentId[], rev?: string): AddSpec {
+  if (item.kind === 'skill') return { kind: 'skill', repo: item.skill?.repo ?? item.source, name: item.name, ...(rev ? { rev } : {}) };
   if (item.kind === 'mcp') return { kind: 'mcp', name: item.name, ...(agents ? { agents } : {}) };
   return { kind: 'plugin', name: item.name };
 }
@@ -167,6 +170,7 @@ export function AddToolFlow({
   const [picked, setPicked] = useState<string | null>(preset ? `${preset.kind}:${preset.name}` : null);
   const item = preset ?? library.find((i) => `${i.kind}:${i.name}` === picked);
   const [agents, setAgents] = useState<AgentId[] | null>(null);
+  const [rev, setRev] = useState('');
   const effAgents = agents ?? single?.agents ?? [];
 
   const candidates = useMemo(
@@ -177,7 +181,7 @@ export function AddToolFlow({
   // Only pass `agents` when the user narrowed the selection: otherwise the manifest gets `{ name, agents }`
   // instead of the plain `"name"` that `atm add mcp <name>` writes.
   const narrowed = !!single && agents !== null && !(effAgents.length === single.agents.length && single.agents.every((a) => effAgents.includes(a)));
-  const spec = item ? specFor(item, item.kind === 'mcp' && narrowed ? effAgents : undefined) : null;
+  const spec = item ? specFor(item, item.kind === 'mcp' && narrowed ? effAgents : undefined, rev.trim() || undefined) : null;
   const previewKey = JSON.stringify([spec, projectIds]);
 
   const eyebrow = `${targets.length === 1 ? single!.name : `${targets.length} 个项目`} · 添加工具`;
@@ -221,6 +225,15 @@ export function AddToolFlow({
             );
           })}
         </fieldset>
+      )}
+      {item.kind === 'skill' && (
+        <label className="flex flex-col gap-1.5">
+          <span className="label">固定版本（可选）</span>
+          <input className="input mono" value={rev} onChange={(e) => setRev(e.target.value)} placeholder="tag / 分支 / commit，例如 v1.2.0" spellCheck={false} />
+          <span className="text-[12px] leading-[1.6] text-ink3">
+            等价于 <code className="mono">--rev</code>：清单记录期望的版本，共享仓库 HEAD 不一致时 doctor 会警告（不自动切换）。需要隔离版本请添加后用「固定版本」。留空则跟随默认分支。
+          </span>
+        </label>
       )}
       {item.kind !== 'mcp' && targets.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -276,25 +289,27 @@ export function AddToolFlow({
           }
         : {})}
       aside={aside}
+      writeOptions={item?.kind === 'skill' ? ['adopt', 'force'] : ['adopt']}
       previewKey={previewKey}
-      preview={async () => {
+      preview={async (o) => {
         if (!spec) return { files: [], warnings: [], commands: [], errors: [] };
         const results: WriteResult[] = [];
         const errors: string[] = [];
         for (const p of targets) {
           try {
-            results.push(await api.addTool(p.id, spec, { dryRun: true }));
+            results.push(await api.addTool(p.id, spec, { dryRun: true, adopt: o.adopt, force: o.force }));
           } catch (e) {
-            errors.push(`${p.name}：${(e as Error).message}`);
+            const hint = e instanceof ApiError && e.code === 'CONFLICT' ? '（在下方「写入选项」勾选「接管同名的手写条目」后重试）' : '';
+            errors.push(`${p.name}：${(e as Error).message}${hint}`);
           }
         }
         const pv = fromWriteResults(results, projects, errors);
         if (targets.length > 1) pv.commands = targets.map((p, i) => (results[i]?.command ? `(${p.name}) ${results[i]!.command}` : '')).filter(Boolean);
         return pv;
       }}
-      commit={async () => {
+      commit={async (o) => {
         if (!spec) return;
-        for (const p of targets) await api.addTool(p.id, spec);
+        for (const p of targets) await api.addTool(p.id, spec, { adopt: o.adopt, force: o.force });
       }}
     />
   );
