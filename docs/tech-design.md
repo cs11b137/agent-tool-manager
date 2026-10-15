@@ -6,7 +6,7 @@
 
 **目标**
 1. 每个项目用一份清单声明所需的 Skill / MCP / 插件，按需装载，不再全局常驻
-2. Skill 原件统一克隆到 `~/GitHub`，项目内只放软链；`git pull` 一次即可让所有项目同步，修改原件可直接给上游提 PR
+2. Skill 原件统一克隆到 `~/.agent-tools`，项目内只放软链；`git pull` 一次即可让所有项目同步，修改原件可直接给上游提 PR
 3. MCP 只定义一次，自动渲染成各 Agent 的原生配置
 4. 团队可复现：别人拉代码后执行 `atm install` 即可还原
 5. 能估算每个项目的工具上下文占用
@@ -49,7 +49,7 @@ tools.json     ├ SkillResolver   ├ claude-code
 tools.lock     ├ McpRegistry     ├ cursor
                └ PluginIndex     └ codex
    │               │                │
-项目目录        ~/GitHub/*        各 Agent 原生配置
+项目目录        ~/.agent-tools/*        各 Agent 原生配置
 ```
 
 - **Manifest**：读写 `tools.json` 和 `tools.lock.json`
@@ -75,7 +75,7 @@ packages/
 ### 4.1 全局
 
 ```
-~/GitHub/                         # 统一仓库根目录，可配置
+~/.agent-tools/                         # 统一仓库根目录，可配置
   baoyu-skills/                   # Skill 仓库（git clone）
   mcp-registry/                   # MCP 定义仓库（可以是私有仓库）
     figma.json
@@ -87,8 +87,8 @@ packages/
 
 ```json
 {
-  "root": "~/GitHub",
-  "mcpRegistry": "~/GitHub/mcp-registry",
+  "root": "~/.agent-tools",
+  "mcpRegistry": "~/.agent-tools/mcp-registry",
   "defaultAgents": ["claude-code"],
   "projects": [
     "~/personal/workspace/agent-tool-manager",
@@ -96,6 +96,8 @@ packages/
   ]
 }
 ```
+
+GUI 的「工具库」与「设置」提供「初始化共享目录…」：创建共享根目录和 MCP registry 后保存配置，已有内容不覆盖，失败只回滚本次新建且仍为空的目录。更换路径不迁移已有仓库或项目软链。显式保存的旧路径继续生效。
 
 `projects` 是项目注册表，供 GUI 做跨项目视图：执行 `atm init` 或在项目中执行任意写操作时自动登记；目录不存在时 GUI 将其标灰，由用户决定是否移除。
 
@@ -107,7 +109,7 @@ packages/
     tools.json                    # 清单，提交
     tools.lock.json               # 锁文件，提交
     skills/                       # 软链，gitignore
-      baoyu-comic -> ~/GitHub/baoyu-skills/skills/baoyu-comic
+      baoyu-comic -> ~/.agent-tools/baoyu-skills/skills/baoyu-comic
   .claude/
     skills -> ../.agents/skills   # 软链，gitignore
     settings.json                 # enabledPlugins 由 atm 合并写入，提交
@@ -321,7 +323,7 @@ return desired 的名字列表 → 写回 lock.managed
 
 ## 8. Agent 入口 Skill
 
-`agent-tools/SKILL.md` 放在 `~/GitHub/atm/skill/`，这是**唯一需要全局安装的 Skill**。
+`agent-tools/SKILL.md` 放在 `~/.agent-tools/atm/skill/`，这是**唯一需要全局安装的 Skill**。
 
 ```markdown
 ---
@@ -346,7 +348,7 @@ description: 管理当前项目的 Skill、MCP 和插件。用户说「把 X 链
 | 方案 | 优点 | 缺点 | 结论 |
 |---|---|---|---|
 | **本地 Web（`atm ui`）** | 复用 Node 核心，零额外安装，跨平台 | 需要开浏览器，没有托盘图标 | **v1 采用** |
-| 桌面应用（Tauri） | 原生体验、托盘、开机启动 | 要打包签名；Rust 壳与 Node 核心之间需要通信 | v2 视需求再做，直接复用 v1 的前端 |
+| 桌面应用（Tauri） | 原生体验、托盘、开机启动 | 要打包签名；Rust 壳与 Node 核心之间需要通信 | P6 已加入实现，复用 v1 前端；平台验收见 desktop.md |
 | VS Code 扩展 | 贴近编辑器 | 只覆盖 VS Code 系用户，跨项目视图别扭 | 不做 |
 
 启动：`atm ui` 启动本地 server，自动打开浏览器；在项目目录中执行时，默认打开该项目的页面。
@@ -359,7 +361,7 @@ description: 管理当前项目的 Skill、MCP 和插件。用户说「把 X 链
 |---|---|---|
 | **总览** | 已注册项目的列表；每个项目显示 Skill / MCP / 插件数量、上下文占用条、doctor 状态灯 | 打开项目、批量执行 `install`、`sync` |
 | **项目详情** | 三栏：Skill、MCP、插件，每项显示来源、commit、token 占用、生效的 Agent | 开关启用、移除、按 Agent 勾选、查看生成的配置 diff |
-| **工具库** | `~/GitHub` 下所有可发现的 Skill、registry 中的 MCP、已安装的插件；支持搜索和按类型筛选 | 「添加到项目…」（可多选项目）、克隆新仓库、新建 MCP 定义 |
+| **工具库** | `~/.agent-tools` 下所有可发现的 Skill、registry 中的 MCP、已添加到注册项目的插件；首次使用为空，支持搜索和按类型筛选 | 「添加到项目…」（可多选项目）、克隆新仓库、新建 MCP 定义 |
 | **矩阵** | 行为工具、列为项目的交叉表，一眼看出哪个工具在哪些项目里启用 | 单元格点击即启用或停用 |
 | **体检** | 汇总所有项目的 doctor 结果，按级别分组 | 一键修复（只对能安全修复的项，比如重建断链） |
 | **全局** | `~/.claude/skills` 中的全局 Skill、全局启用的插件，以及迁移建议 | 「移到项目级」向导：选择用到它的项目 → 在这些项目中添加 → 从全局移除 |
@@ -393,7 +395,7 @@ server 只是 core 的 HTTP 映射，与 CLI 命令一一对应：
 | `DELETE /api/projects/:id/tools/:kind/:name` | `atm remove …` |
 | `POST /api/projects/:id/install` | `atm install` |
 | `GET /api/projects/:id/doctor?measure=1` | `atm doctor [--measure]` |
-| `GET /api/library` | 扫描 `~/GitHub`、registry、已安装插件 |
+| `GET /api/library` | 读取共享目录、registry 和已添加插件；`includeInstalledPlugins=1` 仅用于主动添加时发现本机插件 |
 | `POST /api/sync` | `atm sync` |
 | `GET /api/events` | SSE：文件变化、长任务进度 |
 
@@ -427,7 +429,7 @@ server 能读写本地文件、执行 git 和 MCP 命令，必须防止被网页
 
 1. **不覆盖**：遇到用户手写的条目、实体目录或冲突的克隆目录时，一律报错，并给出 `--adopt` / `--force` 的提示
 2. **原子写**：所有配置文件都先写临时文件再 rename；中途失败时清单和 lock 都不改
-3. **不动共享仓库的状态**：除了 `sync` 中的 `pull --ff-only` 和 `pin` 建 worktree，atm 不对 `~/GitHub` 下的仓库执行 checkout、reset 或 stash
+3. **不动共享仓库的状态**：除了 `sync` 中的 `pull --ff-only` 和 `pin` 建 worktree，atm 不对 `~/.agent-tools` 下的仓库执行 checkout、reset 或 stash
 4. **报错可执行**：每条错误都附带下一步该执行的命令
 
 ---
@@ -457,6 +459,8 @@ server 能读写本地文件、执行 git 和 MCP 命令，必须防止被网页
 | P5 | GUI 增强：矩阵、体检一键修复、全局→项目迁移向导 | 能在 GUI 中把一个全局插件迁移到它被用到的 2 个项目 | 1–2 天 |
 | P6（可选） | Tauri 桌面壳、托盘 | 不开终端也能使用 | 约 2 天 |
 
+P6 实现位于 `packages/desktop`：内置 Node 与 server/UI、托盘驻留、单实例、可选登录启动、服务恢复与退出清理。构建、发布和目标平台验收见 [desktop.md](./desktop.md)。
+
 > P0–P3 的 core 必须先把 `--json` 输出和 `dryRun` 做好，P4 才能只做 UI 而不改动核心逻辑。
 
 ---
@@ -468,4 +472,23 @@ server 能读写本地文件、执行 git 和 MCP 命令，必须防止被网页
 3. Codex 项目级配置与用户级配置同名时的合并行为
 4. Claude Code 中项目 Skill 与全局 Skill 同名时的优先级
 5. 与 `npx skills` 的兼容：两者都写 `.agents/skills/` 时，是否需要识别对方建的条目，避免误删
-6. GUI 是否需要桌面应用（P6），还是本地 Web 就够用
+6. 已确认需要桌面应用（P6）；与本地 Web 并存，见 [desktop.md](./desktop.md)
+
+## 共享仓库首次使用流程
+
+新安装不导入示例项目、工具或本机插件。界面先检查 `GET /api/shared-repository`，未初始化时仅显示创建仓库入口。显式完成后配置记录 `sharedRepository: true`；更换根目录会清除此状态。旧配置、已添加工具均保留。
+
+共享仓库接口：
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| GET | `/api/shared-repository` | 初始化状态、路径、远程、分支、待提交文件 |
+| POST | `/api/shared-repository/init` | `{ root, mcpRegistry }` 创建目录与本地 Git，最后原子保存配置 |
+| POST | `/api/shared-repository/tools` | `{ kind: skill/plugin, name, description, content }` 或 `{ kind: mcp, def }`，拒绝同名覆盖 |
+| PUT | `/api/shared-repository/remote` | `{ remote }` 配置 origin |
+| POST | `/api/shared-repository/commit` | `{ message }` 仅提交管理范围内文件，保留其他暂存改动 |
+| POST | `/api/shared-repository/push` | 手动推送当前分支，无 force；失败保留本地提交 |
+
+Skill 的共享仓库引用为 `atm:shared`，lock 路径为 `skills/<name>`。插件建立 `.claude-plugin/plugin.json` 和内置 Skill，marketplace 为 `atm-shared`。项目仅在 Claude Code 启用时写入该 marketplace 的绝对目录和 enabledPlugins；移除最后一个本地插件时，仅移除 lock 标记为管理的 marketplace 条目，保留手写设置。
+
+目录初始化复用旧接口的目录校验与回滚；新增 Git 和默认文件失败时清理本次创建内容，配置不变。新工具内容可继续通过编辑器修改；共享目录文件监听刷新工具库。外置 MCP registry 保持原路径，界面明确提示不会随仓库推送。旧 `initSharedDirectory` 接口仍只创建目录，供现有客户端兼容。

@@ -8,7 +8,8 @@ import { withLock } from '../fs/lock.js';
 import { exists, isDir } from '../fs/walk.js';
 import { git } from '../git.js';
 import { paths, readProjectFiles, serializeLock } from '../manifest.js';
-import { discoverSkills } from '../skills/discover.js';
+import { SHARED_REPO } from './shared-repository.js';
+import { discoverSkills, scanSkills } from '../skills/discover.js';
 import { parseRepo } from '../skills/repo.js';
 import { locateRepo, locateRepoDir, pickSkill } from '../skills/resolver.js';
 import { Planner } from './planner.js';
@@ -68,7 +69,9 @@ export async function syncRepos(ctx: Ctx, repos?: string[], opts: WriteOptions =
   for (const [dir, spec] of targets) {
     const row: RepoRow = { repo: spec, dir, status: 'up-to-date' };
     try {
-      if (!(await exists(dir))) {
+      if (spec === SHARED_REPO && !(await git.remoteUrl(dir))) {
+        row.message = '共享仓库尚未配置远程；本地工具可直接关联项目';
+      } else if (!(await exists(dir))) {
         if (opts.dryRun) {
           row.status = 'cloned';
           row.message = 'would clone';
@@ -128,7 +131,8 @@ export async function syncRepos(ctx: Ctx, repos?: string[], opts: WriteOptions =
           if (head === locked.commit) continue;
           touched = true;
           try {
-            const skill = pickSkill(await discoverSkills(ctx, repoDir, path.basename(repoDir)), s);
+            const candidates = s.repo === SHARED_REPO ? (await scanSkills(path.join(repoDir, 'skills'))).map((x) => ({ ...x, path: path.join('skills', x.path) })) : await discoverSkills(ctx, repoDir, path.basename(repoDir));
+            const skill = pickSkill(candidates, s);
             lock.skills[s.name] = { ...locked, path: skill.path, commit: head, contextTokens: skill.contextTokens };
             if (skill.path !== locked.path) {
               // 上游移动了 Skill：软链跟着改指向（与 install 同一套软链规划）

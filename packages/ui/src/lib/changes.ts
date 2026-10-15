@@ -1,3 +1,4 @@
+import { msg } from './i18n';
 import type { BatchResult, FileChange, ProjectSummary, WriteResult } from '../api/types';
 import { AGENT_LABEL } from './format';
 import { unifiedDiff } from './diff';
@@ -100,13 +101,13 @@ export function fromBatch(res: BatchResult, projects: ProjectSummary[] = []): Wr
 }
 
 export function fileMode(c: FileChange): string {
-  if (c.relPath.startsWith('~')) return `${c.agent ? `${AGENT_LABEL[c.agent]} · ` : ''}全局配置`;
-  if (c.type === 'symlink') return '软链 · 不提交';
-  if (c.type === 'dir') return '目录';
-  if (c.relPath.endsWith('tools.json')) return '清单 · 提交';
-  if (c.relPath.endsWith('tools.lock.json')) return '锁文件 · 提交';
-  if (c.agent) return `${AGENT_LABEL[c.agent]} · 提交`;
-  return '提交';
+  if (c.relPath.startsWith('~')) return msg('{0}全局配置', {0: c.agent ? `${AGENT_LABEL[c.agent]} · ` : ''});
+  if (c.type === 'symlink') return msg('软链 · 不提交');
+  if (c.type === 'dir') return msg('目录');
+  if (c.relPath.endsWith('tools.json')) return msg('清单 · 提交');
+  if (c.relPath.endsWith('tools.lock.json')) return msg('锁文件 · 提交');
+  if (c.agent) return `${AGENT_LABEL[c.agent]} · ${msg('提交')}`;
+  return msg('提交');
 }
 
 export function fileStat(c: FileChange): string {

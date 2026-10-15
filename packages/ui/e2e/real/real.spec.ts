@@ -50,7 +50,7 @@ async function shot(name: string, fullPage = true) {
 
 /** In-app navigation (keeps the SPA, its SSE connection and the token). */
 async function nav(label: string) {
-  // the 体检 link may carry an error-count chip, so match by prefix
+  // the 健康检查 link may carry an error-count chip, so match by prefix
   await page.getByRole('navigation', { name: '主导航' }).first().getByRole('link', { name: new RegExp(`^${label}`) }).first().click();
 }
 
@@ -68,9 +68,9 @@ async function addViaProjectPage(column: 0 | 1 | 2, pick: RegExp, expectTabs: Ar
   await page.getByRole('button', { name: '+ 添加' }).nth(column).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('radio', { name: pick }).check();
-  await dialog.getByRole('button', { name: '下一步：预览 diff' }).click();
+  await dialog.getByRole('button', { name: '下一步：预览改动' }).click();
   for (const t of expectTabs) await expect(dialog.getByRole('tab', { name: tabName(t) })).toBeVisible();
-  await expect(dialog.getByText('dryRun=1 · 尚未写入')).toBeVisible();
+  await expect(dialog.getByText('仅预览 · 尚未修改文件')).toBeVisible();
   if (screenshot) await shot(screenshot, false);
   await dialog.getByRole('button', { name: /写入 \d+ 个文件/ }).click();
   await expect(dialog.getByText(/已写入 \d+ 个文件/)).toBeVisible();
@@ -91,11 +91,11 @@ test('1. overview loads over the real API, SSE connected, no mock badge', async 
 });
 
 test('2. add skill via GUI (clone repo in 工具库, then + 添加 on the project page)', async () => {
-  // The add picker only lists library items; a repo not yet under ~/GitHub is brought in with 工具库 →「克隆仓库…」.
+  // The add picker only lists library items; a repo not yet under ~/.agent-tools is brought in with 工具库 →「导入仓库…」.
   await nav('工具库');
-  await page.getByRole('button', { name: '克隆仓库…' }).click();
-  await page.getByRole('textbox', { name: '仓库' }).fill(S.repo);
-  await page.getByRole('button', { name: '克隆', exact: true }).click();
+  await page.getByRole('button', { name: '导入仓库…' }).click();
+  await page.getByRole('textbox', { name: '仓库', exact: true }).fill(S.repo);
+  await page.getByRole('button', { name: '导入仓库', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   // clone runs as a task; task.done → invalidate → library lists the repo's skills
   await expect(page.getByRole('button', { name: /baoyu-comic/ })).toBeVisible({ timeout: 20_000 });
@@ -163,7 +163,7 @@ test('7. doctor over the real API: broken link → 重建软链 → gone', async
   // (a) the shared clone loses the skill dir → broken-link in both projects
   fs.renameSync(skillDir, `${skillDir}.bak`);
   try {
-    await nav('体检');
+    await nav('健康检查');
     await page.reload();
     const errors = page.getByRole('region', { name: 'error' });
     await expect(errors.getByRole('button', { name: '重建软链' }).first()).toBeVisible();
@@ -173,7 +173,7 @@ test('7. doctor over the real API: broken link → 重建软链 → gone', async
     fs.renameSync(`${skillDir}.bak`, skillDir);
   }
   await page.reload();
-  await expect(page.getByText('没有 error')).toBeVisible();
+  await expect(page.getByText('没有错误')).toBeVisible();
 
   // (b) a dangling project link (target restored but link points elsewhere) is rebuilt by the one-click fix
   fs.rmSync(link);
@@ -187,13 +187,13 @@ test('7. doctor over the real API: broken link → 重建软链 → gone', async
   await dialog.getByRole('button', { name: /写入 \d+ 个文件/ }).click();
   await expect(dialog.getByText(/已写入 \d+ 个文件/)).toBeVisible();
   await dialog.getByRole('button', { name: '完成' }).click();
-  await expect(page.getByText(/没有其他 error|没有 error/)).toBeVisible();
+  await expect(page.getByText(/没有其他 error|没有错误/)).toBeVisible();
   expect(fs.readlinkSync(link)).toBe(skillDir);
   await shot('real-07-doctor-fixed.png');
 });
 
 test('8. matrix: toggle baoyu-cover on for proj-gui → diff → write', async () => {
-  await nav('矩阵');
+  await nav('工具关联');
   // the label flips 启用 ↔ 停用 with the pending state, so match the stable suffix
   const cell = page.getByRole('button', { name: /^(启用|停用) baoyu-cover 于 proj-gui$/ });
   await expect(cell).toHaveAttribute('data-state', 'off');
@@ -201,7 +201,7 @@ test('8. matrix: toggle baoyu-cover on for proj-gui → diff → write', async (
   await cell.click();
   await expect(cell).toHaveAttribute('data-state', 'pending');
   await expect(page.getByText(/1 处改动待提交/)).toBeVisible();
-  await page.getByRole('button', { name: '预览 diff' }).click();
+  await page.getByRole('button', { name: '预览改动' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('tab', { name: /tools\.json/ }).first()).toBeVisible();
   await expect(dialog.getByRole('tab', { name: /\.agents\/skills\/baoyu-cover/ })).toBeVisible();
@@ -220,7 +220,7 @@ test('9. pin a skill from the project page (atm pin <skill> <rev>)', async () =>
   await openProject('proj-gui');
   await page.getByRole('button', { name: '固定 baoyu-comic 的版本' }).click();
   await page.getByLabel(/^版本/).fill(sha);
-  await page.getByRole('button', { name: '下一步：预览 diff' }).click();
+  await page.getByRole('button', { name: '下一步：预览改动' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('tab').first()).toBeVisible();
   await dialog.getByRole('button', { name: /写入 \d+ 个文件/ }).click();
@@ -242,7 +242,7 @@ test('10. hand-written MCP clash: CONFLICT until「接管」(--adopt) is ticked'
   await page.getByRole('button', { name: '+ 添加' }).nth(1).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('radio', { name: /linear/ }).check();
-  await dialog.getByRole('button', { name: '下一步：预览 diff' }).click();
+  await dialog.getByRole('button', { name: '下一步：预览改动' }).click();
   await expect(dialog.getByRole('alert')).toContainText('hand-written entry "linear"');
   await expect(dialog.getByRole('alert')).toContainText('接管同名的手写条目');
   await expect(dialog.getByRole('button', { name: /写入/ })).toBeDisabled();
@@ -258,9 +258,9 @@ test('10. hand-written MCP clash: CONFLICT until「接管」(--adopt) is ticked'
 test('11. settings dialog edits the global config; Library syncs a single repo', async () => {
   await page.getByRole('button', { name: '设置' }).first().click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByLabel('共享仓库目录')).toHaveValue(/GitHub/);
+  await expect(dialog.getByLabel('共享仓库目录')).toHaveValue(/\.agent-tools/);
   await dialog.getByRole('checkbox', { name: /Cursor/ }).check();
-  await dialog.getByRole('button', { name: '保存' }).click();
+  await dialog.getByRole('button', { name: '更新仓库' }).click();
   await expect(dialog).toHaveCount(0);
   const cfg = readJson(path.join(S.home, '.config', 'atm', 'config.json'));
   expect(cfg.defaultAgents).toContain('cursor');
@@ -269,4 +269,41 @@ test('11. settings dialog edits the global config; Library syncs a single repo',
   await expect(page.getByRole('region', { name: '共享仓库' })).toBeVisible();
   await page.getByRole('button', { name: /^sync / }).first().click();
   await expect(page.getByText(/sync 失败/)).toHaveCount(0);
+});
+
+test('12. settings updates the repository and preserves existing project links', async ({}, testInfo) => {
+  const configFile = path.join(S.home, '.config', 'atm', 'config.json');
+  const beforeConfig = readJson(configFile);
+  const link = path.join(S.projGui, '.agents', 'skills', 'baoyu-comic');
+  const beforeLink = fs.existsSync(link) ? fs.readlinkSync(link) : null;
+  const root = path.join(S.home, 'shared tools');
+  const registry = path.join(root, 'mcp-registry');
+  await nav('工具库');
+  await expect(page.getByRole('button', { name: '创建共享仓库…' })).toHaveCount(0);
+  await page.getByRole('button', { name: '设置', exact: true }).first().click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByLabel('共享仓库目录')).toHaveValue(S.root);
+  await dialog.getByLabel('共享仓库目录').fill(root);
+  await expect(dialog.getByLabel('MCP registry 目录')).toHaveValue(registry);
+  await page.screenshot({ path: testInfo.outputPath('update-shared-repository.png'), animations: 'disabled' });
+  await dialog.getByRole('button', { name: '更新仓库' }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(fs.statSync(registry).isDirectory()).toBe(true);
+  const afterConfig = readJson(configFile);
+  expect(afterConfig).toMatchObject({ root: '~/shared tools', mcpRegistry: '~/shared tools/mcp-registry' });
+  expect(afterConfig.projects).toEqual(beforeConfig.projects);
+  expect(afterConfig.defaultAgents).toEqual(beforeConfig.defaultAgents);
+  await expect(page.getByText(`${root} · ${registry} · 已添加的插件`, { exact: true })).toBeVisible();
+  if (beforeLink !== null) expect(fs.readlinkSync(link)).toBe(beforeLink);
+
+  // Updating the registry in the same repository preserves existing content.
+  fs.writeFileSync(path.join(root, 'keep.txt'), 'keep');
+  await page.getByRole('button', { name: '设置', exact: true }).first().click();
+  await expect(dialog.getByRole('button', { name: '创建共享仓库…' })).toHaveCount(0);
+  await expect(dialog.getByLabel('共享仓库目录')).toHaveValue(root);
+  await dialog.getByLabel('MCP registry 目录').fill(path.join(root, 'custom-registry'));
+  await dialog.getByRole('button', { name: '更新仓库' }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(read(path.join(root, 'keep.txt'))).toBe('keep');
+  expect(readJson(configFile).sharedRepository).toBe(true);
 });

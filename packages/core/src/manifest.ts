@@ -198,7 +198,7 @@ export function validateLock(raw: unknown, file = '.agents/tools.lock.json'): Lo
   for (const [agent, v] of Object.entries(managed)) {
     if (!isAgent(agent)) continue;
     const o = (v ?? {}) as Record<string, unknown>;
-    lock.managed[agent] = { mcp: strArray(o.mcp), plugins: strArray(o.plugins) };
+    lock.managed[agent] = { mcp: strArray(o.mcp), plugins: strArray(o.plugins), ...(strArray(o.marketplaces).length ? { marketplaces: strArray(o.marketplaces) } : {}) };
   }
   return lock;
 }
@@ -225,7 +225,7 @@ export function serializeLock(lock: LockFile): string {
   const managed: Partial<Record<AgentId, ManagedEntries>> = {};
   for (const agent of ALL_AGENTS) {
     const e = lock.managed[agent];
-    if (e && (e.mcp.length || e.plugins.length)) managed[agent] = { mcp: [...e.mcp].sort(), plugins: [...e.plugins].sort() };
+    if (e && (e.mcp.length || e.plugins.length)) managed[agent] = { mcp: [...e.mcp].sort(), plugins: [...e.plugins].sort(), ...(e.marketplaces?.length ? { marketplaces: [...e.marketplaces].sort() } : {}) };
   }
   return JSON.stringify({ version: 1, skills, mcp, managed }, null, 2) + '\n';
 }

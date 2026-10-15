@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { Atm, ProjectSummary } from './types.js';
 import { createCtx, expandHome, projectId, type CreateAtmOptions, type Ctx } from './context.js';
-import { addProjectToRegistry, loadConfig, saveConfig } from './config.js';
+import { addProjectToRegistry, initSharedDirectory, loadConfig, saveConfig } from './config.js';
 import { AtmError } from './errors.js';
 import { isDir } from './fs/walk.js';
 import { requireManifest } from './manifest.js';
@@ -18,6 +18,7 @@ import { measureMcp } from './ops/measure.js';
 import { pinSkill } from './ops/pin.js';
 import { removeTool } from './ops/remove.js';
 import { syncRepos } from './ops/sync.js';
+import * as sharedRepo from './ops/shared-repository.js';
 import { startWatch } from './watch.js';
 
 const ID_RE = /^[0-9a-f]{12}$/;
@@ -55,8 +56,15 @@ export function createAtm(opts: CreateAtmOptions = {}): Atm {
   };
 
   const atm: Atm = {
+    sharedRepository: () => sharedRepo.sharedRepository(ctx),
+    initSharedRepository: (input) => sharedRepo.initSharedRepository(ctx, input),
+    setSharedRemote: (remote) => sharedRepo.setSharedRemote(ctx, remote),
+    commitSharedRepository: (message) => sharedRepo.commitSharedRepository(ctx, message),
+    pushSharedRepository: () => sharedRepo.pushSharedRepository(ctx),
+    createSharedTool: (input) => sharedRepo.createSharedTool(ctx, input),
     config: () => loadConfig(ctx),
     saveConfig: (patch) => saveConfig(ctx, patch),
+    initSharedDirectory: (input) => initSharedDirectory(ctx, input),
 
     async projects() {
       const cfg = await loadConfig(ctx);
@@ -106,8 +114,8 @@ export function createAtm(opts: CreateAtmOptions = {}): Atm {
     measure: async (dir, name) => measureMcp(ctx, await resolveProject(dir), name),
     pin: async (dir, skill, rev, o) => pinSkill(ctx, await resolveProject(dir), skill, rev, o),
 
-    library: () => buildLibrary(ctx),
-    search: (q) => searchLibrary(ctx, q),
+    library: (opts) => buildLibrary(ctx, opts),
+    search: (q, opts) => searchLibrary(ctx, q, opts),
     repos: () => listRepos(ctx),
     cloneRepo: (repo) => cloneRepo(ctx, repo),
     saveMcpDef: (def, scope) => saveMcpDef(ctx, def, scope, resolveProject),
@@ -130,7 +138,7 @@ export function createAtm(opts: CreateAtmOptions = {}): Atm {
             // 跳过不存在的项目
           }
         }
-        if (!cancelled) stop = startWatch(resolved, cfg.mcpRegistry, cb);
+        if (!cancelled) stop = startWatch(resolved, cfg.mcpRegistry, cb, cfg.sharedRepository ? cfg.root : undefined);
       })().catch(() => undefined);
       return () => {
         cancelled = true;

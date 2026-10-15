@@ -25,7 +25,7 @@ export default async function globalSetup(): Promise<void> {
   // realpath: macOS tmpdir is a symlink (/var → /private/var); core compares real paths
   const base = await fsp.realpath(await fsp.mkdtemp(path.join(os.tmpdir(), 'atm-e2e-')));
   const home = base;
-  const root = path.join(home, 'GitHub');
+  const root = path.join(home, '.agent-tools');
   const registry = path.join(root, 'mcp-registry');
 
   // MCP registry
@@ -46,7 +46,7 @@ export default async function globalSetup(): Promise<void> {
     ) + '\n',
   );
 
-  // local skill repo (not yet cloned into ~/GitHub)
+  // local skill repo (not yet cloned into ~/.agent-tools)
   const repo = path.join(home, 'src', 'baoyu-skills');
   write(path.join(repo, 'skills', 'baoyu-comic', 'SKILL.md'), skillMd('baoyu-comic', '把文章改编成多格漫画，生成分镜脚本和画面提示词'));
   write(path.join(repo, 'skills', 'baoyu-cover', 'SKILL.md'), skillMd('baoyu-cover', '为文章生成封面图提示词，支持多种风格'));
@@ -103,6 +103,8 @@ export default async function globalSetup(): Promise<void> {
   child.stderr!.on('data', (b: Buffer) => process.stderr.write(`[atm ui] ${b}`));
 
   const u = new URL(url);
+  const initialized = await fetch(`${u.origin}/api/shared-repository/init`, { method: 'POST', headers: { Authorization: `Bearer ${u.searchParams.get('token')}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ root, mcpRegistry: registry }) });
+  if (!initialized.ok) throw new Error(await initialized.text());
   const state: RealState = {
     base,
     home,

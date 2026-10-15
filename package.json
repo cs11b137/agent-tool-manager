@@ -4,6 +4,8 @@
   "packageManager": "pnpm@11.9.0",
   "engines": { "node": ">=20" },
   "scripts": {
+    "desktop:dev": "pnpm --filter @atm/desktop dev",
+    "desktop:build": "pnpm --filter @atm/desktop bundle",
     "build": "pnpm -r --filter './packages/*' run build",
     "test": "pnpm -r --filter './packages/*' run test",
     "typecheck": "pnpm -r --filter './packages/*' run typecheck",

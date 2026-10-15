@@ -207,3 +207,70 @@ describe('EventHub', () => {
     hub.close();
   });
 });
+
+describe('shared directory endpoint', () => {
+  it('requires auth, validates both paths and initializes the real filesystem', async () => {
+    const { app, home, atm } = await makeApp();
+    const url = `${BASE}/api/config/init-shared-directory`;
+    expect((await app.request(url, { method: 'POST' })).status).toBe(401);
+    for (const body of [{}, { root: '~/tools' }, { root: 'relative', mcpRegistry: '~/registry' }, { root: '~/tools', mcpRegistry: '' }, { root: '~/tools', mcpRegistry: '~/registry', force: true }]) {
+      expect((await app.request(url, { method: 'POST', headers: auth, body: JSON.stringify(body) })).status).toBe(400);
+    }
+    const body = JSON.stringify({ root: '~/shared/deep', mcpRegistry: '~/shared/deep/mcp-registry' });
+    const response = await app.request(url, { method: 'POST', headers: auth, body });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(await atm.config());
+    expect((await fs.stat(path.join(home, 'shared/deep/mcp-registry'))).isDirectory()).toBe(true);
+    expect((await app.request(url, { method: 'POST', headers: auth, body })).status).toBe(200);
+    await fs.writeFile(path.join(home, 'blocked'), 'keep');
+    expect((await app.request(url, { method: 'POST', headers: auth, body: JSON.stringify({ root: '~/blocked', mcpRegistry: '~/registry' }) })).status).toBe(409);
+    expect((await atm.config()).root).toBe(path.join(home, 'shared/deep'));
+  });
+});
+
+describe('managed library and explicit plugin discovery', () => {
+  it('keeps native installed plugins out of the default library and search results', async () => {
+    const { app, home } = await makeApp();
+    const installPath = path.join(home, '.claude/plugins/cache/native');
+    await fs.mkdir(installPath, { recursive: true });
+    await write(path.join(home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'native@market': [{ scope: 'user', installPath, version: '1.0.0' }] } }));
+    for (const query of ['', '?q=native', '?includeInstalledPlugins=0']) {
+      const response = await app.request(`${BASE}/api/library${query}`, { headers: auth });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual([]);
+    }
+    for (const query of ['?includeInstalledPlugins=1', '?q=native&includeInstalledPlugins=1']) {
+      const response = await app.request(`${BASE}/api/library${query}`, { headers: auth });
+      expect(await response.json()).toEqual([expect.objectContaining({ name: 'native@market', usedBy: [] })]);
+    }
+  });
+});
+
+describe('shared repository endpoints', () => {
+  it('authenticates, validates, initializes and creates real tools', async () => {
+    const { app, atm } = await makeApp();
+    const post = (route: string, body: unknown) => app.request(`${BASE}/api/shared-repository${route}`, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    for (const route of ['/init', '/tools', '/commit', '/push']) expect((await app.request(`${BASE}/api/shared-repository${route}`, { method: 'POST' })).status).toBe(401);
+    expect((await app.request(`${BASE}/api/shared-repository/remote`, { method: 'PUT' })).status).toBe(401);
+    expect((await post('/init', { root: 'relative', mcpRegistry: '/tmp/registry' })).status).toBe(400);
+    expect((await post('/tools', { kind: 'unknown' })).status).toBe(400);
+    expect((await post('/commit', { message: '' })).status).toBe(400);
+    const cfg = await atm.config();
+    expect((await post('/init', { root: cfg.root, mcpRegistry: cfg.mcpRegistry, defaultAgents: ['bad'] })).status).toBe(400);
+    expect((await post('/init', { root: cfg.root, mcpRegistry: cfg.mcpRegistry, defaultAgents: ['claude-code', 'cursor'] })).status).toBe(200);
+    expect((await atm.config()).defaultAgents).toEqual(['claude-code', 'cursor']);
+    const state = await app.request(`${BASE}/api/shared-repository`, { headers: auth });
+    expect(await state.json()).toMatchObject({ initialized: true, root: cfg.root, head: '' });
+    for (const kind of ['skill', 'plugin']) {
+      const input = { kind, name: `my-${kind}`, description: 'My tool', content: '# Instructions\nDo useful work.' };
+      const res = await post('/tools', input);
+      expect(res.status).toBe(200);
+      const result = await res.json() as { path: string };
+      expect(await fs.stat(result.path)).toBeDefined();
+      expect((await post('/tools', input)).status).toBe(409);
+    }
+    expect((await post('/tools', { kind: 'mcp', def: { name: 'local-mcp', transport: 'http', url: 'https://example.com/mcp' } })).status).toBe(200);
+    expect((await post('/tools', { kind: 'mcp', def: {} })).status).toBe(400);
+    expect((await atm.library()).map((i) => i.name)).toEqual(expect.arrayContaining(['my-skill', 'my-plugin@atm-shared', 'local-mcp']));
+  });
+});

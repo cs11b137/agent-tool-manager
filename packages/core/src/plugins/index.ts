@@ -2,6 +2,9 @@ import path from 'node:path';
 import type { PluginContents } from '../types.js';
 import type { Ctx } from '../context.js';
 import { exists, listDir, readJson } from '../fs/walk.js';
+import { loadConfig } from '../config.js';
+import { SHARED_MARKETPLACE } from '../ops/shared-repository.js';
+import { isToolName } from '../manifest.js';
 import { scanSkills } from '../skills/discover.js';
 
 export interface InstalledPlugin {
@@ -10,6 +13,8 @@ export interface InstalledPlugin {
   scope?: string;
   installPath?: string;
   version?: string;
+  sharedDirectory?: string;
+  nativeInstalled?: boolean;
 }
 
 export interface PluginIndex {
@@ -88,6 +93,17 @@ export async function loadPluginIndex(ctx: Ctx): Promise<PluginIndex> {
       if (typeof first.version === 'string') item.version = first.version;
     }
     installed.set(name, item);
+  }
+  const cfg = await loadConfig(ctx);
+  if (cfg.sharedRepository) {
+    const catalog = await safeJson(path.join(cfg.root, '.claude-plugin', 'marketplace.json')) as { name?: string; plugins?: Array<{ name?: string; source?: string }> } | null;
+    if (catalog?.name === SHARED_MARKETPLACE && Array.isArray(catalog.plugins)) for (const entry of catalog.plugins) {
+      if (!entry.name || !isToolName(entry.name) || entry.source !== `./plugins/${entry.name}`) continue;
+      const name = `${entry.name}@${SHARED_MARKETPLACE}`;
+      const installPath = path.join(cfg.root, 'plugins', entry.name);
+      if (!(await exists(path.join(installPath, '.claude-plugin', 'plugin.json')))) continue;
+      installed.set(name, { name, marketplace: SHARED_MARKETPLACE, installPath, sharedDirectory: cfg.root, nativeInstalled: installed.has(name), version: '0.1.0' });
+    }
   }
   const settings = (await safeJson(p.settings)) as { enabledPlugins?: Record<string, unknown> } | null;
   const globallyEnabled = new Set(

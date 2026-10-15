@@ -193,7 +193,7 @@ export async function buildTools(
     const inst = shared.plugins.installed.get(name);
     const info: NonNullable<ToolEntry['plugin']> = {
       marketplace: splitPluginId(name).marketplace,
-      installed: Boolean(inst),
+      installed: Boolean(inst) && (!inst?.sharedDirectory || inst.nativeInstalled === true),
       globallyEnabled: shared.plugins.globallyEnabled.has(name),
     };
     if (inst?.version) info.version = inst.version;
@@ -386,8 +386,9 @@ export async function projectIssues(
   // 插件
   const enabledPlugins = new Set([...shared.plugins.globallyEnabled, ...manifest.plugins]);
   for (const name of manifest.plugins) {
-    if (!shared.plugins.installed.has(name)) {
-      add('plugin-not-installed', 'error', pid, pname, 'plugin', name, `Plugin ${name} is not installed`, {
+    const availablePlugin = shared.plugins.installed.get(name);
+    if (!availablePlugin || (availablePlugin.sharedDirectory && !availablePlugin.nativeInstalled)) {
+      add('plugin-not-installed', availablePlugin?.sharedDirectory ? 'warn' : 'error', pid, pname, 'plugin', name, `Plugin ${name} is not installed`, {
         nextCommand: `/plugin install ${name}`,
       });
     }

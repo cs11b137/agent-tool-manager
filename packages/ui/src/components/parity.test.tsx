@@ -38,7 +38,7 @@ describe('CLI flags reachable from the UI', () => {
 
     renderWithProviders(<AddToolFlow onClose={() => {}} projectIds={[IDS.webApp]} kind="mcp" />, { api });
     await user.click(await screen.findByRole('radio', { name: /github/ }));
-    await user.click(screen.getByRole('button', { name: '下一步：预览 diff' }));
+    await user.click(screen.getByRole('button', { name: '下一步：预览改动' }));
     expect(await screen.findByText(/中已有手写的 MCP/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /写入/ })).toBeDisabled();
     await user.click(screen.getByRole('checkbox', { name: /接管同名的手写条目/ }));
@@ -53,7 +53,7 @@ describe('CLI flags reachable from the UI', () => {
     renderWithProviders(<AddToolFlow onClose={() => {}} projectIds={[IDS.atm]} kind="skill" />, { api });
     const radios = await screen.findAllByRole('radio');
     await user.click(radios[0]!);
-    await user.click(screen.getByRole('button', { name: '下一步：预览 diff' }));
+    await user.click(screen.getByRole('button', { name: '下一步：预览改动' }));
     await user.type(await screen.findByLabelText(/固定版本/), 'v2.0.0');
     await waitFor(() => expect(spy).toHaveBeenLastCalledWith(IDS.atm, expect.objectContaining({ kind: 'skill', rev: 'v2.0.0' }), expect.objectContaining({ dryRun: true })));
   });
@@ -75,7 +75,7 @@ describe('CLI flags reachable from the UI', () => {
     const project = (await api.getProjects()).find((p) => p.id === IDS.webApp)!;
     const onSubmit = vi.fn();
     renderWithProviders(<PinDialog project={project} skill="baoyu-comic" onSubmit={onSubmit} onClose={() => {}} />, { api });
-    const next = screen.getByRole('button', { name: '下一步：预览 diff' });
+    const next = screen.getByRole('button', { name: '下一步：预览改动' });
     expect(next).toBeDisabled();
     await user.type(screen.getByLabelText(/版本/), ' v1.4.0 ');
     await user.click(next);
@@ -88,8 +88,8 @@ describe('CLI flags reachable from the UI', () => {
     const onClose = vi.fn();
     renderWithProviders(<SettingsDialog onClose={onClose} />, { api });
     const root = await screen.findByLabelText('共享仓库目录');
-    await waitFor(() => expect((root as HTMLInputElement).value).toContain('GitHub'));
-    const save = screen.getByRole('button', { name: '保存' });
+    await waitFor(() => expect((root as HTMLInputElement).value).toContain('.agent-tools'));
+    const save = screen.getByRole('button', { name: '更新仓库' });
     expect(save).toBeDisabled();
     await user.clear(root);
     await user.type(root, '~/repos');

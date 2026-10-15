@@ -1,3 +1,4 @@
+import { msg, useLocale } from '../lib/i18n';
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, CircleAlert, Loader2, X } from 'lucide-react';
 
@@ -29,6 +30,7 @@ export function useToast(): ToastApi {
 let seq = 0;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  useLocale();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
@@ -108,10 +110,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </div>
             {t.tone === 'running' && t.onCancel ? (
               <button type="button" className="btn btn-t btn-sm !h-7 !px-2 text-[12px]" onClick={t.onCancel}>
-                取消
-              </button>
+                {msg("取消")}</button>
             ) : (
-              <button type="button" aria-label="关闭通知" className="btn btn-t !h-7 !w-7 !p-0" onClick={() => dismiss(t.id)}>
+              <button type="button" aria-label={msg("关闭通知")} className="btn btn-t !h-7 !w-7 !p-0" onClick={() => dismiss(t.id)}>
                 <X size={14} aria-hidden />
               </button>
             )}

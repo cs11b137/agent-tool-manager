@@ -20,7 +20,7 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 } }],
   webServer: {
-    // Vite dev server in mock mode (.env.development sets VITE_ATM_MOCK=1; set again to be explicit).
+    // Mock fixtures are explicitly enabled only for this isolated browser test server.
     command: `node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}`,
     env: { VITE_ATM_MOCK: '1' },

@@ -55,6 +55,7 @@ async function globalSkillSpec(ctx: Ctx, name: string): Promise<AddSpec> {
   const st = await linkState(path.join(pluginPaths(ctx).globalSkills, name));
   if (st.kind === 'symlink' && st.resolved.startsWith(cfg.root + path.sep)) {
     const top = st.resolved.slice(cfg.root.length + 1).split(path.sep)[0]!;
+    if (cfg.sharedRepository && top === 'skills') return { kind: 'skill', repo: 'atm:shared', name };
     if (top !== '.worktrees') {
       const repoDir = path.join(cfg.root, top);
       const remote = await git.remoteUrl(repoDir, ctx.signal);

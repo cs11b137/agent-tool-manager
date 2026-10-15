@@ -1,13 +1,16 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { LanguageSwitch } from './LanguageSwitch';
+import { msg, useLocale } from '../lib/i18n';
+import type { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { useState } from 'react';
-import { Monitor, Moon, Settings, Sun } from 'lucide-react';
-import { useDoctor, useProjects } from '../api/queries';
+import { Monitor, Moon, Settings, Sun, LayoutDashboard, Library, Grid2X2, HeartPulse, HardDrive, Folder, Plus, Search, Menu, ChevronRight } from 'lucide-react';
+import { useDoctor, useProjects, useConfig } from '../api/queries';
 import { useApi } from '../api/context';
 import { useTheme } from '../lib/theme';
 import { useConnection } from './LiveProvider';
+import { SimpleDialog } from './Dialog';
 import { AtmMark } from './AtmMark';
-import { SettingsDialog } from './dialogs';
+import { SettingsDialog, RegisterProjectDialog } from './dialogs';
 import { LevelGlyph, worstLevel } from './ui';
 
 type Blob = [w: number, h: number, top: number, left: number, color: 'b1' | 'b2' | 'b3' | 'b4'];
@@ -29,6 +32,7 @@ function pageOf(pathname: string): string {
 }
 
 export function MeshBackground({ page }: { page: string }) {
+  useLocale();
   const blobs = MESH[page] ?? MESH.overview!;
   return (
     <div className="mesh" aria-hidden="true">
@@ -43,158 +47,88 @@ export function MeshBackground({ page }: { page: string }) {
   );
 }
 
-function Logo() {
-  return (
-    <div className="flex items-center gap-2.5 px-2">
-      <AtmMark size={32} className="shrink-0" />
-      <strong className="text-[15px] leading-tight">Agent Tool Manager</strong>
-    </div>
-  );
-}
-
-function SettingsButton() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button type="button" className="btn btn-t !h-7 !w-7 !rounded-[8px] !p-0" aria-label="设置" title="设置" onClick={() => setOpen(true)}>
-        <Settings size={14} aria-hidden />
-      </button>
-      {open && <SettingsDialog onClose={() => setOpen(false)} />}
-    </>
-  );
-}
 
 function ThemeToggle() {
+  useLocale();
   const { pref, cycle } = useTheme();
-  const label = pref === 'system' ? '跟随系统' : pref === 'light' ? '浅色' : '深色';
+  const label = msg(pref === 'system' ? '跟随系统' : pref === 'light' ? '浅色' : '深色');
   const Icon = pref === 'system' ? Monitor : pref === 'light' ? Sun : Moon;
-  return (
-    <button type="button" className="btn btn-t !h-7 !w-7 !rounded-[8px] !p-0" aria-label={`主题：${label}（点击切换）`} title={`主题：${label}`} onClick={cycle}>
-      <Icon size={14} aria-hidden />
-    </button>
-  );
+  return <button type="button" className="sidebar-icon-button" aria-label={msg('主题：{0}（点击切换）', {0: label})} title={msg('主题：{0}', {0: label})} onClick={cycle}><Icon size={17} aria-hidden /></button>;
 }
 
-const NAV: Array<{ to: string; label: string; end?: boolean }> = [
-  { to: '/', label: '总览', end: true },
-  { to: '/library', label: '工具库' },
-  { to: '/matrix', label: '矩阵' },
-  { to: '/doctor', label: '体检' },
-  { to: '/global', label: '全局' },
+const PRIMARY = [
+  { to: '/', label: '总览', icon: LayoutDashboard },
+  { to: '/library', label: '工具库', icon: Library },
+  { to: '/matrix', label: '矩阵', icon: Grid2X2 },
+];
+const MAINTENANCE = [
+  { to: '/doctor', label: '体检', icon: HeartPulse },
+  { to: '/global', label: '全局', icon: HardDrive },
 ];
 
-function useNavBadges() {
+function SidebarContent({ onAdd, onSettings, onNavigate }: { onAdd: () => void; onSettings: () => void; onNavigate?: () => void }) {
+  useLocale();
+  const { data: projects = [], error } = useProjects();
   const doctor = useDoctor();
-  const errors = doctor.data?.counts.error ?? 0;
-  return { errors };
-}
-
-function NavItems({ compact = false }: { compact?: boolean }) {
-  const { errors } = useNavBadges();
-  return (
-    <>
-      {NAV.map((n) => (
-        <NavLink key={n.to} to={n.to} end={n.end ?? false} className={({ isActive }) => `nv ${isActive ? 'on' : ''} ${compact ? '!min-h-9' : ''}`}>
-          <span className="dot" />
-          {n.label}
-          {n.to === '/doctor' && errors > 0 && (
-            <span className="chip ml-auto" style={{ background: 'var(--err-soft)', color: 'var(--err-ink)' }} aria-label={`${errors} 个 error`}>
-              {errors}
-            </span>
-          )}
-        </NavLink>
-      ))}
-    </>
-  );
-}
-
-function ProjectNav() {
-  const { data: projects } = useProjects();
-  return (
-    <div className="flex min-h-0 flex-col gap-0.5">
-      <span className="cap px-3 pb-1.5">项目</span>
-      <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
-        {projects?.map((p) => {
-          const lvl = p.exists ? worstLevel(p.doctor) : 'missing';
-          const style: CSSProperties = p.exists ? { fontSize: 13, color: 'var(--ink)' } : { fontSize: 13, color: 'var(--ink3)', textDecoration: 'line-through' };
-          return (
-            <NavLink
-              key={p.id}
-              to={`/projects/${p.id}`}
-              className={({ isActive }) => `nv mono ${isActive ? 'on' : ''}`}
-              style={style}
-              title={p.exists ? p.path : `${p.path}（目录不存在）`}
-            >
-              <LevelGlyph level={lvl} size={lvl === 'missing' ? 7 : 7} />
-              <span className="truncate">{p.name}</span>
-            </NavLink>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ConnectionFooter() {
+  const config = useConfig();
   const status = useConnection();
   const api = useApi();
-  const host = typeof window !== 'undefined' ? window.location.host : '';
-  const [color, text] =
-    status === 'open' ? ['var(--ok)', '已连接 · 实时同步'] : status === 'connecting' ? ['var(--warn)', '连接中…'] : ['var(--err)', '已断开 · 正在重连'];
-  return (
-    <div className="mt-auto flex flex-col gap-1 border-t border-line px-3 pt-3.5 pb-1 text-[12px] text-ink3">
-      <span className="flex items-center gap-1.5">
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-        {text}
-        {api.kind === 'mock' && <span className="chip c-muted ml-auto !h-[18px] !px-1.5 !text-[10px]">mock</span>}
-      </span>
-      <span className="flex items-center justify-between gap-2">
-        <span className="mono truncate" title={api.kind === 'mock' ? 'VITE_ATM_MOCK=1：使用内存中的演示数据' : undefined}>
-          {host}
-        </span>
-        <span className="flex items-center gap-1">
-          <SettingsButton />
-          <ThemeToggle />
-        </span>
-      </span>
+  const [search, setSearch] = useState('');
+  const visible = projects.filter((p) => (p.name + ' ' + p.path).toLowerCase().includes(search.toLowerCase()));
+  const root = config.data?.root;
+  const repositoryName = root?.split(/[\\/]/).filter(Boolean).pop() ?? 'agent-tools';
+  const errors = doctor.data?.counts.error ?? 0;
+  const links = (items: typeof PRIMARY) => items.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} onClick={onNavigate} className={({isActive}) => `sidebar-link ${isActive ? 'is-active' : ''}`}>
+    <Icon size={18} aria-hidden /><span>{msg(label)}</span>
+    {to === '/doctor' && errors > 0 && <span className="sidebar-badge error" aria-label={msg('{0} 个 error', {0: errors})}>{errors}</span>}
+  </NavLink>);
+  return <>
+    <div className="sidebar-brand"><AtmMark size={34} /><div><strong>Agent Tools</strong><span>{msg('集中管理，按需关联')}</span></div></div>
+    <LanguageSwitch />
+    <button type="button" className="repository-switch" onClick={onSettings} title={root}>
+      <span className="repository-avatar"><Folder size={17} aria-hidden /></span>
+      <span className="min-w-0 flex-1 text-left"><span className="block text-[11px] text-ink3">{msg('共享仓库')}</span><strong className="block truncate text-[13px] font-medium">{repositoryName}</strong></span>
+      <ChevronRight size={15} aria-hidden />
+    </button>
+    <div className="sidebar-section"><span className="sidebar-heading">{msg('工作区')}</span>{links(PRIMARY)}</div>
+    <div className="sidebar-projects">
+      <div className="flex items-center justify-between px-2"><span className="sidebar-heading !p-0">{msg('项目')} <span className="ml-1 opacity-60">{projects.length}</span></span><button type="button" className="sidebar-icon-button" aria-label={msg('添加项目')} title={msg('添加项目')} onClick={onAdd}><Plus size={16} aria-hidden /></button></div>
+      {projects.length > 0 && <label className="sidebar-search"><Search size={14} aria-hidden /><input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={msg('搜索项目')} aria-label={msg('搜索项目')} /></label>}
+      <div className="sidebar-project-list">
+        {visible.map((p) => <NavLink key={p.id} to={`/projects/${p.id}`} onClick={onNavigate} title={p.path} className={({isActive}) => `sidebar-link project-link ${isActive ? 'is-active' : ''}`}>
+          <Folder size={15} aria-hidden /><span className={`truncate ${p.exists ? '' : 'text-ink3 line-through'}`}>{p.name}</span><LevelGlyph level={p.exists ? worstLevel(p.doctor) : 'missing'} size={6} />
+        </NavLink>)}
+        {!projects.length && !error && <div className="sidebar-empty"><span>{msg('还没有项目')}</span><p>{msg('添加项目文件夹，再关联需要的工具。')}</p><button className="sidebar-add" type="button" onClick={onAdd}><Plus size={14} aria-hidden />{msg('添加项目')}</button></div>}
+        {error && <p className="px-2 text-xs text-err-ink">{msg('无法加载项目')}</p>}
+        {projects.length > 0 && !visible.length && <p className="px-2 text-xs text-ink3">{msg('没有匹配的项目')}</p>}
+      </div>
     </div>
-  );
+    <div className="sidebar-section"><span className="sidebar-heading">{msg('维护')}</span>{links(MAINTENANCE)}</div>
+    <div className="sidebar-footer">
+      <div className="flex items-center gap-1"><button type="button" className="sidebar-link flex-1" onClick={onSettings}><Settings size={17} aria-hidden /><span>{msg('设置')}</span></button><ThemeToggle /></div>
+      <span className="sidebar-connection" role="status"><span style={{background: status === 'open' ? 'var(--ok)' : 'var(--warn)'}} />{msg(status === 'open' ? '已连接 · 实时同步' : status === 'connecting' ? '连接中…' : '已断开 · 正在重连')}{api.kind === 'mock' && <span> · Demo</span>}</span>
+    </div>
+  </>;
 }
 
 export function Shell({ children }: { children: ReactNode }) {
+  useLocale();
   const loc = useLocation();
-  const page = pageOf(loc.pathname);
-  return (
-    <div className="relative isolate min-h-screen">
-      <MeshBackground page={page} />
-      <div className="relative z-[1] flex min-h-screen flex-col gap-4 p-4 md:flex-row">
-        {/* ≥768: glass sidebar */}
-        <nav
-          aria-label="主导航"
-          className="glass sticky top-4 hidden h-[calc(100vh-32px)] w-[220px] shrink-0 flex-col gap-[22px] rounded-[20px] px-3 py-5 md:flex"
-        >
-          <Logo />
-          <div className="flex flex-col gap-0.5">
-            <NavItems />
-          </div>
-          <ProjectNav />
-          <ConnectionFooter />
-        </nav>
-        {/* <768: top nav */}
-        <nav aria-label="主导航" className="glass sticky top-2 z-30 flex items-center gap-2 rounded-[16px] px-2 py-2 md:hidden">
-          <AtmMark size={32} className="shrink-0" />
-          <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto">
-            <NavItems compact />
-          </div>
-          <SettingsButton />
-          <ThemeToggle />
-        </nav>
-        <main className="min-w-0 flex-1 px-0 py-2 md:px-2 md:py-4">
-          <div key={loc.pathname} className="page mx-auto flex w-full max-w-[1280px] flex-col gap-5">
-            {children}
-          </div>
-        </main>
-      </div>
+  const [mobile, setMobile] = useState(false);
+  const [settings, setSettings] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const openSettings = () => { setMobile(false); setSettings(true); };
+  const openAdd = () => { setMobile(false); setAdding(true); };
+  return <div className="relative isolate min-h-screen">
+    <MeshBackground page={pageOf(loc.pathname)} />
+    <a href="#main-content" className="skip-link">{msg('跳转到主内容')}</a>
+    <div className="relative z-[1] flex min-h-screen flex-col gap-5 p-3 md:flex-row md:p-4">
+      <nav aria-label={msg('主导航')} className="glass sidebar hidden md:flex"><SidebarContent onAdd={openAdd} onSettings={openSettings} /></nav>
+      <header className="glass mobile-header md:hidden"><button type="button" className="sidebar-icon-button" onClick={() => setMobile(true)} aria-label={msg('打开导航')} aria-expanded={mobile}><Menu size={20} aria-hidden /></button><AtmMark size={26} /><strong className="mr-auto text-sm">Agent Tools</strong><LanguageSwitch /></header>
+      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-0 py-2 md:px-2 md:py-4"><div key={loc.pathname} className="page mx-auto flex w-full max-w-[1280px] flex-col gap-5">{children}</div></main>
     </div>
-  );
+    {mobile && <SimpleDialog open title={msg('导航')} onClose={() => setMobile(false)}><nav className="mobile-sidebar" aria-label={msg('主导航')}><SidebarContent onAdd={openAdd} onSettings={openSettings} onNavigate={() => setMobile(false)} /></nav></SimpleDialog>}
+    {settings && <SettingsDialog onClose={() => setSettings(false)} />}
+    {adding && <RegisterProjectDialog onClose={() => setAdding(false)} />}
+  </div>;
 }

@@ -1,9 +1,11 @@
+import { msg, useLocale } from '../lib/i18n';
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import type { ContextBreakdown, DoctorCounts, DoctorLevel, ToolKind } from '../api/types';
 import { KIND_LABEL, budgetPct, fmtTok } from '../lib/format';
 import { ApiError } from '../api/client';
 
 export function KindChip({ kind, className = '', style, children }: { kind: ToolKind; className?: string; style?: CSSProperties; children?: ReactNode }) {
+  useLocale();
   return (
     <span className={`chip c-${kind} ${className}`} style={style}>
       {children ?? KIND_LABEL[kind]}
@@ -15,6 +17,7 @@ type Glyph = DoctorLevel | 'ok' | 'missing';
 
 /** Level glyphs from the design system: error ● / warn ◆ / info ○ / ok ●. */
 export function LevelGlyph({ level, size = 8, className = '' }: { level: Glyph; size?: number; className?: string }) {
+  useLocale();
   const base: CSSProperties = { width: size, height: size, flexShrink: 0, display: 'inline-block', boxSizing: 'border-box' };
   if (level === 'warn') {
     const s = Math.round(size * 0.86);
@@ -33,6 +36,7 @@ export function worstLevel(c: DoctorCounts): 'error' | 'warn' | 'ok' {
 
 /** "1 warn" / "1 error" / "ok" chip used on project cards. */
 export function DoctorChip({ counts }: { counts: DoctorCounts }) {
+  useLocale();
   const w = worstLevel(counts);
   const style: CSSProperties =
     w === 'error'
@@ -59,6 +63,7 @@ export function Switch({
   label: string;
   disabled?: boolean;
 }) {
+  useLocale();
   return (
     <button
       type="button"
@@ -76,6 +81,7 @@ export function Switch({
 
 /** Skill / MCP / 插件 segments against a 10k budget; hatched tail for unmeasured tools. */
 export function ContextBar({ context, height = 8 }: { context: ContextBreakdown; height?: number }) {
+  useLocale();
   return (
     <div className="flex overflow-hidden rounded-full bg-line" style={{ height, gap: 2 }}>
       {context.skill > 0 && <div className="bar" style={{ width: budgetPct(context.skill), background: 'var(--skill)' }} />}
@@ -84,7 +90,7 @@ export function ContextBar({ context, height = 8 }: { context: ContextBreakdown;
       {context.unmeasured > 0 && (
         <div
           className="bar"
-          title={`${context.unmeasured} 项未测量`}
+          title={msg("{0} 项未测量", {0: context.unmeasured})}
           style={{ width: '8%', background: 'repeating-linear-gradient(135deg, var(--line2) 0 3px, transparent 3px 6px)' }}
         />
       )}
@@ -93,10 +99,11 @@ export function ContextBar({ context, height = 8 }: { context: ContextBreakdown;
 }
 
 export function ContextLegend({ context }: { context: ContextBreakdown }) {
+  useLocale();
   const items: Array<[string, string, string]> = [
     ['var(--skill)', 'Skill', fmtTok(context.skill)],
     ['var(--mcp)', 'MCP', fmtTok(context.mcp)],
-    ['var(--plugin)', '插件', fmtTok(context.plugin)],
+    ['var(--plugin)', msg("插件"), fmtTok(context.plugin)],
   ];
   return (
     <div className="flex flex-wrap gap-4 text-[12px] text-ink2">
@@ -109,8 +116,7 @@ export function ContextLegend({ context }: { context: ContextBreakdown }) {
       {context.unmeasured > 0 && (
         <span className="inline-flex items-center gap-1.5">
           <span className="hatch h-2 w-2 rounded-full border border-line2" />
-          未测量 {context.unmeasured} 项
-        </span>
+          {msg("{0} 项未测量", {0: context.unmeasured})}</span>
       )}
     </div>
   );
@@ -118,6 +124,7 @@ export function ContextLegend({ context }: { context: ContextBreakdown }) {
 
 /** Renders `code` spans in plain strings as mono <code>. */
 export function Rich({ text, codeClass = '' }: { text: string; codeClass?: string }) {
+  useLocale();
   const parts = text.split(/(`[^`]+`)/g);
   return (
     <>
@@ -135,6 +142,7 @@ export function Rich({ text, codeClass = '' }: { text: string; codeClass?: strin
 }
 
 export function PageHeader({ cap, title, titleClass = '', sub, actions, crumb }: { cap?: ReactNode; title: ReactNode; titleClass?: string; sub?: ReactNode; actions?: ReactNode; crumb?: ReactNode }) {
+  useLocale();
   return (
     <div className="rise flex flex-wrap items-end justify-between gap-4">
       <div className="flex min-w-0 flex-col gap-1.5">
@@ -149,23 +157,25 @@ export function PageHeader({ cap, title, titleClass = '', sub, actions, crumb }:
 }
 
 export function ErrorBox({ error, className = '' }: { error: unknown; className?: string }) {
+  useLocale();
   const e = error instanceof ApiError ? error : null;
-  const msg = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.message : String(error);
   return (
     <div role="alert" className={`flex gap-2.5 rounded-[12px] px-3.5 py-3 text-[13px] leading-[1.6] ${className}`} style={{ background: 'var(--err-soft)' }}>
       <LevelGlyph level="error" size={8} className="mt-[7px]" />
       <div className="flex min-w-0 flex-col gap-0.5">
         <span>
           {e && <strong className="mono mr-1.5 text-[12px] text-err-ink">{e.code}</strong>}
-          <Rich text={msg} />
+          <Rich text={msg(message)} />
         </span>
-        {e?.nextCommand && <span className="mono text-[12px] text-ink3">下一步：{e.nextCommand}</span>}
+        {e?.nextCommand && <span className="mono text-[12px] text-ink3">{msg("下一步：")}{e.nextCommand}</span>}
       </div>
     </div>
   );
 }
 
-export function Loading({ label = '加载中…', className = '' }: { label?: string; className?: string }) {
+export function Loading({ label = msg("加载中…"), className = '' }: { label?: string; className?: string }) {
+  useLocale();
   return (
     <div className={`flex items-center gap-2 px-5 py-6 text-[13px] text-ink3 ${className}`}>
       <span className="spin inline-block h-3.5 w-3.5 rounded-full border-2 border-line2 border-t-accent" aria-hidden />
@@ -175,11 +185,13 @@ export function Loading({ label = '加载中…', className = '' }: { label?: st
 }
 
 export function Empty({ children, className = '' }: { children: ReactNode; className?: string }) {
+  useLocale();
   return <div className={`px-5 py-6 text-[13px] leading-[1.6] text-ink3 ${className}`}>{children}</div>;
 }
 
 /** Sticky "N 项改动待提交" bar used by project detail and matrix. */
 export function PendingBar({ label, sub, onReset, onApply, applyLabel, sticky = true }: { label: string; sub?: string; onReset: () => void; onApply: () => void; applyLabel: string; sticky?: boolean }) {
+  useLocale();
   return (
     <div
       role="status"
@@ -190,8 +202,7 @@ export function PendingBar({ label, sub, onReset, onApply, applyLabel, sticky = 
         {label} {sub && <span className="font-normal text-ink3">· {sub}</span>}
       </span>
       <button type="button" className="btn btn-g" onClick={onReset}>
-        撤销
-      </button>
+        {msg("撤销")}</button>
       <button type="button" className="btn btn-p" onClick={onApply}>
         {applyLabel}
       </button>

@@ -68,10 +68,15 @@ class ProjectWatcher {
 
   private async doRefresh(): Promise<void> {
     if (this.stopped) return;
-    const projects = [...(await this.atm.config()).projects].sort();
+    const cfg = await this.atm.config();
+    const projects = [...cfg.projects].sort();
     // core's fs.watch skips directories that don't exist yet (e.g. `.agents/` before init), so the
     // key also covers which watchable directories exist: when one appears, the watch is restarted.
-    const key = (await Promise.all(projects.map(async (p) => `${p}:${(await existing(p)).join(',')}`))).join('\n');
+    const registryExists = await fs.stat(cfg.mcpRegistry).then((st) => st.isDirectory(), () => false);
+    const key = JSON.stringify([
+      cfg.root, cfg.mcpRegistry, registryExists, cfg.sharedRepository,
+      await Promise.all(projects.map(async (p) => `${p}:${(await existing(p)).join(',')}`)),
+    ]);
     if (key === this.key || this.stopped) return;
     this.key = key;
     this.stop?.();

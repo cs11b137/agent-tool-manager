@@ -13,10 +13,10 @@ const WEB_APP = 'a1f3c9e20b7d';
 const ROUTES: Array<{ file: string; path: string; ready: (p: Page) => Promise<void> }> = [
   { file: '01-overview.png', path: '/', ready: (p) => expect(p.getByRole('heading', { name: 'web-app' })).toBeVisible() },
   { file: '02-project-detail.png', path: `/projects/${WEB_APP}`, ready: (p) => expect(p.getByRole('heading', { name: 'Skills' })).toBeVisible() },
-  { file: '03-library.png', path: '/library', ready: (p) => expect(p.getByRole('button', { name: '预览 diff' })).toBeVisible() },
+  { file: '03-library.png', path: '/library', ready: (p) => expect(p.getByRole('button', { name: '预览改动' })).toBeVisible() },
   { file: '04-matrix.png', path: '/matrix', ready: (p) => expect(p.getByText('上下文合计')).toBeVisible() },
   { file: '05-doctor.png', path: '/doctor', ready: (p) => expect(p.getByRole('button', { name: '重建软链' })).toBeVisible() },
-  { file: '06-global.png', path: '/global', ready: (p) => expect(p.getByRole('heading', { name: '全局启用的插件' })).toBeVisible() },
+  { file: '06-global.png', path: '/global', ready: (p) => expect(p.getByRole('button', { name: '扫描本机工具' })).toBeVisible() },
 ];
 
 async function settle(page: Page) {
@@ -38,7 +38,7 @@ for (const r of ROUTES) {
 
 test('add-tool diff modal (prototype 03)', async ({ page }) => {
   await page.goto('/library');
-  await page.getByRole('button', { name: '预览 diff' }).click();
+  await page.getByRole('button', { name: '预览改动' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('tab', { name: /\.mcp\.json/ })).toBeVisible();
   await settle(page);
@@ -69,7 +69,7 @@ test.describe('write flows against the mock', () => {
     await page.goto(`/projects/${WEB_APP}`);
     await page.getByRole('switch', { name: '启用 baoyu-cover' }).click();
     await expect(page.getByText('1 项改动待提交')).toBeVisible();
-    await page.getByRole('button', { name: '查看 diff 并应用' }).click();
+    await page.getByRole('button', { name: '预览并应用' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('tab', { name: /\.agents\/skills\/baoyu-cover/ })).toBeVisible();
     await dialog.getByRole('button', { name: /写入 \d+ 个文件/ }).click();
@@ -84,7 +84,7 @@ test.describe('write flows against the mock', () => {
     await page.getByRole('button', { name: '+ 添加' }).nth(1).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('radio').first().check();
-    await dialog.getByRole('button', { name: '下一步：预览 diff' }).click();
+    await dialog.getByRole('button', { name: '下一步：预览改动' }).click();
     await expect(dialog.getByRole('tab', { name: /tools\.json/ }).first()).toBeVisible();
     await dialog.getByRole('button', { name: /写入 \d+ 个文件/ }).click();
     await expect(dialog.getByText(/已写入/)).toBeVisible();
@@ -115,14 +115,15 @@ test.describe('write flows against the mock', () => {
 
   test('global: migrate wizard (pick projects → diff → confirm)', async ({ page }) => {
     await page.goto('/global');
+    await page.getByRole('button', { name: '扫描本机工具' }).click();
     await page.getByRole('button', { name: '移到项目级…' }).nth(1).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('checkbox', { name: /web-app/ })).toBeChecked();
-    await dialog.getByRole('button', { name: '下一步：预览 diff' }).click();
+    await dialog.getByRole('button', { name: '下一步：预览改动' }).click();
     await expect(dialog.getByRole('tab', { name: /~\/\.claude\/settings\.json/ })).toBeVisible();
     await dialog.getByRole('button', { name: /写入 \d+ 个文件/ }).click();
     await dialog.getByRole('button', { name: '完成' }).click();
-    await expect(page.getByText('没有全局启用的插件。')).toBeVisible();
+    await expect(page.getByText('没有本机工具启用的插件。')).toBeVisible();
   });
 
   test('narrow viewport collapses the sidebar into a top nav', async ({ browser }) => {

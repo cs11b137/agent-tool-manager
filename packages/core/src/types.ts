@@ -75,6 +75,7 @@ export interface LockedMcp {
 export interface ManagedEntries {
   mcp: string[];
   plugins: string[];
+  marketplaces?: string[];
 }
 
 /** registry 中的 `<name>.json` 或项目内 `.agents/mcp/<name>.json` */
@@ -102,13 +103,15 @@ export interface McpHttpDef extends McpDefBase {
 
 /** `~/.config/atm/config.json` */
 export interface GlobalConfig {
-  /** 共享仓库根目录，默认 `~/GitHub` */
+  /** 共享仓库根目录，默认 `~/.agent-tools` */
   root: string;
   /** MCP registry 目录，默认 `<root>/mcp-registry` */
   mcpRegistry: string;
   defaultAgents: AgentId[];
   /** 已注册项目的绝对路径（存储时允许 `~` 前缀） */
   projects: string[];
+  /** Explicitly initialized shared Git repository. */
+  sharedRepository?: boolean;
 }
 
 // ───────────────────────────── 查询结果（list / projects / library） ─────────────────────────────
@@ -222,7 +225,12 @@ export interface PluginContents {
   hooks: boolean;
 }
 
-/** 工具库页：`~/GitHub`、registry、已安装插件中所有可发现的工具 */
+export interface LibraryOptions {
+  /** Explicit add-tool pickers may discover installed plugins not yet referenced by a managed project. */
+  includeInstalledPlugins?: boolean;
+}
+
+/** 工具库：共享目录中的 Skill、MCP 定义及已添加到项目的插件。 */
 export interface LibraryItem {
   kind: ToolKind;
   name: string;
@@ -238,7 +246,7 @@ export interface LibraryItem {
   global: boolean;
   skill?: { repo: string; repoDir: string; path: string; commit: string };
   mcp?: { transport: 'stdio' | 'http'; origin: 'registry' | 'project'; envVars: EnvVarStatus[] };
-  plugin?: { marketplace: string; installed: boolean; version?: string; globallyEnabled: boolean };
+  plugin?: { marketplace: string; installed: boolean; version?: string; globallyEnabled: boolean; localSource?: boolean };
 }
 
 export interface RepoStatus {
@@ -474,13 +482,29 @@ export interface AtmErrorJson {
 /** `saveMcpDef` 的保存位置：全局 registry，或某个项目的 `.agents/mcp/`（projectDir 可以是项目 id 或路径）。 */
 export type McpDefScope = 'registry' | { projectDir: string };
 
+export interface SharedDirectoryInput {
+  root: string;
+  mcpRegistry: string;
+}
+
+export interface SharedRepositoryInput extends SharedDirectoryInput {
+  defaultAgents?: AgentId[];
+}
+
 /**
  * `createAtm()` 返回的对象（契约 §2）。所有接收 `dir` 的方法也接受项目 id。
  * 除 `projectId` / `watch` 外全部返回 Promise。
  */
 export interface Atm {
+  sharedRepository(): Promise<SharedRepositoryStatus>;
+  initSharedRepository(input: SharedRepositoryInput): Promise<GlobalConfig>;
+  setSharedRemote(remote: string): Promise<SharedRepositoryStatus>;
+  commitSharedRepository(message: string): Promise<SharedRepositoryStatus>;
+  pushSharedRepository(): Promise<SharedRepositoryStatus>;
+  createSharedTool(input: CreateSharedToolInput): Promise<{ path: string }>;
   config(): Promise<GlobalConfig>;
   saveConfig(patch: Partial<GlobalConfig>): Promise<GlobalConfig>;
+  initSharedDirectory(input: SharedDirectoryInput): Promise<GlobalConfig>;
   projects(): Promise<ProjectSummary[]>;
   registerProject(dir: string): Promise<ProjectSummary>;
   unregisterProject(idOrDir: string): Promise<void>;
@@ -502,8 +526,8 @@ export interface Atm {
   measure(dir: string, mcpName: string): Promise<MeasureResult>;
   pin(dir: string, skillName: string, rev: string, opts?: WriteOptions): Promise<WriteResult>;
 
-  library(): Promise<LibraryItem[]>;
-  search(query: string): Promise<SearchResult>;
+  library(opts?: LibraryOptions): Promise<LibraryItem[]>;
+  search(query: string, opts?: LibraryOptions): Promise<SearchResult>;
   repos(): Promise<RepoStatus[]>;
   cloneRepo(repo: string): Promise<RepoStatus>;
   saveMcpDef(def: McpDef, scope: McpDefScope): Promise<{ path: string }>;
@@ -514,3 +538,17 @@ export interface Atm {
   /** 监听项目（空数组 = 全部已注册项目）与 registry；同步返回停止函数（`await` 它也可以） */
   watch(dirs: string[], cb: (e: AtmEvent) => void): () => void;
 }
+
+export interface SharedRepositoryStatus {
+  initialized: boolean;
+  root: string;
+  remote: string;
+  branch: string;
+  head: string;
+  changes: string[];
+  ahead: number;
+  registryIncluded: boolean;
+}
+export type CreateSharedToolInput =
+  | { kind: 'skill' | 'plugin'; name: string; description: string; content: string }
+  | { kind: 'mcp'; def: McpDef };

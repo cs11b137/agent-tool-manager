@@ -1,3 +1,4 @@
+import { msg, useLocale } from '../lib/i18n';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Check } from 'lucide-react';
@@ -12,6 +13,7 @@ import { useAcknowledged } from '../lib/ack';
 import { hhmm, tildify } from '../lib/format';
 
 function RepoDialog({ repo, onClose }: { repo: string; onClose: () => void }) {
+  useLocale();
   const repos = useRepos();
   const projects = useProjects();
   const r = repos.data?.find((x) => x.repo === repo);
@@ -20,12 +22,11 @@ function RepoDialog({ repo, onClose }: { repo: string; onClose: () => void }) {
     <SimpleDialog
       open
       onClose={onClose}
-      cap="共享仓库"
+      cap={msg("共享仓库")}
       title={<span className="mono">{repo}</span>}
       footer={
         <button type="button" className="btn btn-p btn-lg" onClick={onClose}>
-          知道了
-        </button>
+          {msg("知道了")}</button>
       }
     >
       {!r ? (
@@ -33,29 +34,29 @@ function RepoDialog({ repo, onClose }: { repo: string; onClose: () => void }) {
       ) : (
         <>
           <dl className="m-0 grid grid-cols-[84px_1fr] gap-y-2.5 text-[13px]">
-            <dt className="text-ink3">目录</dt>
+            <dt className="text-ink3">{msg("目录")}</dt>
             <dd className="mono m-0 break-all">{tildify(r.dir)}</dd>
-            <dt className="text-ink3">分支</dt>
+            <dt className="text-ink3">{msg("分支")}</dt>
             <dd className="mono m-0">
               {r.branch ?? '(detached)'} · {r.head.slice(0, 7)}
             </dd>
-            <dt className="text-ink3">状态</dt>
+            <dt className="text-ink3">{msg("状态")}</dt>
             <dd className="m-0">
-              {r.dirty ? '有未提交的改动' : '工作区干净'}
-              {r.ahead > 0 ? ` · 领先远端 ${r.ahead} 个提交` : ''}
+              {r.dirty ? msg("有未提交的改动") : msg("工作区干净")}
+              {r.ahead > 0 ? msg(" · 领先远端 {0} 个提交", {0: r.ahead}) : ''}
             </dd>
-            <dt className="text-ink3">被引用</dt>
+            <dt className="text-ink3">{msg("被引用")}</dt>
             <dd className="mono m-0">{users.length ? users.join('、') : '—'}</dd>
           </dl>
           <div className="flex flex-col gap-1.5">
-            <span className="cap">在终端查看</span>
+            <span className="cap">{msg("在终端查看")}</span>
             <code className="mono rounded-[12px] border border-line2 bg-glass-2 px-3.5 py-2.5 text-[12px] leading-[1.8] break-all">
               git -C {tildify(r.dir)} status
               <br />
               git -C {tildify(r.dir)} diff
             </code>
           </div>
-          <p className="m-0 text-[12px] leading-[1.6] text-ink3">atm 不会替你提交或丢弃改动。改动已经对所有引用它的项目生效；确认无误可以给上游提 PR。</p>
+          <p className="m-0 text-[12px] leading-[1.6] text-ink3">{msg("atm 不会替你提交或丢弃改动。改动已经对所有引用它的项目生效；确认无误可以给上游提 PR。")}</p>
         </>
       )}
     </SimpleDialog>
@@ -65,6 +66,7 @@ function RepoDialog({ repo, onClose }: { repo: string; onClose: () => void }) {
 const LEVEL_INK: Record<DoctorLevel, string> = { error: 'var(--err-ink)', warn: 'var(--warn-ink)', info: 'var(--ink3)' };
 
 function Section({ level, children, delay }: { level: DoctorLevel; children: ReactNode; delay: number }) {
+  useLocale();
   return (
     <section aria-labelledby={`h-${level}`} className={`glass rise d${delay} overflow-hidden rounded-[20px]`}>
       <h2 id={`h-${level}`} className="cap m-0 flex items-center gap-2 border-b border-line px-5 py-3.5" style={{ color: LEVEL_INK[level] }}>
@@ -77,6 +79,7 @@ function Section({ level, children, delay }: { level: DoctorLevel; children: Rea
 }
 
 function ProjectRef({ issue, link }: { issue: DoctorIssue; link: boolean }) {
+  useLocale();
   if (!issue.projectName) return null;
   return link && issue.projectId ? (
     <Link to={`/projects/${issue.projectId}`} className="mono text-[13px] font-medium text-accent-ink">
@@ -88,6 +91,7 @@ function ProjectRef({ issue, link }: { issue: DoctorIssue; link: boolean }) {
 }
 
 export function DoctorPage() {
+  useLocale();
   const api = useApi();
   const toast = useToast();
   const doctor = useDoctor();
@@ -98,7 +102,7 @@ export function DoctorPage() {
   const [migrate, setMigrate] = useState<DoctorIssue | null>(null);
 
   if (doctor.isLoading) return <Loading />;
-  if (doctor.error || !doctor.data) return <ErrorBox error={doctor.error ?? new Error('无法读取体检结果')} />;
+  if (doctor.error || !doctor.data) return <ErrorBox error={doctor.error ?? new Error(msg("无法读取体检结果"))} />;
 
   const report = doctor.data;
   const issues = report.issues.filter((i) => !acked.includes(i.id));
@@ -112,19 +116,19 @@ export function DoctorPage() {
     const ids = list.map((i) => i.id);
     const note = list.map((i) => `\`.agents/skills/${i.name ?? ''}\``).join('、');
     setFlow({
-      eyebrow: '体检 · 一键修复',
-      title: <span>{list.length === 1 ? `重建软链 ${list[0]!.name ?? ''}` : `修复 ${list.length} 项`}</span>,
+      eyebrow: msg("体检 · 一键修复"),
+      title: <span>{list.length === 1 ? msg("重建软链 {0}", {0: list[0]!.name ?? ''}) : msg("修复 {0} 项", {0: list.length})}</span>,
       run: (dryRun) => api.fix(ids, { dryRun }),
       onCommitted: () => setFixedNote(note),
-      footnote: '只处理能安全修复的项：按清单重建软链，不改动清单与 Agent 配置。',
+      footnote: msg("只处理能安全修复的项：按清单重建软链，不改动清单与 Agent 配置。"),
     });
   };
 
   const measure = () => {
-    api.getDoctor(undefined, { measure: true }).catch((e: unknown) => toast.push({ tone: 'err', title: '检查失败', detail: (e as Error).message }));
+    api.getDoctor(undefined, { measure: true }).catch((e: unknown) => toast.push({ tone: 'err', title: msg("检查失败"), detail: (e as Error).message }));
   };
 
-  const errText = errors.length ? (errors.every((i) => i.fixable) ? 'error · 可安全修复' : 'error · 需要处理') : fixedNote ? 'error · 全部已修复' : 'error · 无';
+  const errText = errors.length ? (errors.every((i) => i.fixable) ? msg("error · 可安全修复") : msg("error · 需要处理")) : fixedNote ? msg("error · 全部已修复") : msg("error · 无");
 
   const warnActions = (i: DoctorIssue): ReactNode => {
     if (i.code === 'mcp-dup-plugin' && i.projectId && i.name) {
@@ -137,37 +141,34 @@ export function DoctorPage() {
             className="btn btn-g"
             onClick={() => {
               ack(i.id);
-              toast.push({ tone: 'ok', title: `保留清单里的 ${name}`, detail: '这条告警已在本机隐藏' });
+              toast.push({ tone: 'ok', title: msg("保留清单里的 {0}", {0: name}), detail: msg("这条告警已在本机隐藏") });
             }}
           >
-            保留清单的 MCP
-          </button>
+            {msg("保留清单的 MCP")}</button>
           <button
             type="button"
             className="btn btn-g"
             onClick={() =>
               setFlow({
-                eyebrow: `${i.projectName ?? ''} · 改用插件版本`,
+                eyebrow: msg("{0} · 改用插件版本", {0: i.projectName ?? ''}),
                 title: (
                   <>
                     <KindChip kind="mcp" />
-                    <span className="mono ca">移除 {name}</span>
+                    <span className="mono ca">{msg("移除 {0}", {0: name})}</span>
                   </>
                 ),
                 run: (dryRun) => api.removeTool(pid, 'mcp', name, { dryRun }),
               })
             }
           >
-            改用插件版本
-          </button>
+            {msg("改用插件版本")}</button>
         </>
       );
     }
     if (i.code === 'skill-shadowed') {
       return (
         <Link to="/global" className="btn btn-g">
-          打开全局页
-        </Link>
+          {msg("打开全局页")}</Link>
       );
     }
     if (i.code === 'rev-mismatch' && i.projectId) {
@@ -186,20 +187,17 @@ export function DoctorPage() {
       case 'repo-dirty':
         return (
           <button type="button" className="btn btn-g" onClick={() => setRepo(i.name ?? '')}>
-            查看改动
-          </button>
+            {msg("查看改动")}</button>
         );
       case 'plugin-global-only':
         return (
           <button type="button" className="btn btn-g" onClick={() => setMigrate(i)}>
-            移到项目级…
-          </button>
+            {msg("移到项目级…")}</button>
         );
       case 'context-total':
         return i.projectId ? (
           <Link to={`/projects/${i.projectId}`} className="btn btn-g">
-            打开项目
-          </Link>
+            {msg("打开项目")}</Link>
         ) : null;
       default:
         return null;
@@ -209,15 +207,14 @@ export function DoctorPage() {
   return (
     <>
       <PageHeader
-        cap={`${report.projects.length} 个项目 · atm doctor · ${hhmm(report.checkedAt)} 更新`}
-        title="体检"
+        cap={msg("{0} 个项目 · atm doctor · {1} 更新", {0: report.projects.length, 1: hhmm(report.checkedAt)})}
+        title={msg("体检")}
         actions={
           <>
             <button type="button" className="btn btn-g" onClick={measure}>
-              重新检查（含 --measure）
-            </button>
+              {msg("重新检查（含 --measure）")}</button>
             <button type="button" className="btn btn-p" disabled={!fixable.length} onClick={() => fix(fixable)}>
-              {fixable.length ? `一键修复安全项（${fixable.length}）` : '没有可自动修复的项'}
+              {fixable.length ? msg("一键修复安全项（{0}）", {0: fixable.length}) : msg("没有可自动修复的项")}
             </button>
           </>
         }
@@ -239,7 +236,7 @@ export function DoctorPage() {
           </span>
           <span className="flex flex-col gap-0.5">
             <span className="mono text-[34px] leading-none font-semibold">{warns.length}</span>
-            <span className="text-[13px] text-ink2">warn · 需要你决定</span>
+            <span className="text-[13px] text-ink2">{msg("warn · 需要你决定")}</span>
           </span>
         </div>
         <div className="glass flex items-center gap-4 rounded-[20px] px-[22px] py-5">
@@ -259,7 +256,7 @@ export function DoctorPage() {
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-white" style={{ background: 'var(--ok)' }}>
               <Check size={13} strokeWidth={3} aria-hidden />
             </span>
-            <span>{fixedNote ? <Rich text={`已重建软链 ${fixedNote}，没有其他 error`} /> : '没有 error'}</span>
+            <span>{fixedNote ? <Rich text={msg("已重建软链 {0}，没有其他 error", {0: fixedNote})} /> : msg("没有 error")}</span>
           </div>
         )}
         {errors.map((i, idx) => (
@@ -275,17 +272,16 @@ export function DoctorPage() {
                   <Rich text={i.detail} />
                 </code>
               )}
-              {i.nextCommand && <span className="mono text-[12px] text-ink3">下一步：{i.nextCommand}</span>}
+              {i.nextCommand && <span className="mono text-[12px] text-ink3">{msg("下一步：")}{i.nextCommand}</span>}
             </div>
             {i.fixable && (
               <button type="button" className="btn btn-p" onClick={() => fix([i])}>
-                {i.code === 'broken-link' || i.code === 'missing-link' ? '重建软链' : '修复'}
+                {i.code === 'broken-link' || i.code === 'missing-link' ? msg("重建软链") : msg("修复")}
               </button>
             )}
             {i.code === 'project-missing' && i.projectId && (
               <Link to={`/projects/${i.projectId}`} className="btn btn-g">
-                重新定位…
-              </Link>
+                {msg("重新定位…")}</Link>
             )}
           </div>
         ))}
@@ -307,7 +303,7 @@ export function DoctorPage() {
                   </span>
                 )}
                 <span className="text-[12px] text-ink3">
-                  {i.code === 'mcp-dup-plugin' ? '需要你决定保留哪一个，atm 不会自动处理' : i.code === 'skill-shadowed' ? '需要你决定保留哪一份，atm 不会自动处理' : `下一步：${i.nextCommand ?? 'atm doctor'}`}
+                  {i.code === 'mcp-dup-plugin' ? msg("需要你决定保留哪一个，atm 不会自动处理") : i.code === 'skill-shadowed' ? msg("需要你决定保留哪一份，atm 不会自动处理") : msg("下一步：{0}", {0: i.nextCommand ?? 'atm doctor'})}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">{warnActions(i)}</div>
@@ -336,7 +332,7 @@ export function DoctorPage() {
         </Section>
       )}
 
-      {issues.length === 0 && <Empty className="glass rounded-[20px]">所有项目都很健康。</Empty>}
+      {issues.length === 0 && <Empty className="glass rounded-[20px]">{msg("所有项目都很健康。")}</Empty>}
 
       <OpFlow config={flow} onClose={() => setFlow(null)} />
       {repo && <RepoDialog repo={repo} onClose={() => setRepo(null)} />}

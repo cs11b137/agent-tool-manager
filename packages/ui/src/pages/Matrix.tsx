@@ -1,9 +1,10 @@
+import { msg, useLocale } from '../lib/i18n';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { useApi } from '../api/context';
 import { useDoctor, useLibrary, useProjects } from '../api/queries';
 import type { BatchOp, LibraryItem, ProjectSummary } from '../api/types';
-import { ErrorBox, KindChip, Loading, PageHeader, PendingBar } from '../components/ui';
+import { Empty, ErrorBox, KindChip, Loading, PageHeader, PendingBar } from '../components/ui';
 import { OpFlow, specFor, type OpFlowConfig } from '../components/flows';
 import { displayName, fmtTok, fmtTokShort } from '../lib/format';
 
@@ -24,29 +25,27 @@ const LOOK = {
 } satisfies Record<string, CellLook>;
 
 function Legend() {
+  useLocale();
   return (
     <div className="glass flex flex-wrap gap-4 rounded-full px-4 py-2.5 text-[12px] text-ink2">
       <span className="inline-flex items-center gap-1.5">
         <span className="h-3 w-3.5 rounded-[4px] bg-accent" />
-        启用
-      </span>
+        {msg("启用")}</span>
       <span className="inline-flex items-center gap-1.5">
         <span className="box-border h-3 w-3.5 rounded-[4px]" style={{ border: '1.5px dashed var(--accent)' }} />
-        待提交
-      </span>
+        {msg("待提交")}</span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-[1px]" style={{ background: 'var(--warn)', transform: 'rotate(45deg)' }} />
-        有告警
-      </span>
+        {msg("有告警")}</span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-3 w-3.5 rounded-[4px]" style={{ background: 'repeating-linear-gradient(135deg, var(--line2) 0 3px, transparent 3px 6px)' }} />
-        项目缺失
-      </span>
+        {msg("项目缺失")}</span>
     </div>
   );
 }
 
 export function MatrixPage() {
+  useLocale();
   const api = useApi();
   const projects = useProjects();
   const library = useLibrary();
@@ -103,32 +102,35 @@ export function MatrixPage() {
       }
     }
     setFlow({
-      eyebrow: `矩阵 · ${pendingProjects.size} 个项目`,
-      title: <span>{ops.length} 处改动</span>,
+      eyebrow: msg("矩阵 · {0} 个项目", {0: pendingProjects.size}),
+      title: <span>{ops.length} {msg("处改动")}</span>,
       run: (dryRun, o) => api.batch(ops, { dryRun, adopt: o.adopt, force: o.force }),
       writeOptions: ['adopt', 'force'],
       onCommitted: () => setDiff(new Set()),
-      footnote: '逐项执行，单项失败不影响其他项目。合并写入只改动 lock.managed 中列出的条目，文件里手写的条目保持原样。',
+      footnote: msg("逐项执行，单项失败不影响其他项目。合并写入只改动 lock.managed 中列出的条目，文件里手写的条目保持原样。"),
     });
   };
 
   return (
     <>
       <PageHeader
-        cap="工具 × 项目"
-        title="矩阵"
-        sub={<span className="text-[14px] text-ink2">点击单元格启用或停用，改动先攒成一批，统一预览 diff 后写入</span>}
+        cap={msg("工具 × 项目")}
+        title={msg("矩阵")}
+        sub={<span className="text-[14px] text-ink2">{msg("点击单元格启用或停用，改动先攒成一批，统一预览 diff 后写入")}</span>}
         actions={<Legend />}
       />
       {err != null && <ErrorBox error={err} />}
 
-      <section className="glass rise d1 overflow-hidden rounded-[20px]">
+      {!rows.length || !cols.length ? <Empty className="glass rounded-[20px] p-8">
+        <strong className="block text-base text-ink">{msg(!rows.length ? '还没有可关联的工具' : '先添加一个项目')}</strong>
+        <p>{msg(!rows.length ? '先在工具库创建工具，再添加项目。' : '添加项目后，即可在这里勾选要关联的工具。')}</p>
+        <Link className="btn btn-p" to="/library">{msg('前往工具库')}</Link>
+      </Empty> : <section className="glass rise d1 overflow-hidden rounded-[20px]">
         <div className="overflow-x-auto">
-          <div role="grid" aria-label="工具 × 项目" style={{ minWidth: 240 + cols.length * 140 + 80 }}>
+          <div role="grid" aria-label={msg("工具 × 项目")} style={{ minWidth: 240 + cols.length * 140 + 80 }}>
             <div role="row" className="grid border-b border-line" style={{ gridTemplateColumns: grid }}>
               <span role="columnheader" className="cap px-[18px] py-4">
-                工具
-              </span>
+                {msg("工具")}</span>
               {cols.map((p) =>
                 p.exists ? (
                   <Link key={p.id} role="columnheader" to={`/projects/${p.id}`} className="mono truncate px-3 py-4 text-center text-[13px] font-semibold text-ink no-underline hover:underline">
@@ -157,7 +159,7 @@ export function MatrixPage() {
                   if (unavailable(i, p)) {
                     return (
                       <span key={p.id} role="gridcell" className="flex justify-center px-3 py-2">
-                        <button type="button" className="cell" disabled aria-label={`${name} 在 ${p.name}：${p.exists ? '项目未启用 Claude Code' : '项目缺失'}`} style={LOOK.na.style} />
+                        <button type="button" className="cell" disabled aria-label={msg("{0} 在 {1}：{2}", {0: name, 1: p.name, 2: p.exists ? msg('项目未启用 Claude Code') : msg('项目缺失')})} style={LOOK.na.style} />
                       </span>
                     );
                   }
@@ -171,7 +173,7 @@ export function MatrixPage() {
                         type="button"
                         className="cell"
                         aria-pressed={now}
-                        aria-label={`${now ? '停用' : '启用'} ${name} 于 ${p.name}`}
+                        aria-label={msg("{0} {1} 于 {2}", {0: now ? msg('停用') : msg('启用'), 1: name, 2: p.name})}
                         data-state={changed ? 'pending' : now ? 'on' : 'off'}
                         style={{ ...look.style, cursor: 'pointer' }}
                         onClick={() => toggle(k)}
@@ -187,7 +189,7 @@ export function MatrixPage() {
             ))}
 
             <div role="row" className="grid items-center bg-glass-2" style={{ gridTemplateColumns: grid }}>
-              <span className="px-[18px] py-4 text-[14px] font-semibold">上下文合计</span>
+              <span className="px-[18px] py-4 text-[14px] font-semibold">{msg("上下文合计")}</span>
               {totals.map((t, idx) => (
                 <span key={cols[idx]!.id} className="flex flex-col items-center gap-2 px-3 py-4">
                   <span className="mono text-[15px] font-semibold" style={{ color: t ? 'var(--ink)' : 'var(--ink3)' }}>
@@ -202,13 +204,13 @@ export function MatrixPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
       {diff.size > 0 && (
-        <PendingBar label={`${diff.size} 处改动待提交 · 涉及 ${pendingProjects.size} 个项目`} onReset={() => setDiff(new Set())} onApply={preview} applyLabel="预览 diff" />
+        <PendingBar label={msg("{0} 处改动待提交 · 涉及 {1} 个项目", {0: diff.size, 1: pendingProjects.size})} onReset={() => setDiff(new Set())} onApply={preview} applyLabel={msg("预览 diff")} />
       )}
 
-      <p className="rise d2 m-0 text-[12px] leading-[1.6] text-ink3">插件只对 Claude Code 生效；在只启用了 Cursor 的项目里，插件单元格会显示为不可用。</p>
+      <p className="rise d2 m-0 text-[12px] leading-[1.6] text-ink3">{msg("插件只对 Claude Code 生效；在只启用了 Cursor 的项目里，插件单元格会显示为不可用。")}</p>
 
       <OpFlow config={flow} onClose={() => setFlow(null)} />
     </>

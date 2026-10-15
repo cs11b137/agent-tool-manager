@@ -1,3 +1,4 @@
+import { msg, useLocale } from '../lib/i18n';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, X } from 'lucide-react';
@@ -59,6 +60,7 @@ type WriteState = { status: 'writing' } | { status: 'done' } | { status: 'error'
 
 /** 添加工具 · diff 确认 — the shared 3-step modal (prototype 03). */
 export function WriteFlow(props: WriteFlowProps) {
+  useLocale();
   const { open, onClose, eyebrow, title, select, aside, preview, previewKey = '', commit, onCommitted, footnote, writeOptions } = props;
   const qc = useQueryClient();
   const titleId = useId();
@@ -119,7 +121,7 @@ export function WriteFlow(props: WriteFlowProps) {
             {title}
           </h1>
         </div>
-        <ol aria-label="步骤" className="m-0 flex list-none gap-1 rounded-full bg-line p-1 text-[13px]">
+        <ol aria-label={msg("步骤")} className="m-0 flex list-none gap-1 rounded-full bg-line p-1 text-[13px]">
           {STEPS.map(([s, label], i) => {
             const cur = s === step;
             const done = i < stepIdx;
@@ -135,14 +137,14 @@ export function WriteFlow(props: WriteFlowProps) {
                 }
               >
                 <span className="mono" style={cur ? { color: 'var(--accent-ink)' } : undefined}>
-                  {done ? <Check size={12} strokeWidth={3} aria-label="已完成" /> : i + 1}
+                  {done ? <Check size={12} strokeWidth={3} aria-label={msg("已完成")} /> : i + 1}
                 </span>
-                {label}
+                {msg(label)}
               </li>
             );
           })}
         </ol>
-        <button type="button" aria-label="关闭" className="btn btn-t btn-lg !w-11 !p-0" onClick={onClose}>
+        <button type="button" aria-label={msg("关闭")} className="btn btn-t btn-lg !w-11 !p-0" onClick={onClose}>
           <X size={18} aria-hidden />
         </button>
       </header>
@@ -159,27 +161,26 @@ export function WriteFlow(props: WriteFlowProps) {
           <section className="box-border flex min-w-0 flex-[7_1_520px] flex-col gap-3.5 px-[26px] py-[22px]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="m-0 text-[16px] font-semibold">
-                将要写入的文件 <span className="font-normal text-ink3">· {data ? n : '…'}</span>
+                {msg("将要写入的文件")}<span className="font-normal text-ink3">· {data ? n : '…'}</span>
               </h2>
               <span className="chip" style={{ background: 'var(--mcp-soft)', color: 'var(--mcp-ink)', fontWeight: 500 }}>
-                dryRun=1 · 尚未写入
-              </span>
+                {msg("dryRun=1 · 尚未写入")}</span>
             </div>
             {writeOptions && writeOptions.length > 0 && (
               <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
-                <legend className="cap pb-1.5">写入选项</legend>
+                <legend className="cap pb-1.5">{msg("写入选项")}</legend>
                 {writeOptions.map((k) => (
                   <label key={k} className="flex items-start gap-2.5 text-[13px] leading-[1.5]">
                     <input type="checkbox" className="mt-[3px]" checked={wopts[k]} onChange={(e) => setWopts({ ...wopts, [k]: e.target.checked })} />
                     <span>
-                      {OPTION_INFO[k].label} <code className="mono text-[12px] text-ink3">{OPTION_INFO[k].flag}</code>
-                      <span className="block text-[12px] text-ink3">{OPTION_INFO[k].hint}</span>
+                      {msg(OPTION_INFO[k].label)} <code className="mono text-[12px] text-ink3">{OPTION_INFO[k].flag}</code>
+                      <span className="block text-[12px] text-ink3">{msg(OPTION_INFO[k].hint)}</span>
                     </span>
                   </label>
                 ))}
               </fieldset>
             )}
-            {pv.status === 'loading' && <Loading label="正在计算 diff（dryRun）…" className="!px-0" />}
+            {pv.status === 'loading' && <Loading label={msg("正在计算 diff（dryRun）…")} className="!px-0" />}
             {pv.status === 'error' && <ErrorBox error={pv.error} />}
             {data && (
               <>
@@ -189,7 +190,7 @@ export function WriteFlow(props: WriteFlowProps) {
                 {n > 0 ? (
                   <DiffTabs key={previewKey} files={data.files} />
                 ) : (
-                  !data.errors.length && <Empty className="rounded-[16px] border border-line2 bg-glass-2">没有需要写入的文件：磁盘上已经是清单描述的状态。</Empty>
+                  !data.errors.length && <Empty className="rounded-[16px] border border-line2 bg-glass-2">{msg("没有需要写入的文件：磁盘上已经是清单描述的状态。")}</Empty>
                 )}
                 {data.warnings.map((w) => (
                   <div key={w} className="flex gap-2.5 rounded-[12px] px-3.5 py-3 text-[13px] leading-[1.6]" style={{ background: 'var(--warn-soft)' }}>
@@ -202,7 +203,7 @@ export function WriteFlow(props: WriteFlowProps) {
               </>
             )}
             <p className="m-0 text-[12px] leading-[1.6] text-ink3">
-              {footnote ?? '合并写入只改动 lock.managed 中列出的条目，文件里手写的 MCP 保持原样。写入采用临时文件 + rename，失败时清单与 lock 都不变。'}
+              {footnote ?? msg("合并写入只改动 lock.managed 中列出的条目，文件里手写的 MCP 保持原样。写入采用临时文件 + rename，失败时清单与 lock 都不变。")}
             </p>
           </section>
         </div>
@@ -210,7 +211,7 @@ export function WriteFlow(props: WriteFlowProps) {
 
       {step === 'write' && (
         <div className="flex flex-col gap-4 px-[26px] py-[26px]">
-          {ws.status === 'writing' && <Loading label={`正在写入 ${n} 个文件…`} className="!px-0" />}
+          {ws.status === 'writing' && <Loading label={msg("正在写入 {0} 个文件…", {0: n})} className="!px-0" />}
           {ws.status === 'error' && <ErrorBox error={ws.error} />}
           {ws.status === 'done' && (
             <div className="morph flex flex-col gap-4">
@@ -219,7 +220,7 @@ export function WriteFlow(props: WriteFlowProps) {
                   <Check size={13} strokeWidth={3} aria-hidden />
                 </span>
                 <span>
-                  已写入 {n} 个文件{data?.warnings.length ? `，${data.warnings.length} 条提示请留意` : ''}
+                  {msg("已写入 {0} 个文件", {0: n})}{data?.warnings.length ? msg("，{0} 条提示请留意", {0: data.warnings.length}) : ''}
                 </span>
               </div>
               {data && n > 0 && (
@@ -239,43 +240,36 @@ export function WriteFlow(props: WriteFlowProps) {
 
       <footer className="flex flex-wrap items-center justify-end gap-2.5 border-t border-line px-[26px] py-[18px]">
         <span className="mono mr-auto min-w-0 text-[12px] break-all text-ink3">
-          {data?.commands.length ? `等价命令：${data.commands.join(' ; ')}` : ''}
+          {data?.commands.length ? msg("等价命令：{0}", {0: data.commands.join(' ; ')}) : ''}
         </span>
         {step === 'select' && select && (
           <>
             <button type="button" className="btn btn-t btn-lg" onClick={onClose}>
-              取消
-            </button>
+              {msg("取消")}</button>
             <button type="button" className="btn btn-p btn-lg" disabled={!select.canContinue} onClick={() => setStep('preview')}>
-              下一步：预览 diff
-            </button>
+              {msg("下一步：预览 diff")}</button>
           </>
         )}
         {step === 'preview' && (
           <>
             {select && (
               <button type="button" className="btn btn-t btn-lg" onClick={() => setStep('select')}>
-                上一步
-              </button>
+                {msg("上一步")}</button>
             )}
             <button type="button" className="btn btn-t btn-lg" onClick={onClose}>
-              取消
-            </button>
+              {msg("取消")}</button>
             <button type="button" className="btn btn-p btn-lg" disabled={!data || n === 0} onClick={() => void doCommit()}>
-              写入 {data ? n : ''} 个文件
-            </button>
+              {msg("写入 {0} 个文件", {0: data ? n : ''})}</button>
           </>
         )}
         {step === 'write' && (
           <>
             {ws.status === 'error' && (
               <button type="button" className="btn btn-g btn-lg" onClick={() => setStep('preview')}>
-                返回预览
-              </button>
+                {msg("返回预览")}</button>
             )}
             <button type="button" className="btn btn-p btn-lg" disabled={ws.status === 'writing'} onClick={onClose}>
-              完成
-            </button>
+              {msg("完成")}</button>
           </>
         )}
       </footer>

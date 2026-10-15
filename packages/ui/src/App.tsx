@@ -1,3 +1,4 @@
+import { RepositoryGate } from './components/SharedRepository';
 import { Route, Routes } from 'react-router';
 import { Shell } from './components/Shell';
 import { OverviewPage } from './pages/Overview';
@@ -10,7 +11,7 @@ import { NotFoundPage } from './pages/NotFound';
 
 export function App() {
   return (
-    <Shell>
+    <RepositoryGate><Shell>
       <Routes>
         <Route path="/" element={<OverviewPage />} />
         <Route path="/projects/:id" element={<ProjectPage />} />
@@ -20,6 +21,6 @@ export function App() {
         <Route path="/global" element={<GlobalPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </Shell>
+    </Shell></RepositoryGate>
   );
 }

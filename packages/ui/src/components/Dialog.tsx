@@ -1,3 +1,4 @@
+import { msg, useLocale } from '../lib/i18n';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
@@ -21,6 +22,7 @@ export function Dialog({
   children: ReactNode;
   className?: string;
 }) {
+  useLocale();
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -98,6 +100,7 @@ export function SimpleDialog({
   footer?: ReactNode;
   maxWidth?: number;
 }) {
+  useLocale();
   const id = useId();
   return (
     <Dialog open={open} onClose={onClose} labelledBy={id} maxWidth={maxWidth}>
@@ -108,7 +111,7 @@ export function SimpleDialog({
             {title}
           </h1>
         </div>
-        <button type="button" aria-label="关闭" className="btn btn-t btn-lg !w-11 !p-0" onClick={onClose}>
+        <button type="button" aria-label={msg("关闭")} className="btn btn-t btn-lg !w-11 !p-0" onClick={onClose}>
           <X size={18} aria-hidden />
         </button>
       </header>

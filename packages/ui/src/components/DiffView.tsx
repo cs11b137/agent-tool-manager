@@ -1,3 +1,4 @@
+import { msg, useLocale } from '../lib/i18n';
 import { useMemo, useState } from 'react';
 import type { DiffFile } from '../lib/changes';
 import { fileMode, fileStat } from '../lib/changes';
@@ -23,6 +24,7 @@ function linesOf(f: DiffFile): DiffLine[] {
 }
 
 export function DiffLines({ lines }: { lines: DiffLine[] }) {
+  useLocale();
   return (
     <div className="overflow-x-auto py-2" style={{ maxHeight: 440 }}>
       {lines.map((l, i) => {
@@ -45,6 +47,7 @@ export function DiffLines({ lines }: { lines: DiffLine[] }) {
 
 /** Tabs per file with +N −M, then a unified diff panel (prototype 03). */
 export function DiffTabs({ files, initial }: { files: DiffFile[]; initial?: number }) {
+  useLocale();
   const defaultIdx = useMemo(() => {
     if (initial !== undefined) return initial;
     const i = files.findIndex((f) => f.change.agent && f.change.type === 'file');
@@ -57,7 +60,7 @@ export function DiffTabs({ files, initial }: { files: DiffFile[]; initial?: numb
   if (!cur) return null;
   return (
     <>
-      <div role="tablist" aria-label="文件" className="flex flex-wrap gap-1.5">
+      <div role="tablist" aria-label={msg("文件")} className="flex flex-wrap gap-1.5">
         {files.map((f, i) => (
           <button
             key={f.key}

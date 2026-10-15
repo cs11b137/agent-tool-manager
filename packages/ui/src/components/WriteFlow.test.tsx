@@ -22,7 +22,7 @@ const preview: WritePreview = {
 };
 
 describe('WriteFlow (添加工具 · diff 确认)', () => {
-  it('walks 选择 → 预览 diff → 写入 and only writes after confirmation', async () => {
+  it('walks 选择 → 预览改动 → 写入 and only writes after confirmation', async () => {
     const user = userEvent.setup();
     const previewFn = vi.fn().mockResolvedValue(preview);
     const commitFn = vi.fn().mockResolvedValue(undefined);
@@ -46,8 +46,8 @@ describe('WriteFlow (添加工具 · diff 确认)', () => {
     expect(previewFn).not.toHaveBeenCalled();
 
     // step 2: dryRun preview
-    await user.click(screen.getByRole('button', { name: '下一步：预览 diff' }));
-    expect(screen.getByText('预览 diff').closest('li')).toHaveAttribute('aria-current', 'step');
+    await user.click(screen.getByRole('button', { name: '下一步：预览改动' }));
+    expect(screen.getByText('预览改动').closest('li')).toHaveAttribute('aria-current', 'step');
     expect(previewFn).toHaveBeenCalledTimes(1);
     const tabs = await screen.findAllByRole('tab');
     expect(tabs.map((t) => t.textContent)).toEqual(['tools.json+1 −1', '.mcp.json+3 −1']);
@@ -70,8 +70,8 @@ describe('WriteFlow (添加工具 · diff 确认)', () => {
 
   it('starts on the preview step when selection happened elsewhere and surfaces dryRun errors', async () => {
     const previewFn = vi.fn().mockRejectedValue(new Error('另一个 atm 进程正在写'));
-    renderWithProviders(<WriteFlow open onClose={() => {}} eyebrow="矩阵" title="2 处改动" preview={previewFn} commit={vi.fn()} />);
-    expect(screen.getByText('预览 diff').closest('li')).toHaveAttribute('aria-current', 'step');
+    renderWithProviders(<WriteFlow open onClose={() => {}} eyebrow="工具关联" title="2 处改动" preview={previewFn} commit={vi.fn()} />);
+    expect(screen.getByText('预览改动').closest('li')).toHaveAttribute('aria-current', 'step');
     expect(await screen.findByRole('alert')).toHaveTextContent('另一个 atm 进程正在写');
     expect(screen.getByRole('button', { name: /写入/ })).toBeDisabled();
   });

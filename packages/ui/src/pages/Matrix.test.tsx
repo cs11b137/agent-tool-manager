@@ -34,7 +34,7 @@ describe('MatrixPage', () => {
     // nothing written yet
     expect((await api.getProject(IDS.webApp)).tools.some((t) => t.name === 'linear')).toBe(false);
 
-    await user.click(screen.getByRole('button', { name: '预览 diff' }));
+    await user.click(screen.getByRole('button', { name: '预览改动' }));
     const dialog = await screen.findByRole('dialog');
     await within(dialog).findByRole('tab', { name: /tools\.json/ });
     expect(within(dialog).getByRole('tab', { name: /\.cursor\/mcp\.json/ })).toBeInTheDocument();

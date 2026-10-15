@@ -1,0 +1,22 @@
+{
+  "name": "@atm/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "node scripts/prepare.mjs",
+    "bundle": "tauri build",
+    "typecheck": "node --check src/backend.mjs && node --check scripts/prepare.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check:rust": "cargo test --manifest-path src-tauri/Cargo.toml"
+  },
+  "dependencies": {
+    "@atm/server": "workspace:*",
+    "@atm/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.3",
+    "esbuild": "^0.25.12"
+  }
+}

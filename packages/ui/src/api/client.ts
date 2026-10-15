@@ -9,8 +9,13 @@ import type {
   DoctorReport,
   FileChange,
   GlobalConfig,
+  SharedDirectoryInput,
+  SharedRepositoryInput,
+  SharedRepositoryStatus,
+  CreateSharedToolInput,
   GlobalReport,
   LibraryItem,
+  LibraryOptions,
   McpDef,
   MigrateSpec,
   ProjectDetail,
@@ -56,9 +61,19 @@ export type McpDefScope = 'registry' | { projectId: string };
 export interface ApiClient {
   readonly kind: 'http' | 'mock';
 
+  selectDirectory(initialPath?: string): Promise<{ path: string | null }>;
+
   // config
   getConfig(): Promise<GlobalConfig>;
   patchConfig(patch: Partial<GlobalConfig>): Promise<GlobalConfig>;
+  initSharedDirectory(input: SharedDirectoryInput): Promise<GlobalConfig>;
+
+  getSharedRepository(): Promise<SharedRepositoryStatus>;
+  initSharedRepository(input: SharedRepositoryInput): Promise<GlobalConfig>;
+  setSharedRemote(remote: string): Promise<SharedRepositoryStatus>;
+  commitSharedRepository(message: string): Promise<SharedRepositoryStatus>;
+  pushSharedRepository(): Promise<SharedRepositoryStatus>;
+  createSharedTool(input: CreateSharedToolInput): Promise<{ path: string }>;
 
   // projects
   getProjects(): Promise<ProjectSummary[]>;
@@ -80,7 +95,7 @@ export interface ApiClient {
   fix(issueIds: string[], opts?: DryRunOpt): Promise<WriteResult>;
 
   // library & repos
-  getLibrary(q?: string): Promise<LibraryItem[]>;
+  getLibrary(q?: string, opts?: LibraryOptions): Promise<LibraryItem[]>;
   getRepos(): Promise<RepoStatus[]>;
   cloneRepo(repo: string): Promise<TaskRef>;
   sync(repos?: string[]): Promise<TaskRef>;

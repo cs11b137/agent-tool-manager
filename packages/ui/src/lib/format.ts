@@ -1,3 +1,4 @@
+import { msg } from './i18n';
 import type { AgentId, ToolKind } from '../api/types';
 
 /** 184 → "184", 6084 → "6.1k" (project / overview style). */
@@ -30,8 +31,8 @@ export const AGENT_MCP_FILE: Record<AgentId, string> = {
 };
 
 export function agentsLabel(agents: AgentId[]): string {
-  if (agents.length === 0) return '未落地';
-  if (agents.length === 1) return `仅 ${AGENT_LABEL[agents[0]!]}`;
+  if (agents.length === 0) return msg("未落地");
+  if (agents.length === 1) return msg("仅 {0}", {0: AGENT_LABEL[agents[0]!]});
   return agents.map((a) => AGENT_LABEL[a]).join(' · ');
 }
 

@@ -1,3 +1,4 @@
+import { msg } from '../lib/i18n';
 import { ApiError, type ApiClient, type ConnectionStatus, type DryRunOpt, type McpDefScope, type TaskInfo, type TaskRef, type WriteOpt } from './client';
 import type {
   ActivityEntry,
@@ -10,8 +11,13 @@ import type {
   DoctorReport,
   FileChange,
   GlobalConfig,
+  SharedDirectoryInput,
+  SharedRepositoryInput,
+  SharedRepositoryStatus,
+  CreateSharedToolInput,
   GlobalReport,
   LibraryItem,
+  LibraryOptions,
   McpDef,
   MigrateSpec,
   ProjectDetail,
@@ -56,13 +62,13 @@ export class HttpApiClient implements ApiClient {
         body: body === undefined ? null : JSON.stringify(body),
       });
     } catch (e) {
-      throw new ApiError('NETWORK', `无法连接 atm server：${(e as Error).message}`);
+      throw new ApiError('NETWORK', msg('无法连接服务，请确认 atm ui 正在运行。'));
     }
     const text = await res.text();
     const data: unknown = text ? safeJson(text) : undefined;
     if (!res.ok) {
       if (res.status === 401) {
-        throw new ApiError('UNAUTHORIZED', '未授权：请使用 `atm ui` 打印的带 token 链接重新打开', {
+        throw new ApiError('UNAUTHORIZED', msg('未授权：请使用 `atm ui` 打印的带 token 链接重新打开'), {
           status: 401,
           nextCommand: 'atm ui',
         });
@@ -80,12 +86,25 @@ export class HttpApiClient implements ApiClient {
     return data as T;
   }
 
+  selectDirectory(initialPath?: string) { return this.req<{ path: string | null }>('POST', '/dialogs/select-directory', { initialPath }); }
+
   getConfig() {
     return this.req<GlobalConfig>('GET', '/config');
   }
   patchConfig(patch: Partial<GlobalConfig>) {
     return this.req<GlobalConfig>('PATCH', '/config', patch);
   }
+
+  initSharedDirectory(input: SharedDirectoryInput) {
+    return this.req<GlobalConfig>('POST', '/config/init-shared-directory', input);
+  }
+
+  getSharedRepository() { return this.req<SharedRepositoryStatus>('GET', '/shared-repository'); }
+  initSharedRepository(input: SharedRepositoryInput) { return this.req<GlobalConfig>('POST', '/shared-repository/init', input); }
+  setSharedRemote(remote: string) { return this.req<SharedRepositoryStatus>('PUT', '/shared-repository/remote', { remote }); }
+  commitSharedRepository(message: string) { return this.req<SharedRepositoryStatus>('POST', '/shared-repository/commit', { message }); }
+  pushSharedRepository() { return this.req<SharedRepositoryStatus>('POST', '/shared-repository/push'); }
+  createSharedTool(input: CreateSharedToolInput) { return this.req<{ path: string }>('POST', '/shared-repository/tools', input); }
 
   getProjects() {
     return this.req<ProjectSummary[]>('GET', '/projects');
@@ -141,8 +160,8 @@ export class HttpApiClient implements ApiClient {
     return this.req<WriteResult>('POST', '/doctor/fix', { issueIds }, { dryRun: opts.dryRun });
   }
 
-  getLibrary(q?: string) {
-    return this.req<LibraryItem[]>('GET', '/library', undefined, { q });
+  getLibrary(q?: string, opts: LibraryOptions = {}) {
+    return this.req<LibraryItem[]>('GET', '/library', undefined, { q, includeInstalledPlugins: opts.includeInstalledPlugins });
   }
   getRepos() {
     return this.req<RepoStatus[]>('GET', '/repos');

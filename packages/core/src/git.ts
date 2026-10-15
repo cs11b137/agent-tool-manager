@@ -24,7 +24,7 @@ export function runGit(args: string[], opts: GitOptions = {}): Promise<string> {
           const msg = (stderr || err.message).toString().trim();
           reject(new AtmError('GIT_FAILED', `git ${args.join(' ')} failed: ${msg}`, { nextCommand: 'atm doctor', cause: err }));
         } else {
-          resolve(stdout.toString().trim());
+          resolve(args.includes('-z') ? stdout.toString() : stdout.toString().trim());
         }
       },
     );

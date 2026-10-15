@@ -12,8 +12,13 @@ import type {
   DoctorReport,
   FileChange,
   GlobalConfig,
+  SharedDirectoryInput,
+  SharedRepositoryInput,
+  SharedRepositoryStatus,
+  CreateSharedToolInput,
   GlobalReport,
   LibraryItem,
+  LibraryOptions,
   McpDef,
   MigrateSpec,
   ProjectDetail,
@@ -239,7 +244,7 @@ export class MockApiClient implements ApiClient {
     }
     if (p.agents.includes('codex')) files['.codex/config.toml'] = this.renderCodex(p);
     if (p.agents.includes('claude-code') && p.plugins.length) {
-      files['.claude/settings.json'] = json({ enabledPlugins: Object.fromEntries(p.plugins.map((n) => [n, true])) });
+      files['.claude/settings.json'] = json({ enabledPlugins: Object.fromEntries(p.plugins.map((n) => [n, true])), ...(p.plugins.some((n) => this.s.plugins.find((x) => x.name === n)?.localSource) ? { extraKnownMarketplaces: { 'atm-shared': { source: { source: 'directory', path: this.config.root } } } } : {}) });
     }
     return files;
   }
@@ -377,7 +382,7 @@ export class MockApiClient implements ApiClient {
     }
     const c = this.s.plugins.find((x) => x.name === spec.name || x.name.startsWith(`${spec.name}@`));
     if (!c) throw new ApiError('NOT_FOUND', `找不到插件 ${spec.name}`, { status: 404, nextCommand: 'claude plugin install ' + spec.name });
-    if (!c.installed) {
+    if (!c.installed && !c.localSource) {
       throw new ApiError('PLUGIN_NOT_INSTALLED', `插件 ${c.name} 尚未安装`, { status: 400, nextCommand: `claude plugin install ${c.name}` });
     }
     if (p.plugins.includes(c.name)) {
@@ -665,12 +670,63 @@ export class MockApiClient implements ApiClient {
 
   // ───────────── ApiClient ─────────────
 
+  async selectDirectory(_initialPath?: string): Promise<{ path: string | null }> {
+    throw new ApiError('UNSUPPORTED', '演示模式不打开本机文件夹，请手动输入路径');
+  }
+
   getConfig() {
     return this.wait({ ...this.config, projects: this.s.projects.map((p) => p.path) });
   }
   patchConfig(patch: Partial<GlobalConfig>) {
     this.config = { ...this.config, ...patch };
     return this.getConfig();
+  }
+
+  async initSharedDirectory(input: SharedDirectoryInput) {
+    const normalize = (value: string) => {
+      const clean = value.trim();
+      if (!clean || clean.includes('\0') || !/^(\/|~(?:\/|$))/.test(clean)) {
+        throw new ApiError('INVALID_MANIFEST', '请输入绝对路径或 ~/ 开头的路径', { status: 400 });
+      }
+      const parts: string[] = [];
+      for (const part of clean.replace(/^~(?=\/|$)/, HOME).split('/')) {
+        if (part === '..') parts.pop();
+        else if (part && part !== '.') parts.push(part);
+      }
+      return '/' + parts.join('/');
+    };
+    const patch = { root: normalize(input.root), mcpRegistry: normalize(input.mcpRegistry) };
+    this.config = { ...this.config, ...patch };
+    this.emit({ type: 'library.changed' });
+    return this.getConfig();
+  }
+
+  private sharedRemote = '';
+  private sharedHead = '';
+  async getSharedRepository(): Promise<SharedRepositoryStatus> {
+    return { initialized: true, root: this.config.root, remote: this.sharedRemote, branch: 'main', head: this.sharedHead, changes: this.sharedHead ? [] : ['README.md'], ahead: 0, registryIncluded: this.config.mcpRegistry.startsWith(this.config.root + '/') };
+  }
+  async initSharedRepository(input: SharedRepositoryInput): Promise<GlobalConfig> {
+    const cfg = await this.initSharedDirectory(input);
+    this.config.sharedRepository = true;
+    if (input.defaultAgents) this.config.defaultAgents = [...input.defaultAgents];
+    return { ...cfg, defaultAgents: this.config.defaultAgents, sharedRepository: true };
+  }
+  async setSharedRemote(remote: string) { this.sharedRemote = remote; return this.getSharedRepository(); }
+  async commitSharedRepository(_message: string) { this.sharedHead = 'demo-commit'; return this.getSharedRepository(); }
+  async pushSharedRepository() { return this.getSharedRepository(); }
+  async createSharedTool(input: CreateSharedToolInput) {
+    if (input.kind === 'mcp') {
+      if (this.s.mcp.some((c) => c.def.name === input.def.name)) throw new ApiError('ALREADY_EXISTS', '工具已存在');
+      return this.saveMcpDef(input.def, 'registry');
+    }
+    const name = input.kind === 'plugin' ? `${input.name}@atm-shared` : input.name;
+    if (this.s.skills.some((i) => input.kind === 'skill' && i.name === name) || this.s.plugins.some((i) => input.kind === 'plugin' && i.name === name)) throw new ApiError('ALREADY_EXISTS', '工具已存在');
+    const rel = `${input.kind === 'skill' ? 'skills' : 'plugins'}/${input.name}`;
+    if (input.kind === 'skill') this.s.skills.push({ name, repo: 'atm:shared', repoDir: this.config.root, path: rel, commit: '', tokens: 0, description: input.description });
+    else this.s.plugins.push({ name, installed: false, localSource: true, tokens: 0, globallyEnabled: false, contents: { skills: [{ name: input.name, description: input.description, contextTokens: 0 }], mcp: [], commands: [], agents: [], hooks: false } });
+    this.emit({ type: 'library.changed' });
+    return { path: `${this.config.root}/${rel}` };
   }
 
   getProjects() {
@@ -898,7 +954,7 @@ export class MockApiClient implements ApiClient {
     return this.wait<WriteResult>({ applied: !opts.dryRun, files, warnings: [], command: 'atm install' });
   }
 
-  getLibrary(q?: string) {
+  getLibrary(q?: string, opts: LibraryOptions = {}) {
     const live = this.s.projects.filter((p) => p.exists);
     const items: LibraryItem[] = [];
     for (const c of this.s.skills) {
@@ -934,6 +990,7 @@ export class MockApiClient implements ApiClient {
       });
     }
     for (const c of this.s.plugins) {
+      if (!opts.includeInstalledPlugins && !c.localSource && !live.some((p) => p.plugins.includes(c.name))) continue;
       const marketplace = c.name.split('@')[1] ?? '';
       items.push({
         kind: 'plugin',
@@ -943,7 +1000,7 @@ export class MockApiClient implements ApiClient {
         contextTokens: c.tokens,
         usedBy: live.filter((p) => p.plugins.includes(c.name)).map((p) => p.id),
         global: c.globallyEnabled,
-        plugin: { marketplace, installed: c.installed, ...(c.version ? { version: c.version } : {}), globallyEnabled: c.globallyEnabled },
+        plugin: { marketplace, installed: c.installed, ...(c.version ? { version: c.version } : {}), globallyEnabled: c.globallyEnabled, ...(c.localSource ? { localSource: true } : {}) },
       });
     }
     const needle = q?.trim().toLowerCase();
@@ -981,7 +1038,7 @@ export class MockApiClient implements ApiClient {
         this.s.skills.push({ name: skillName, repo: full, repoDir: dir, path: `skills/${skillName}`, commit: head, tokens: 64 });
       }
       this.emit({ type: 'library.changed' });
-      this.log({ level: 'info', kind: 'skill', projectName: '~/GitHub', message: `已克隆 \`${full}\` 到 ${shortHome(dir)}` });
+      this.log({ level: 'info', kind: 'skill', projectName: '~/.agent-tools', message: `已克隆 \`${full}\` 到 ${shortHome(dir)}` });
       return { repo: full, dir };
     });
     return this.wait(ref);
@@ -1002,7 +1059,7 @@ export class MockApiClient implements ApiClient {
           this.log({
             level: r.status === 'skipped-dirty' ? 'warn' : 'info',
             kind: 'skill',
-            projectName: '~/GitHub',
+            projectName: '~/.agent-tools',
             message: r.status === 'skipped-dirty' ? `\`${r.repo}\` 有本地改动，已跳过 pull` : `\`${r.repo}\` 已是最新`,
           });
         }

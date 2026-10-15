@@ -261,7 +261,8 @@ describe('library, repos, global, migrate, batch, registry', () => {
     expect(lib.filter((i) => i.kind === 'skill').map((i) => i.name).sort()).toEqual(['comic', 'cover']);
     expect(lib.find((i) => i.name === 'comic')).toMatchObject({ global: true, source: remote.bare, skill: { repoDir: path.join(env.root, 'kit') } });
     expect(lib.find((i) => i.kind === 'mcp')).toMatchObject({ name: 'figma', mcp: { origin: 'registry', envVars: [{ name: 'FIGMA_API_KEY', set: false }] } });
-    expect(lib.find((i) => i.kind === 'plugin')).toMatchObject({ name: 'p@m', global: true, contextTokens: expect.any(Number) });
+    expect(lib.filter((i) => i.kind === 'plugin')).toEqual([]);
+    expect((await atm.library({ includeInstalledPlugins: true })).find((i) => i.kind === 'plugin')).toMatchObject({ name: 'p@m', global: true, contextTokens: expect.any(Number) });
     expect((await atm.search('cov')).items.map((i) => i.name)).toEqual(['cover']);
     expect((await atm.search('fgm')).items.map((i) => i.name)).toEqual(['figma']);
 

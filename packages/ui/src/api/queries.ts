@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from './context';
+import type { LibraryOptions } from './types';
 
 export const qk = {
   config: ['config'] as const,
@@ -29,9 +30,9 @@ export function useDoctor(id?: string) {
   return useQuery({ queryKey: qk.doctor(id), queryFn: () => api.getDoctor(id) });
 }
 
-export function useLibrary() {
+export function useLibrary(opts: LibraryOptions = {}) {
   const api = useApi();
-  return useQuery({ queryKey: qk.library, queryFn: () => api.getLibrary() });
+  return useQuery({ queryKey: opts.includeInstalledPlugins ? [...qk.library, 'available'] : qk.library, queryFn: () => api.getLibrary(undefined, opts) });
 }
 
 export function useRepos() {
@@ -39,9 +40,9 @@ export function useRepos() {
   return useQuery({ queryKey: qk.repos, queryFn: () => api.getRepos() });
 }
 
-export function useGlobal() {
+export function useGlobal(enabled = true) {
   const api = useApi();
-  return useQuery({ queryKey: qk.global, queryFn: () => api.getGlobal() });
+  return useQuery({ queryKey: qk.global, queryFn: () => api.getGlobal(), enabled });
 }
 
 export function useActivity() {
@@ -52,4 +53,9 @@ export function useActivity() {
 export function useConfig() {
   const api = useApi();
   return useQuery({ queryKey: qk.config, queryFn: () => api.getConfig() });
+}
+
+export function useSharedRepository() {
+  const api = useApi();
+  return useQuery({ queryKey: ['shared-repository'], queryFn: () => api.getSharedRepository(), retry: false });
 }

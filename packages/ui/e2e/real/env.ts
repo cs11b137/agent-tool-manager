@@ -14,7 +14,7 @@ export interface RealState {
   home: string;
   /** `<home>/src/baoyu-skills` — local git repo used as the skill source */
   repo: string;
-  /** `<home>/GitHub` */
+  /** `<home>/.agent-tools` */
   root: string;
   projGui: string;
   projCli: string;

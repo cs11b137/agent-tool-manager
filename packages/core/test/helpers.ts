@@ -75,7 +75,7 @@ export interface Env {
 export async function setup(env: Record<string, string | undefined> = {}): Promise<Env> {
   const base = await mkTmp();
   const home = path.join(base, 'home');
-  const root = path.join(home, 'GitHub');
+  const root = path.join(home, '.agent-tools');
   const registry = path.join(root, 'mcp-registry');
   await fs.mkdir(registry, { recursive: true });
   const events: AtmEvent[] = [];

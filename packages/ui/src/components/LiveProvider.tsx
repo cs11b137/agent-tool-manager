@@ -1,3 +1,4 @@
+import { msg, useLocale } from '../lib/i18n';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../api/context';
@@ -11,6 +12,7 @@ export const useConnection = () => useContext(StatusCtx);
 
 /** Subscribes to SSE once and keeps the TanStack cache in sync. */
 export function LiveProvider({ children }: { children: ReactNode }) {
+  useLocale();
   const api = useApi();
   const qc = useQueryClient();
   const toast = useToast();
@@ -29,6 +31,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
           void qc.invalidateQueries({ queryKey: qk.global });
           break;
         case 'library.changed':
+          void qc.invalidateQueries({ queryKey: ['shared-repository'] });
           void qc.invalidateQueries({ queryKey: qk.library });
           void qc.invalidateQueries({ queryKey: qk.repos });
           void qc.invalidateQueries({ queryKey: qk.global });
@@ -43,7 +46,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
             id: e.taskId,
             title: e.title,
             tone: 'running',
-            detail: '已开始',
+            detail: msg("已开始"),
             onCancel: () => void api.cancelTask(e.taskId),
           });
           break;
@@ -51,14 +54,14 @@ export function LiveProvider({ children }: { children: ReactNode }) {
           toast.update(e.taskId, { detail: e.message, ...(e.percent !== undefined ? { percent: e.percent } : {}) });
           break;
         case 'task.done':
-          toast.update(e.taskId, { tone: 'ok', detail: '已完成' });
+          toast.update(e.taskId, { tone: 'ok', detail: msg("已完成") });
           void qc.invalidateQueries();
           break;
         case 'task.failed':
           toast.update(e.taskId, { tone: 'err', detail: e.error });
           break;
         case 'task.cancelled':
-          toast.update(e.taskId, { tone: 'info', detail: '已取消' });
+          toast.update(e.taskId, { tone: 'info', detail: msg("已取消") });
           break;
       }
     };

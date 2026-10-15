@@ -231,3 +231,46 @@ describe('startServer', () => {
     await sse.close();
   });
 });
+
+describe('shared directory registry watching', () => {
+  it('watches a newly initialized registry and follows later path changes', async () => {
+    const f = await fixture();
+    await fs.rmdir(path.join(f.root, 'mcp-registry'));
+    const srv = await startServer({ home: f.home, env: f.env, port: 0 });
+    onCleanup(() => srv.close());
+    const api = client(srv);
+    const { events } = await openEvents(srv);
+    for (const root of [f.root, path.join(f.home, 'other-tools')]) {
+      const registry = path.join(root, 'mcp-registry');
+      const result = await api('POST', '/api/config/init-shared-directory', { root, mcpRegistry: registry });
+      expect(result.status).toBe(200);
+      await waitFor(async () => events.find((event) => event.type === 'library.changed'));
+      // Allow the serialized watcher refresh and its async core setup to complete.
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      events.length = 0;
+      await fs.writeFile(path.join(registry, 'test.json'), JSON.stringify({ name: 'test', transport: 'http', url: 'https://example.test/mcp' }));
+      await waitFor(async () => events.find((event) => event.type === 'library.changed'));
+      events.length = 0;
+    }
+  });
+});
+
+describe('shared repository source watching', () => {
+  it('refreshes after initializing an existing root and after external skill edits', async () => {
+    const { srv, f } = await start();
+    const api = client(srv);
+    const { events } = await openEvents(srv);
+    expect((await api('POST', '/api/shared-repository/init', { root: f.root, mcpRegistry: path.join(f.root, 'mcp-registry') })).status).toBe(200);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const dir = path.join(f.root, 'skills', 'external');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'SKILL.md'), skillMd('external', 'Created externally'));
+    await waitFor(async () => events.find((e) => e.type === 'library.changed'));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    events.length = 0;
+    await fs.writeFile(path.join(dir, 'SKILL.md'), skillMd('external', 'Edited externally'));
+    await waitFor(async () => events.find((e) => e.type === 'library.changed'));
+    const library = await api<Array<{ name: string; description?: string }>>('GET', '/api/library');
+    expect(library.body.find((i) => i.name === 'external')?.description).toBe('Edited externally');
+  });
+});

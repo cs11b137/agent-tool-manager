@@ -5,7 +5,7 @@
 import type { ActivityEntry, AgentId, McpDef, PluginContents } from './types';
 
 export const HOME = '/Users/dev';
-export const ROOT = `${HOME}/GitHub`;
+export const ROOT = `${HOME}/.agent-tools`;
 export const REGISTRY = `${ROOT}/mcp-registry`;
 
 export interface SkillCat {
@@ -28,6 +28,7 @@ export interface McpCat {
 }
 
 export interface PluginCat {
+  localSource?: boolean;
   name: string;
   installed: boolean;
   version?: string;
@@ -126,7 +127,7 @@ export function seed(): MockState {
         commit: 'e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3',
         tokens: null,
         description: 'atm 入口 Skill · 全局安装',
-        sourceLabel: '~/GitHub/atm/skill',
+        sourceLabel: '~/.agent-tools/atm/skill',
       },
     ],
     mcp: [
@@ -275,7 +276,7 @@ export function seed(): MockState {
         at: todayAt(10, 15),
         level: 'info',
         kind: 'skill',
-        projectName: '~/GitHub',
+        projectName: '~/.agent-tools',
         message: '`jimliu/baoyu-skills` pull --ff-only 完成，lock 已更新',
       },
       {

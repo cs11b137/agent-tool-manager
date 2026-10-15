@@ -9,6 +9,8 @@ import { exists, isDir, listDir, readText } from '../fs/walk.js';
 import { git } from '../git.js';
 import { emptyLock, mcpRefAgents, mcpRefName, paths, relativeWorktree, resolveWorktree, serializeLock, serializeManifest, type ProjectFiles } from '../manifest.js';
 import { hashMcpDef, loadDefs, requireDef } from '../mcp/registry.js';
+import { SHARED_MARKETPLACE } from './shared-repository.js';
+import { loadPluginIndex } from '../plugins/index.js';
 import { locateRepoDir, type SkillResolver } from '../skills/resolver.js';
 import type { Planner } from './planner.js';
 
@@ -212,9 +214,18 @@ async function planPlugins(p: Planner, input: ProjectPlanInput, lockOut: LockFil
     file: cfgPlugins.file,
     retryCommand: input.retryCommand,
   });
-  p.write(file, before, after, 'claude-code');
+  const plugins = await loadPluginIndex(p.ctx);
+  const local = enabled && manifest.plugins.some((n) => plugins.installed.get(n)?.sharedDirectory);
+  const marketplaces = mergeIntoFile({ before: after, format: 'json', key: 'extraKnownMarketplaces',
+    desired: local ? { [SHARED_MARKETPLACE]: { source: { source: 'directory', path: input.cfg.root } } } : {},
+    managedOld: files.lock.managed['claude-code']?.marketplaces ?? [], adopt: opts.adopt ?? false,
+    file: cfgPlugins.file, retryCommand: input.retryCommand });
+  p.write(file, before, marketplaces.after, 'claude-code');
+  if (local) p.warn('本地插件已关联；首次进入项目时请在 Claude Code 中确认安装共享 marketplace 插件。');
   const entry = lockOut.managed['claude-code'] ?? { mcp: [], plugins: [] };
   entry.plugins = managed;
+  if (marketplaces.managed.length) entry.marketplaces = marketplaces.managed;
+  else delete entry.marketplaces;
   lockOut.managed['claude-code'] = entry;
 }
 

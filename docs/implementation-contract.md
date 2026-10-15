@@ -12,6 +12,7 @@ packages/
   cli/      atm          commander 式参数解析 → core → 文本 / --json
   server/   @atm/server  Hono + Node http，core 的 HTTP 映射 + SSE + 鉴权
   ui/       @atm/ui      React 19 + Vite + Tailwind v4，构建产物复制到 cli/dist/ui
+  desktop/  @atm/desktop Tauri 2 桌面壳，内置 Node + server/UI 资源，托盘与生命周期管理
 ```
 
 - 根目录：`pnpm-workspace.yaml`、`package.json`、`tsconfig.base.json`。各包只改自己目录；需要改根文件时只做**追加**。
@@ -37,7 +38,8 @@ const atm = createAtm({
 
 | 方法 | 对应命令 | 说明 |
 |---|---|---|
-| `config()` / `saveConfig(patch)` | — | 读写全局配置，缺省值：`root=~/GitHub`、`mcpRegistry=<root>/mcp-registry`、`defaultAgents=['claude-code']` |
+| `config()` / `saveConfig(patch)` | — | 读写全局配置，缺省值：`root=~/.agent-tools`、`mcpRegistry=<root>/mcp-registry`、`defaultAgents=['claude-code']` |
+| `initSharedDirectory({ root, mcpRegistry })` | GUI 初始化共享目录 | 创建缺失目录并原子保存配置，返回 `GlobalConfig`；复用已有目录，失败回滚本次新建空目录；拒绝相对路径、文件占位和失效软链 |
 | `projects()` | — | 注册表里每个项目的 `ProjectSummary`；目录不存在 → `exists:false`，其余字段取零值 |
 | `registerProject(dir)` / `unregisterProject(idOrDir)` / `relocateProject(id, newDir)` | — | 注册表维护；`init` 和任何写操作自动调用 `registerProject` |
 | `resolveProject(idOrDir)` | — | 把 id 或路径解析成绝对路径；找不到抛 `NOT_FOUND` |
@@ -51,7 +53,7 @@ const atm = createAtm({
 | `fix(issueIds: string[], opts?: WriteOptions)` | GUI 一键修复 | 只处理 `fixable:true` 的 issue（重建软链 = 对该项目执行 install 的 skill 部分） |
 | `measure(dir, mcpName)` | `doctor --measure` 单项 | 启动 MCP server，`tools/list`，统计 schema token，写回 lock |
 | `pin(dir, skillName, rev)` | `atm pin` | 建 `<root>/.worktrees/<repo>@<rev>` worktree，软链改指向它 |
-| `library()` | GUI 工具库 | 扫描 `<root>/**/SKILL.md`、registry、项目内 `.agents/mcp/`、`installed_plugins.json` |
+| `library(opts?)` | GUI 工具库 | 共享根目录中的 Skill、registry/项目 MCP、已被注册项目引用的插件；仅主动添加时传 `includeInstalledPlugins:true` 展示本机插件候选 |
 | `search(query)` | `atm search` | 对 `library()` 做模糊匹配（name / repo / description） |
 | `repos()` | — | `RepoStatus[]`：`<root>` 下所有 git 仓库 |
 | `cloneRepo(repo)` | GUI「克隆仓库」 | clone 到 `<root>/<repoName>`，重名抛 `CONFLICT` |
@@ -121,6 +123,8 @@ src/
 | 方法 | 路径 | 请求 | 响应 |
 |---|---|---|---|
 | GET | `/api/config` | | `GlobalConfig`（不含密钥，本来也没有） |
+| POST | `/api/dialogs/select-directory` | `{ initialPath?: string }` | `{ path: string \| null }`；绝对路径，取消为 null；不保存配置 |
+| POST | `/api/config/init-shared-directory` | `{ root, mcpRegistry }` | `GlobalConfig` |
 | PATCH | `/api/config` | `Partial<GlobalConfig>` | `GlobalConfig` |
 | GET | `/api/projects` | | `ProjectSummary[]` |
 | POST | `/api/projects` | `{ path }` | `ProjectSummary`（注册，不 init） |
@@ -137,7 +141,7 @@ src/
 | POST | `/api/projects/:id/pin` | `{ skill, rev }` | `WriteResult` |
 | GET | `/api/doctor?measure=1` | | 全部项目的 `DoctorReport` |
 | POST | `/api/doctor/fix?dryRun=1` | `{ issueIds: string[] }` | `WriteResult` |
-| GET | `/api/library?q=` | | `LibraryItem[]` |
+| GET | `/api/library?q=` | 可选 `includeInstalledPlugins=1`，默认不扫描未添加的插件 | `LibraryItem[]` |
 | GET | `/api/repos` | | `RepoStatus[]` |
 | POST | `/api/repos` | `{ repo }` | `{ taskId }`（clone 是长任务） |
 | POST | `/api/sync` | `{ repos?: string[] }` | `{ taskId }` |
@@ -153,8 +157,14 @@ src/
 
 ## 5. UI（`packages/ui`）
 
+本地化：`src/lib/i18n.ts` 使用可订阅的语言状态，`msg` 显式翻译界面消息，`useLocale` 让组件在切换时重渲染而不重挂载。默认中文；`atm.locale` 保存浏览器偏好，同步更新 HTML `lang`。`src/locales/en.json` 提供英文，`zh.json` 定义中文文案改写，其余中文使用消息原文。动态值用 `{0}` 等占位符插入，不对路径、用户内容和代码进行翻译。新增界面消息需补齐英文并验证占位符一致。
+
+导航：桌面分组侧边栏、可搜索项目列表和固定维护入口；移动端菜单使用现有可访问弹框，包含项目与设置入口。侧边栏项保持原路由，活动项由 `NavLink` 标记。
+
+目录输入共用 `DirectoryInput`：更新仓库、首次创建、注册和重新定位支持原生选择与手动输入。工具库与设置不再显示初始化入口；设置直接更新仓库目录、registry 和默认 Agent，在目录与 Git 准备成功后原子保存。选择根目录与手动修改使用相同的 registry 联动逻辑；取消保留输入，失败显示可重试错误。选择期间禁用提交和重复选择。接口沿用 token 与 Host/Origin 鉴权，每个服务端进程只允许一个原生窗口；默认定位到输入路径最近的现存父目录，参数通过 argv 或环境变量传递，不拼接脚本。窗口最多等待 5 分钟，超时可重试。
+
 - 路由：`/`（总览）、`/projects/:id`（项目详情）、`/library`（工具库）、`/matrix`（矩阵）、`/doctor`（体检）、`/global`（全局）。
-- 数据层：`src/api/client.ts` 实现 `ApiClient` 接口（方法与 §4 一一对应）；`src/api/mock.ts` 实现同一接口返回原型中的示例数据。`VITE_ATM_MOCK=1` 或 URL 无 token 且非 dev server 时用 mock。TanStack Query 做缓存；SSE `project.changed` → invalidate 对应查询。
+- 数据层：`src/api/client.ts` 实现 `ApiClient` 接口（方法与 §4 一一对应）；`src/api/mock.ts` 实现同一接口返回原型中的示例数据。仅显式 `VITE_ATM_MOCK=1` 时用 mock，网页和桌面默认都连接真实服务。TanStack Query 做缓存；SSE `project.changed` → invalidate 对应查询。
 - token 从 `?token=` 读出后存 `sessionStorage`，并从 URL 中移除。
 - 设计系统：按 `design/liquid-glass/Main.dc.html` 的 CSS 变量与组件样式还原（亮 / 暗两套 token、玻璃材质、彩虹描边、动效时长）。`prefers-reduced-motion` 时关闭背景光斑动画。
 - 添加工具 / 批量改动 / 一键修复 / 迁移向导等所有写操作：先 `dryRun=1` 展示 diff（原型 03），确认后再提交。
@@ -165,3 +175,22 @@ src/
 2. Codex 的变量引用暂定 `$VAR`（§13 待验证项）；实现放在单个函数里，便于后续改。
 3. doctor 增加 `missing-link`、`plugin-not-installed`、`rev-mismatch`、`project-missing` 四个检查项。
 4. 新增 `GET /api/projects/:id/generated`、`/api/batch`、`/api/global`、`/api/activity`、`/api/tasks` 等接口，服务矩阵页、全局页、总览「最近变更」。
+
+## 共享仓库首次使用流程
+
+新安装不导入示例项目、工具或本机插件。界面先检查 `GET /api/shared-repository`，未初始化时仅显示创建仓库入口。显式完成后配置记录 `sharedRepository: true`；更换根目录会清除此状态。旧配置、已添加工具均保留。
+
+共享仓库接口：
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| GET | `/api/shared-repository` | 初始化状态、路径、远程、分支、待提交文件 |
+| POST | `/api/shared-repository/init` | `{ root, mcpRegistry, defaultAgents? }` 创建或更新目录与本地 Git，最后原子保存路径及默认 Agent 配置 |
+| POST | `/api/shared-repository/tools` | `{ kind: skill/plugin, name, description, content }` 或 `{ kind: mcp, def }`，拒绝同名覆盖 |
+| PUT | `/api/shared-repository/remote` | `{ remote }` 配置 origin |
+| POST | `/api/shared-repository/commit` | `{ message }` 仅提交管理范围内文件，保留其他暂存改动 |
+| POST | `/api/shared-repository/push` | 手动推送当前分支，无 force；失败保留本地提交 |
+
+Skill 的共享仓库引用为 `atm:shared`，lock 路径为 `skills/<name>`。插件建立 `.claude-plugin/plugin.json` 和内置 Skill，marketplace 为 `atm-shared`。项目仅在 Claude Code 启用时写入该 marketplace 的绝对目录和 enabledPlugins；移除最后一个本地插件时，仅移除 lock 标记为管理的 marketplace 条目，保留手写设置。
+
+目录初始化复用旧接口的目录校验与回滚；新增 Git 和默认文件失败时清理本次创建内容，配置不变。新工具内容可继续通过编辑器修改；共享目录文件监听刷新工具库。外置 MCP registry 保持原路径，界面明确提示不会随仓库推送。旧 `initSharedDirectory` 接口仍只创建目录，供现有客户端兼容。

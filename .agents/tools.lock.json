@@ -1,19 +1,6 @@
 {
   "version": 1,
-  "skills": {
-    "logo-design": {
-      "repo": "kaankiziltug/logo-design-skill",
-      "path": "skills/logo-design",
-      "commit": "0ecf52e9a4b3ac92b714f7cc6e3148ab8c774134",
-      "contextTokens": 257
-    },
-    "svg-logo-maker": {
-      "repo": "durmazoguzhan/svg-logo-maker",
-      "path": "skills/svg-logo-maker",
-      "commit": "983b3c6886eb4cfd750002d0fd764c06a4ca2758",
-      "contextTokens": 120
-    }
-  },
+  "skills": {},
   "mcp": {},
   "managed": {}
 }

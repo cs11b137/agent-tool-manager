@@ -7,6 +7,7 @@ const IGNORE = /(^\.lock$)|(\.atm-.*\.tmp$)|(^\.DS_Store$)/;
 
 interface WatchTarget {
   dir: string;
+  recursive?: boolean;
   filter?: (file: string) => boolean;
   event: () => AtmEvent;
 }
@@ -26,7 +27,7 @@ function targetsFor(projectDir: string): WatchTarget[] {
 }
 
 /** fs.watch 项目的 `.agents/` 与各 Agent 配置文件、registry 目录；事件做 150ms 去抖。返回停止函数。 */
-export function startWatch(projectDirs: string[], registryDir: string | null, cb: (e: AtmEvent) => void): () => void {
+export function startWatch(projectDirs: string[], registryDir: string | null, cb: (e: AtmEvent) => void, sharedRoot?: string): () => void {
   const watchers: FSWatcher[] = [];
   const timers = new Map<string, NodeJS.Timeout>();
   let stopped = false;
@@ -44,9 +45,10 @@ export function startWatch(projectDirs: string[], registryDir: string | null, cb
   };
   const targets: WatchTarget[] = projectDirs.flatMap(targetsFor);
   if (registryDir) targets.push({ dir: registryDir, filter: (f) => f.endsWith('.json'), event: () => ({ type: 'library.changed' }) });
+  if (sharedRoot) targets.push({ dir: sharedRoot, recursive: true, filter: (f) => /^(skills|plugins|\.claude-plugin)([\\/]|$)/.test(f), event: () => ({ type: 'library.changed' }) });
   for (const t of targets) {
     try {
-      const w = fs.watch(t.dir, { persistent: false }, (_evt, file) => {
+      const w = fs.watch(t.dir, { persistent: false, recursive: t.recursive ?? false }, (_evt, file) => {
         const name = file ? file.toString() : '';
         if (name && IGNORE.test(name)) return;
         if (t.filter && name && !t.filter(name)) return;

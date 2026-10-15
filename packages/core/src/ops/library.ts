@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { LibraryItem, McpDef, RepoStatus, SearchResult } from '../types.js';
+import type { LibraryItem, LibraryOptions, McpDef, RepoStatus, SearchResult } from '../types.js';
 import { compactHome, projectId, type Ctx } from '../context.js';
 import { loadConfig } from '../config.js';
 import { AtmError } from '../errors.js';
@@ -10,7 +10,8 @@ import { exists, isDir, listDir } from '../fs/walk.js';
 import { git } from '../git.js';
 import { mcpRefName, paths } from '../manifest.js';
 import { envVarStatus, loadDefs, validateMcpDef } from '../mcp/registry.js';
-import { discoverSkills } from '../skills/discover.js';
+import { SHARED_REPO } from './shared-repository.js';
+import { discoverSkills, scanSkills } from '../skills/discover.js';
 import { parseRepo, repoSlugFromRemote } from '../skills/repo.js';
 import { locateRepoDir } from '../skills/resolver.js';
 import { loadShared, type Shared } from './inspect.js';
@@ -18,8 +19,9 @@ import { loadShared, type Shared } from './inspect.js';
 /** `<root>` 下的顶层目录（跳过 `.worktrees`、隐藏目录与 registry）。 */
 async function rootDirs(root: string, registry: string): Promise<string[]> {
   const out: string[] = [];
+  const shared = await git.isRepoRoot(root);
   for (const name of await listDir(root)) {
-    if (name.startsWith('.')) continue;
+    if (name.startsWith('.') || (shared && ['skills', 'plugins'].includes(name) && !(await git.isRepoRoot(path.join(root, name))))) continue;
     const dir = path.join(root, name);
     if (dir === registry || !(await isDir(dir))) continue;
     out.push(dir);
@@ -28,7 +30,7 @@ async function rootDirs(root: string, registry: string): Promise<string[]> {
 }
 
 async function repoSlug(ctx: Ctx, dir: string): Promise<{ slug: string; remote: string }> {
-  const remote = (await git.remoteUrl(dir, ctx.signal)) ?? '';
+  const remote = (await git.isRepoRoot(dir, ctx.signal) ? await git.remoteUrl(dir, ctx.signal) : null) ?? '';
   return { slug: remote ? repoSlugFromRemote(remote) : dir, remote };
 }
 
@@ -36,22 +38,27 @@ async function skillUsers(ctx: Ctx, shared: Shared, repoDir: string, name: strin
   const users: string[] = [];
   for (const [id, { manifest }] of shared.manifests) {
     for (const s of manifest.skills) {
-      if (s.name === name && (await locateRepoDir(ctx, shared.cfg.root, s.repo)) === repoDir) users.push(id);
+      if (s.name !== name) continue;
+      const located = await locateRepoDir(ctx, shared.cfg.root, s.repo);
+      if (located === repoDir || (repoDir === shared.cfg.root && located === path.join(repoDir, 'skills') && !(await git.isRepoRoot(located)))) users.push(id);
     }
   }
   return users;
 }
 
-export async function buildLibrary(ctx: Ctx): Promise<LibraryItem[]> {
+export async function buildLibrary(ctx: Ctx, opts: LibraryOptions = {}): Promise<LibraryItem[]> {
   const cfg = await loadConfig(ctx);
   const shared = await loadShared(ctx, cfg);
   const items: LibraryItem[] = [];
 
-  for (const dir of await rootDirs(cfg.root, cfg.mcpRegistry)) {
-    const skills = await discoverSkills(ctx, dir, path.basename(dir));
+  const dirs = await rootDirs(cfg.root, cfg.mcpRegistry);
+  if (cfg.sharedRepository) dirs.unshift(cfg.root);
+  for (const dir of dirs) {
+    const own = dir === cfg.root;
+    const skills = own ? (await git.isRepoRoot(path.join(dir, 'skills')) ? [] : await scanSkills(path.join(dir, 'skills'))).map((s) => ({ ...s, path: path.join('skills', s.path) })) : await discoverSkills(ctx, dir, path.basename(dir));
     if (!skills.length) continue;
-    const { slug } = await repoSlug(ctx, dir);
-    const commit = (await git.tryHead(dir, ctx.signal)) ?? '';
+    const { slug } = own ? { slug: SHARED_REPO } : await repoSlug(ctx, dir);
+    const commit = (await git.isRepoRoot(dir, ctx.signal) ? await git.tryHead(dir, ctx.signal) : null) ?? '';
     for (const s of skills) {
       const item: LibraryItem = {
         kind: 'skill',
@@ -104,12 +111,13 @@ export async function buildLibrary(ctx: Ctx): Promise<LibraryItem[]> {
     }
   }
 
-  // 插件
+  // Installed plugins become managed library entries only after an explicit project add.
   for (const [name, inst] of shared.plugins.installed) {
-    const contents = await shared.plugins.contents(name);
     const usedBy = [...shared.manifests.entries()].filter(([, v]) => v.manifest.plugins.includes(name)).map(([id]) => id);
+    if (!opts.includeInstalledPlugins && !usedBy.length && !inst.sharedDirectory) continue;
+    const contents = await shared.plugins.contents(name);
     const globallyEnabled = shared.plugins.globallyEnabled.has(name);
-    const plugin: NonNullable<LibraryItem['plugin']> = { marketplace: inst.marketplace, installed: true, globallyEnabled };
+    const plugin: NonNullable<LibraryItem['plugin']> = { marketplace: inst.marketplace, installed: !inst.sharedDirectory || inst.nativeInstalled === true, globallyEnabled, ...(inst.sharedDirectory ? { localSource: true } : {}) };
     if (inst.version) plugin.version = inst.version;
     const item: LibraryItem = {
       kind: 'plugin',
@@ -142,9 +150,9 @@ function score(item: LibraryItem, q: string): number {
   return 0;
 }
 
-export async function searchLibrary(ctx: Ctx, query: string): Promise<SearchResult> {
+export async function searchLibrary(ctx: Ctx, query: string, opts: LibraryOptions = {}): Promise<SearchResult> {
   const q = query.trim().toLowerCase();
-  const items = await buildLibrary(ctx);
+  const items = await buildLibrary(ctx, opts);
   if (!q) return { items };
   const scored = items.map((item) => ({ item, s: score(item, q) })).filter((x) => x.s > 0);
   scored.sort((a, b) => b.s - a.s || a.item.name.localeCompare(b.item.name));

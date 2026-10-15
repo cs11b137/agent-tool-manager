@@ -8,6 +8,7 @@ import { exists } from '../fs/walk.js';
 import { git } from '../git.js';
 import { isToolName, NAME_RULE } from '../manifest.js';
 import { discoverSkills, scanSkills, type DiscoveredSkill } from './discover.js';
+import { SHARED_REPO } from '../ops/shared-repository.js';
 import { normalizeRemote, parseRepo, type RepoSpec } from './repo.js';
 
 export type CloneMode = 'final' | 'temp' | 'never';
@@ -72,7 +73,7 @@ export interface RepoLocation {
  */
 async function matchesRepo(ctx: Ctx, repo: RepoSpec, dir: string): Promise<{ ok: boolean; remote: string | null }> {
   if (await isSelf(repo, dir)) return { ok: true, remote: null };
-  const remote = await git.remoteUrl(dir, ctx.signal);
+  const remote = await git.isRepoRoot(dir, ctx.signal) ? await git.remoteUrl(dir, ctx.signal) : null;
   return { ok: Boolean(remote) && (await sameRemote(ctx.home, remote!, repo.url)), remote };
 }
 
@@ -83,6 +84,7 @@ function occupiedReason(ctx: Ctx, dir: string, remote: string | null): string {
 
 /** 不克隆、不报错地找出仓库所在目录（用于 list / doctor / sync 等只读场景）。 */
 export async function locateRepo(ctx: Ctx, root: string, spec: string): Promise<RepoLocation> {
+  if (spec === SHARED_REPO) return { dir: root, expected: root };
   let repo: RepoSpec;
   try {
     repo = parseRepo(spec, ctx.home);
@@ -143,6 +145,10 @@ export class SkillResolver {
 
   private async doCheckout(spec: string): Promise<RepoCheckout> {
     const { ctx } = this;
+    if (spec === SHARED_REPO) {
+      if (!(await git.isRepoRoot(this.root))) throw new AtmError('NOT_INITIALIZED', '请先创建共享仓库');
+      return { repo: { spec, url: this.root, name: 'shared' }, dir: this.root, scanDir: this.root, cloned: false, head: await git.tryHead(this.root) ?? '' };
+    }
     const repo = parseRepo(spec, ctx.home);
     const cands = repoDirCandidates(this.root, repo);
     let occupied: { dir: string; remote: string | null } | null = null;
@@ -179,6 +185,7 @@ export class SkillResolver {
   }
 
   async listSkills(co: RepoCheckout): Promise<DiscoveredSkill[]> {
+    if (co.repo.spec === SHARED_REPO) return (await scanSkills(path.join(co.scanDir, 'skills'))).map((s) => ({ ...s, path: path.join('skills', s.path) }));
     // dryRun（temp 模式）不写缓存
     return this.mode !== 'temp' && co.scanDir === co.dir ? discoverSkills(this.ctx, co.dir, path.basename(co.dir)) : scanSkills(co.scanDir);
   }

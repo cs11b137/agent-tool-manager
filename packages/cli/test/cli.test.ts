@@ -50,7 +50,7 @@ async function fixture(): Promise<Fixture> {
   const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'atm-cli-')));
   temps.push(base);
   const home = path.join(base, 'home');
-  const root = path.join(home, 'GitHub');
+  const root = path.join(home, '.agent-tools');
   await fs.mkdir(path.join(root, 'mcp-registry'), { recursive: true });
   const dir = path.join(base, 'work', 'proj');
   await fs.mkdir(dir, { recursive: true });

@@ -1,15 +1,17 @@
 import { timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { Hono, type Context } from 'hono';
-import { AtmError, type Atm, type AtmEvent, type InstallOptions, type McpDefScope, type ProjectDetail, type WriteOptions } from '@atm/core';
+import { AtmError, type Atm, type AtmEvent, type CreateSharedToolInput, type InstallOptions, type McpDefScope, type ProjectDetail, type WriteOptions } from '@atm/core';
 import { BadRequest, toErrorResponse, type ServerErrorJson } from './errors.js';
 import { EventHub } from './events.js';
 import { dirExists, serveStatic, UI_NOT_BUILT_HTML } from './static.js';
 import { TaskManager, type TaskContext } from './tasks.js';
 import * as v from './validate.js';
+import { selectDirectory, type DirectorySelection } from './directory-picker.js';
 
 export interface AppDeps {
   atm: Atm;
+  selectDirectory?: (initialPath?: string) => Promise<DirectorySelection>;
   token: string;
   /** Directory with the built UI (`index.html` + assets). */
   uiDir?: string;
@@ -28,7 +30,7 @@ export interface AppDeps {
    * and cancellation only marks the task cancelled.
    */
   atmForTask?: (signal: AbortSignal, onEvent: (e: AtmEvent) => void) => Atm;
-  /** Called after the project registry may have changed (register / unregister / relocate / init). */
+  /** Refresh watches after project registration, directory initialization, or configured path changes. */
   onProjectsChanged?: () => void;
   /** SSE keep-alive interval. Default 25s. */
   pingIntervalMs?: number;
@@ -139,13 +141,59 @@ export function createApp(deps: AppDeps): Hono {
     return { taskId };
   };
 
+  app.post('/api/dialogs/select-directory', async (c) => {
+    const body = v.obj((await readBody(c)) ?? {});
+    if (Object.keys(body).some((key) => key !== 'initialPath')) throw new BadRequest('unknown directory picker field');
+    const initialPath = v.optStr(body, 'initialPath');
+    if (initialPath?.includes('\0')) throw new BadRequest('initialPath contains a null character');
+    return c.json(await (deps.selectDirectory ?? selectDirectory)(initialPath));
+  });
+
   // ── config ──
   app.get('/api/config', async (c) => c.json(await atm.config()));
+  app.post('/api/config/init-shared-directory', async (c) => {
+    const body = v.obj(await readBody(c));
+    for (const key of Object.keys(body)) {
+      if (key !== 'root' && key !== 'mcpRegistry') throw new BadRequest(`unknown directory field "${key}"`);
+    }
+    const cfg = await atm.initSharedDirectory({ root: v.reqStr(body, 'root'), mcpRegistry: v.reqStr(body, 'mcpRegistry') });
+    projectsChanged();
+    return c.json(cfg);
+  });
   app.patch('/api/config', async (c) => {
     const patch = v.configPatch(await readBody(c));
     const cfg = await atm.saveConfig(patch);
-    if (patch.projects) projectsChanged();
+    if (patch.projects || patch.root !== undefined || patch.mcpRegistry !== undefined) projectsChanged();
     return c.json(cfg);
+  });
+
+  app.get('/api/shared-repository', async (c) => c.json(await atm.sharedRepository()));
+  app.post('/api/shared-repository/init', async (c) => {
+    const body = v.obj(await readBody(c));
+    for (const key of Object.keys(body)) {
+      if (!['root', 'mcpRegistry', 'defaultAgents'].includes(key)) throw new BadRequest(`unknown repository field "${key}"`);
+    }
+    const defaultAgents = body.defaultAgents === undefined ? undefined : v.agents(body.defaultAgents, 'defaultAgents');
+    const cfg = await atm.initSharedRepository({ root: v.reqStr(body, 'root'), mcpRegistry: v.reqStr(body, 'mcpRegistry'), ...(defaultAgents ? { defaultAgents } : {}) });
+    projectsChanged();
+    return c.json(cfg);
+  });
+  app.put('/api/shared-repository/remote', async (c) => {
+    const body = v.obj(await readBody(c));
+    return c.json(await atm.setSharedRemote(v.reqStr(body, 'remote')));
+  });
+  app.post('/api/shared-repository/commit', async (c) => {
+    const body = v.obj(await readBody(c));
+    return c.json(await atm.commitSharedRepository(v.reqStr(body, 'message')));
+  });
+  app.post('/api/shared-repository/push', async (c) => c.json(await atm.pushSharedRepository()));
+  app.post('/api/shared-repository/tools', async (c) => {
+    const body = v.obj(await readBody(c));
+    let input: CreateSharedToolInput;
+    if (body.kind === 'mcp') input = { kind: 'mcp', def: body.def as Extract<CreateSharedToolInput, { kind: 'mcp' }>['def'] };
+    else if (body.kind === 'skill' || body.kind === 'plugin') input = { kind: body.kind, name: v.reqStr(body, 'name'), description: v.reqStr(body, 'description'), content: v.reqStr(body, 'content') };
+    else throw new BadRequest('kind must be skill, mcp or plugin');
+    return c.json(await atm.createSharedTool(input));
   });
 
   // ── projects ──
@@ -249,7 +297,8 @@ export function createApp(deps: AppDeps): Hono {
   // ── library / repos / sync / mcp defs ──
   app.get('/api/library', async (c) => {
     const q = c.req.query('q')?.trim();
-    return c.json(q ? (await atm.search(q)).items : await atm.library());
+    const opts = { includeInstalledPlugins: flag(c, 'includeInstalledPlugins') ?? false };
+    return c.json(q ? (await atm.search(q, opts)).items : await atm.library(opts));
   });
   app.get('/api/repos', async (c) => c.json(await atm.repos()));
   app.post('/api/repos', async (c) => {
