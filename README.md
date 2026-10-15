@@ -7,9 +7,13 @@
 
 # atm · Agent Tool Manager
 
+**简体中文** | [English](README.en.md)
+
 每个项目用一份清单（`.agents/tools.json`）声明所需的 Skill / MCP / 插件，`atm` 把它们落地到各 Agent（Claude Code、Cursor、Codex）的原生位置。Skill 原件统一克隆到 `~/.agent-tools`，项目内只放软链；MCP 只定义一次，渲染成各家格式；插件按项目启用。附带本地 GUI。
 
-首次打开且尚未添加工具时，工具库为空；只初始化目录也不会自动导入本机插件。已安装插件在项目的「添加工具」中主动选择，「全局」页面需点击扫描后才展示本机工具。
+首次打开且尚未添加工具时，工具库为空；只初始化目录也不会自动导入本机插件。已安装插件在项目的「添加工具」中主动选择，「本机工具」页面需点击扫描后才展示本机工具。
+
+## 首次使用
 
 首次使用按以下流程操作：
 
@@ -25,7 +29,7 @@
 
 插件仅关联 Claude Code 项目，写入项目级 `extraKnownMarketplaces` 和 `enabledPlugins`；本地 marketplace 使用绝对路径。在 Claude Code 中信任项目后加载本地插件，如客户端提示未安装，可运行 `claude plugin install <name>@atm-shared --scope project`。参见 [Claude Code 官方说明](https://code.claude.com/docs/en/plugins/org#require-plugins-per-repository)。
 
-### 导航与语言
+## 导航与语言
 
 侧边栏按「工作区 → 项目 → 维护」分组：工作区包含总览、工具库、工具关联；项目区支持搜索和添加文件夹；维护区包含健康检查、本机工具。顶部的共享仓库卡片和底部设置均可打开更新仓库弹框。窄屏通过菜单按钮打开完整导航。
 
@@ -40,13 +44,25 @@
 
 ## 安装与使用
 
-桌面版：`pnpm desktop:build` 生成当前平台安装包，产物位于 `packages/desktop/src-tauri/target/release/bundle/`。应用内置 Node 和本地服务，双击打开即可使用，支持托盘、单实例和可选登录启动。开发使用 `pnpm desktop:dev`。详见 [桌面版说明](docs/desktop.md)。
+### 桌面版
+
+从 [GitHub Releases](https://github.com/cs11b137/agent-tool-manager/releases) 下载桌面版。`v0.1.0` 预览版提供 macOS 14+、Apple Silicon（M 系列）安装包，下载后打开 DMG，将应用拖入 Applications。发布页面附有 SHA-256 校验文件。
+
+应用内置 Node 和本地服务，无需终端即可使用，支持托盘、单实例和可选登录启动。当前预览版尚未使用 Apple Developer ID 签名或通过公证，macOS 可能阻止打开；暂未提供 Intel Mac、Windows 或 Linux 安装包。Git 操作仍需本机 Git，MCP 自身依赖与凭据需自行配置。
+
+从源码构建使用 `pnpm desktop:build`，产物位于 `packages/desktop/src-tauri/target/release/bundle/`。开发使用 `pnpm desktop:dev`。详见 [桌面版说明](docs/desktop.md)。
+
+### 从源码使用 CLI 和网页界面
+
+完整工作区构建需要 Node 22+、pnpm 11、Rust 1.90+ 和当前系统的 Tauri 构建依赖；桌面构建环境详见 [桌面版说明](docs/desktop.md)。
 
 ```bash
 pnpm install
 pnpm -r build
-node packages/cli/dist/bin.js --help      # 或 pnpm link --global 后直接用 atm
+node packages/cli/dist/bin.js --help      # 查看 CLI 帮助
 ```
+
+如需直接使用下面的 `atm` 命令，在 `packages/cli` 目录运行 `pnpm link --global`。
 
 ```bash
 cd <project>
@@ -73,17 +89,22 @@ Agent 入口 Skill 在 [skill/agent-tools/SKILL.md](skill/agent-tools/SKILL.md)�
 | `packages/cli` | `atm` 命令行，core 的薄壳 |
 | `packages/server` | `@atm/server`：Hono HTTP API + SSE + token 鉴权，托管 UI 构建产物 |
 | `packages/ui` | React + Vite + Tailwind 的 GUI（Liquid Glass 设计系统） |
+| `packages/desktop` | Tauri 桌面壳、内置 Node 与服务资源、托盘和生命周期管理 |
 | `skill/agent-tools` | 唯一需要全局安装的 Skill |
 
 ## 开发
 
 ```bash
 pnpm -r build
-pnpm -r test                               # core / cli / server / ui 的 Vitest
+pnpm -r test                               # Vitest + 桌面服务的 Node 集成测试
+pnpm typecheck                            # 工作区类型与语法检查
 pnpm --filter @atm/ui dev                  # 真实本机数据 + GUI 热更新（5173 端口）
 pnpm --filter @atm/ui dev:mock             # 显式使用演示数据
 pnpm --filter @atm/ui e2e                  # Playwright，mock 模式截图
 pnpm --filter @atm/ui e2e:real             # Playwright，真实 server + 临时 HOME
+pnpm --filter @atm/desktop check:rust      # Rust 桌面壳测试
+pnpm desktop:dev                          # 桌面开发模式
+pnpm desktop:build                        # 当前平台安装包
 ```
 
 开发时使用终端打印的带 token 链接打开页面；默认读取本机配置、已注册项目和工具库，界面写操作会修改真实文件。`dev:mock` 仅用于演示，不写本机工具配置。
@@ -92,6 +113,6 @@ pnpm --filter @atm/ui e2e:real             # Playwright，真实 server + 临时
 
 ## 安全
 
-- server 只监听 `127.0.0.1`、随机端口、随机 token，校验 `Host` / `Origin`
-- 配置文件只写 `${VAR}` 变量引用；任何接口都不返回密钥值；`doctor` 扫描明文密钥
+- server 只监听 `127.0.0.1`，每次启动生成随机 token，并校验 `Host` / `Origin`。网页模式默认随机端口；桌面版优先复用上次端口，冲突时换用空闲端口
+- 使用 `${VAR}` 等变量引用避免在配置中保存明文密钥；`doctor` 扫描可能的明文密钥
 - 合并写入只改动 lock `managed` 中列出的条目，手写配置不受影响
