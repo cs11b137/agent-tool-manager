@@ -9,7 +9,17 @@
 
 **简体中文** | [English](README.en.md)
 
-每个项目用一份清单（`.agents/tools.json`）声明所需的 Skill / MCP / 插件，`atm` 把它们落地到各 Agent（Claude Code、Cursor、Codex）的原生位置。Skill 原件统一克隆到 `~/.agent-tools`，项目内只放软链；MCP 只定义一次，渲染成各家格式；插件按项目启用。附带本地 GUI。
+集中管理 Skill、MCP 和 Claude Code 插件，通过桌面应用、网页界面或 CLI 按项目关联到 Claude Code、Cursor、Codex。工具保存在共享 Git 仓库（默认 `~/.agent-tools`），每个项目用 `.agents/tools.json` 声明所需工具；Skill 使用软链，MCP 自动生成各 Agent 的原生配置，插件按项目启用。
+
+[下载 v0.2.0 · macOS Apple Silicon](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/Agent-Tool-Manager_0.2.0_macos-arm64.dmg) · [版本说明](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.2.0) · [SHA-256 校验文件](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/SHA256SUMS.txt)
+
+支持 macOS 14+、M 系列芯片。当前为未使用 Apple Developer ID 签名、未经公证的桌面预览版。
+
+## v0.2.0 新增
+
+1. **搜索安装**：搜索 Agent Skills、MCP Registry、Claude 官方插件市场及 GitHub 仓库，预览后勾选安装。
+2. **多种来源**：直接导入 Skill、MCP、Plugin 原生文件或完整目录；支持 GitHub 仓库、指定版本与子目录，以及 `.skill` / ZIP。
+3. **开发自动重载**：后端源码变化后自动重建并重启服务，保留会话，避免新界面连接旧接口。
 
 首次打开且尚未添加工具时，工具库为空；只初始化目录也不会自动导入本机插件。已安装插件在项目的「添加工具」中主动选择，「本机工具」页面需点击扫描后才展示本机工具。
 
@@ -18,16 +28,32 @@
 首次使用按以下流程操作：
 
 1. 创建共享 Git 仓库，默认 `~/.agent-tools`，MCP registry 默认 `~/.agent-tools/mcp-registry`。未完成前界面不开放项目与工具操作。
-2. 在工具库新建 Skill、MCP 或 Claude Code 插件。Skill 保存到 `skills/<name>/SKILL.md`；插件保存到 `plugins/<name>/`，并登记 `.claude-plugin/marketplace.json`。
+2. 在工具库选择「搜索安装…」「下载安装…」「上传工具包…」或「新建工具…」。Skill 保存到 `skills/<name>/SKILL.md`；插件保存到 `plugins/<name>/`，并登记 `.claude-plugin/marketplace.json`。
 3. 添加已有项目目录，自动初始化工具清单和 Agent 入口。
 4. 在工具库选择项目关联工具，预览文件差异后写入。
 5. 在 Git 区域填写已有 GitHub 仓库地址，手动提交、推送；使用本机 Git 身份及认证。推送失败保留本地提交，可修正地址或认证后重试。
 
-已有目录内容、工具和显式配置路径保留；更换路径不迁移文件或重建项目软链。提交范围为 README、gitignore、共享 Skills、插件及仓库内的 MCP registry；外部 registry、外部克隆仓库和项目文件不随该操作提交。GitHub 仓库需自行创建，本功能不会自动发布。
+已有目录内容、工具和显式配置路径保留；更换路径不迁移文件或重建项目软链。提交范围为 README、gitignore、共享 Skills、插件、MCP 本地脚本（`.mcp-packages/`）及仓库内的 MCP registry；外部 registry、外部克隆仓库和项目文件不随该操作提交。GitHub 仓库需自行创建，本功能不会自动发布。
 
 设置中的「更新仓库」、首次创建仓库、注册项目和重新定位的路径输入框支持「选择文件夹…」，也可手动输入绝对路径或 `~/…`。选择只回填路径，取消不修改输入；尚不存在的目录可手动输入后创建。工具库和设置不再提供重复初始化入口；后续通过设置更新仓库路径、registry 和默认 Agent，成功后刷新工具库。选择窗口在运行服务端的本机打开：macOS 和 Windows 使用系统窗口，Linux 需要 `zenity` 或 `kdialog`；没有桌面环境时可继续手动输入。
 
 插件仅关联 Claude Code 项目，写入项目级 `extraKnownMarketplaces` 和 `enabledPlugins`；本地 marketplace 使用绝对路径。在 Claude Code 中信任项目后加载本地插件，如客户端提示未安装，可运行 `claude plugin install <name>@atm-shared --scope project`。参见 [Claude Code 官方说明](https://code.claude.com/docs/en/plugins/org#require-plugins-per-repository)。
+
+## 安装第三方工具
+
+在**工具库**选择「搜索安装…」「下载安装…」或「上传工具包…」。弹窗支持搜索、地址、GitHub、本地文件和本地目录；先预览并勾选工具，再确认安装。安装后可将工具关联到项目。
+
+| 来源 | 支持内容 |
+| --- | --- |
+| 原生文件或目录 | Skill 的 `SKILL.md` 及资源；MCP JSON（单个定义、`mcpServers`、VS Code `servers`、官方 `server.json`）；Claude Code 的 `.claude-plugin/plugin.json` 及插件资源 |
+| GitHub | `owner/repo`、仓库地址、目录或文件地址；可指定分支、标签、提交及仓库内路径 |
+| MCP 包名 | 地址栏输入 `npm:@组织/包名@版本` 或 `pypi:包名==版本`，生成 npx / uvx 启动配置 |
+| 搜索 | Agent Skills 目录、MCP Registry、Claude 官方插件市场及 GitHub 仓库搜索 |
+| 压缩包 | `.skill`、ZIP；支持单工具或多工具，以及仓库下载包的外层目录 |
+
+有脚本或资源的 Skill / Plugin 应导入完整目录或 GitHub 路径。单独上传 `plugin.json` 时，其引用的外部文件必须同时存在，否则拒绝安装。MCP 相对脚本随完整来源保存在共享仓库的 `.mcp-packages/`，配置引用安装后的路径；`node_modules` 不复制。MCP npm / PyPI 依赖由 Agent 首次启动时下载，需要预先安装 Node.js / uv。密钥使用 `${ENV_VAR}` 引用，预览会提示缺少的变量。
+
+下载或上传文件最多 20 MB，来源展开后及所选工具安装后最多 50 MB、来源最多 2000 项。GitHub 限制按整个仓库快照计算。加密 ZIP、软链、特殊文件、路径穿越及重复路径会被拒绝；Git 元数据、依赖目录和系统元数据跳过。同名工具不覆盖，写入失败会回滚；预览后内容变化需重新预览。安装不执行脚本，不自动关联项目或推送仓库。搜索来源失败会显示提示，其他来源仍可使用；演示模式不执行外部安装。
 
 ## 导航与语言
 
@@ -46,7 +72,7 @@
 
 ### 桌面版
 
-从 [GitHub Releases](https://github.com/cs11b137/agent-tool-manager/releases) 下载桌面版。`v0.2.0` 预览版提供 macOS 14+、Apple Silicon（M 系列）安装包，下载后打开 DMG，将应用拖入 Applications。发布页面附有 SHA-256 校验文件。
+下载 [v0.2.0 安装包](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/Agent-Tool-Manager_0.2.0_macos-arm64.dmg)，打开 DMG，将应用拖入 Applications。适用于 macOS 14+、Apple Silicon（M 系列）；[发布页面](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.2.0)附有版本说明和 SHA-256 校验文件。
 
 应用内置 Node 和本地服务，无需终端即可使用，支持托盘、单实例和可选登录启动。当前预览版尚未使用 Apple Developer ID 签名或通过公证，macOS 可能阻止打开；暂未提供 Intel Mac、Windows 或 Linux 安装包。Git 操作仍需本机 Git，MCP 自身依赖与凭据需自行配置。
 
@@ -118,19 +144,3 @@ pnpm desktop:build                        # 当前平台安装包
 - server 只监听 `127.0.0.1`，每次启动生成随机 token，并校验 `Host` / `Origin`。网页模式默认随机端口；桌面版优先复用上次端口，冲突时换用空闲端口
 - 使用 `${VAR}` 等变量引用避免在配置中保存明文密钥；`doctor` 扫描可能的明文密钥
 - 合并写入只改动 lock `managed` 中列出的条目，手写配置不受影响
-
-### 从外部安装工具
-
-在**工具库**选择「搜索安装…」「下载安装…」或「上传工具包…」。弹窗支持搜索、地址、GitHub、本地文件和本地目录；先预览并勾选工具，再确认安装。安装后可将工具关联到项目。
-
-| 来源 | 支持内容 |
-| --- | --- |
-| 原生文件或目录 | Skill 的 `SKILL.md` 及资源；MCP JSON（单个定义、`mcpServers`、VS Code `servers`、官方 `server.json`）；Claude Code 的 `.claude-plugin/plugin.json` 及插件资源 |
-| GitHub | `owner/repo`、仓库地址、目录或文件地址；可指定分支、标签、提交及仓库内路径 |
-| MCP 包名 | 地址栏输入 `npm:@组织/包名@版本` 或 `pypi:包名==版本`，生成 npx / uvx 启动配置 |
-| 搜索 | Agent Skills 目录、MCP Registry、Claude 官方插件市场及 GitHub 仓库搜索 |
-| 压缩包 | `.skill`、ZIP；支持单工具或多工具，以及仓库下载包的外层目录 |
-
-有脚本或资源的 Skill / Plugin 应导入完整目录或 GitHub 路径。单独上传 `plugin.json` 时，其引用的外部文件必须同时存在，否则拒绝安装。MCP 相对脚本随完整来源保存在共享仓库的 `.mcp-packages/`，配置引用安装后的路径；`node_modules` 不复制。MCP npm / PyPI 依赖由 Agent 首次启动时下载，需要预先安装 Node.js / uv。密钥使用 `${ENV_VAR}` 引用，预览会提示缺少的变量。
-
-下载或上传文件最多 20 MB，来源展开后及所选工具安装后最多 50 MB、来源最多 2000 项。GitHub 限制按整个仓库快照计算。加密 ZIP、软链、特殊文件、路径穿越及重复路径会被拒绝；Git 元数据、依赖目录和系统元数据跳过。同名工具不覆盖，写入失败会回滚；预览后内容变化需重新预览。安装不执行脚本，不自动关联项目或推送仓库。搜索来源失败会显示提示，其他来源仍可使用；演示模式不执行外部安装。

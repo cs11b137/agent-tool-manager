@@ -9,23 +9,49 @@
 
 [简体中文](README.md) | **English**
 
-Declare the Skills, MCP servers, and plugins each project needs in a single manifest (`.agents/tools.json`). `atm` installs them in the native locations used by Claude Code, Cursor, and Codex. Skill repositories live in `~/.agent-tools`, with symbolic links in each project. Define MCP servers once and generate configuration for each agent. Enable plugins per project. A local GUI is included.
+Manage Skills, MCP servers, and Claude Code plugins in one place, then assign them to Claude Code, Cursor, and Codex projects through the desktop app, web UI, or CLI. Tools live in a shared Git repository (default: `~/.agent-tools`); each project declares its tools in `.agents/tools.json`. Skills use symbolic links, MCP definitions generate native agent configurations, and plugins are enabled per project.
+
+[Download v0.2.0 · macOS Apple Silicon](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/Agent-Tool-Manager_0.2.0_macos-arm64.dmg) · [Release notes](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.2.0) · [SHA-256 checksums](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/SHA256SUMS.txt)
+
+Requires macOS 14+ and an M-series chip. This desktop preview is not Apple Developer ID signed or notarized.
+
+## New in v0.2.0
+
+1. **Search and install**: Find tools in Agent Skills, MCP Registry, the Claude official plugin marketplace, and GitHub. Preview and select tools before installation.
+2. **Multiple sources**: Import native Skill, MCP, and Plugin files or complete directories; install from GitHub repositories with optional revisions and subpaths, or use `.skill` / ZIP archives.
+3. **Development reloads**: Backend source changes automatically rebuild and restart the service while preserving the session, keeping the UI and endpoints in sync.
 
 The tool library starts empty until you add tools. Creating the shared directory does not import installed plugins automatically. Select installed plugins explicitly when adding tools to a project, or scan for them on the **Local tools** page.
 
 ## First-time setup
 
 1. Create a shared Git repository. The default location is `~/.agent-tools`, with the MCP registry at `~/.agent-tools/mcp-registry`. The GUI requires this step before you can manage projects and tools.
-2. Create a Skill, MCP definition, or Claude Code plugin in the tool library. Skills are saved to `skills/<name>/SKILL.md`; plugins go in `plugins/<name>/` and are registered in `.claude-plugin/marketplace.json`.
+2. In the tool library, choose **Search and install…**, **Download and install…**, **Upload package…**, or **New tool…**. Skills are saved to `skills/<name>/SKILL.md`; plugins go in `plugins/<name>/` and are registered in `.claude-plugin/marketplace.json`.
 3. Add an existing project folder. This initializes its tool manifest and agent entry points.
 4. Assign tools from the library to your projects. Preview the file changes before applying them.
 5. In the Git section, enter an existing GitHub repository URL, then commit and push manually using your local Git identity and authentication. Failed pushes preserve local commits so you can fix the URL or credentials and retry.
 
-Existing directory contents, tools, and explicitly configured paths are preserved. Changing a path does not move files or rebuild project links. Commits cover the README, gitignore, shared Skills, plugins, and any MCP registry inside the shared repository. External registries, separately cloned repositories, and project files are excluded. Create the remote GitHub repository yourself; this feature does not create it automatically.
+Existing directory contents, tools, and explicitly configured paths are preserved. Changing a path does not move files or rebuild project links. Commits cover the README, gitignore, shared Skills, plugins, local MCP scripts (`.mcp-packages/`), and any MCP registry inside the shared repository. External registries, separately cloned repositories, and project files are excluded. Create the remote GitHub repository yourself; this feature does not create it automatically.
 
 Path fields in repository settings, first-time setup, project registration, and project relocation support **Choose folder…** as well as absolute paths or `~/…`. Choosing a folder only fills the input; canceling preserves its value. To create a directory that does not exist yet, enter its path manually. Use settings to update the repository path, registry, and default agents; the library refreshes after a successful update. Folder dialogs open on the machine running the server: macOS and Windows use native dialogs, while Linux requires `zenity` or `kdialog`. Manual input remains available without a desktop environment.
 
 Plugins can only be assigned to projects with Claude Code enabled. They use project-level `extraKnownMarketplaces` and `enabledPlugins`, with an absolute path for the local marketplace. Trust the project in Claude Code to load local plugins. If the client reports a missing installation, run `claude plugin install <name>@atm-shared --scope project`. See the [Claude Code documentation](https://code.claude.com/docs/en/plugins/org#require-plugins-per-repository).
+
+## Install third-party tools
+
+In **Tool library**, choose **Search and install…**, **Download and install…**, or **Upload package…**. The dialog offers search, URL, GitHub, local file, and local directory inputs. Preview and select tools before confirming, then link installed tools to projects.
+
+| Source | Supported content |
+| --- | --- |
+| Native files/directories | Skill `SKILL.md` with resources; MCP JSON (single definitions, `mcpServers`, VS Code `servers`, official `server.json`); Claude Code `.claude-plugin/plugin.json` with plugin resources |
+| GitHub | `owner/repo`, repository, tree or blob URLs, with optional branch/tag/commit and subpath |
+| MCP package identifiers | Enter `npm:@scope/package@version` or `pypi:package==version` in the URL field to generate npx / uvx launch configuration |
+| Search | Agent Skills catalog, MCP Registry, Claude official plugin marketplace, and GitHub repository search |
+| Archives | `.skill` and ZIP, containing one or multiple tools, with optional repository wrapper directory |
+
+Import complete directories or GitHub paths for tools with resources. A standalone `plugin.json` is rejected if its referenced files are missing. Relative MCP scripts are copied with source files into the shared repository's `.mcp-packages/` directory and launch paths are rewritten; `node_modules` is excluded. npm / PyPI dependencies download when the agent first starts the MCP server, requiring Node.js / uv. Secrets use `${ENV_VAR}` references; preview warns about unset variables.
+
+Limits: 20 MB per download/upload, 50 MB expanded source and selected installation, 2000 source entries. GitHub limits apply to the entire snapshot. Encrypted ZIPs, links, special files, unsafe and duplicate paths are rejected. Git metadata, dependency directories and system metadata are skipped. Existing tools are never overwritten; failed writes roll back; changed content requires a fresh preview. Installation does not execute scripts, link projects, or push commits. Failed search providers show warnings without discarding other results. Demo mode does not perform external installations.
 
 ## Navigation and language
 
@@ -45,7 +71,7 @@ Additional documentation is currently in Chinese:
 
 ### Desktop app
 
-Download the desktop app from [GitHub Releases](https://github.com/cs11b137/agent-tool-manager/releases). The `v0.2.0` preview provides an installer for Apple Silicon Macs (M-series) running macOS 14 or later. Open the DMG and drag the app into Applications. A SHA-256 checksum file is included on the release page.
+Download the [v0.2.0 installer](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/Agent-Tool-Manager_0.2.0_macos-arm64.dmg), open the DMG, and drag the app into Applications. Requires macOS 14+ and Apple Silicon (M-series). The [release page](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.2.0) includes release notes and SHA-256 checksums.
 
 The app bundles Node and the local server, so no terminal is needed to use it. It supports a system tray, single-instance operation, and optional launch at login. This preview is not signed with an Apple Developer ID or notarized, so macOS may block it from opening. Intel Mac, Windows, and Linux installers are not currently provided. Git operations still require a local Git installation; MCP dependencies and credentials must be configured separately.
 
@@ -117,19 +143,3 @@ Tests use temporary directories instead of your real home directory. Core accept
 - The server listens only on `127.0.0.1`, generates a new random token on each launch, and validates `Host` and `Origin`. Web mode uses a random port by default; desktop mode reuses its previous port when available and falls back to a free port on conflict.
 - Use variable references such as `${VAR}` to avoid storing plaintext secrets in configuration. `doctor` scans for potential plaintext secrets.
 - Configuration merging only changes entries tracked in the lock file's `managed` section, preserving handwritten configuration.
-
-### Install external tools
-
-In **Tool library**, choose **Search and install…**, **Download and install…**, or **Upload package…**. The dialog offers search, URL, GitHub, local file, and local directory inputs. Preview and select tools before confirming, then link installed tools to projects.
-
-| Source | Supported content |
-| --- | --- |
-| Native files/directories | Skill `SKILL.md` with resources; MCP JSON (single definitions, `mcpServers`, VS Code `servers`, official `server.json`); Claude Code `.claude-plugin/plugin.json` with plugin resources |
-| GitHub | `owner/repo`, repository, tree or blob URLs, with optional branch/tag/commit and subpath |
-| MCP package identifiers | Enter `npm:@scope/package@version` or `pypi:package==version` in the URL field to generate npx / uvx launch configuration |
-| Search | Agent Skills catalog, MCP Registry, Claude official plugin marketplace, and GitHub repository search |
-| Archives | `.skill` and ZIP, containing one or multiple tools, with optional repository wrapper directory |
-
-Import complete directories or GitHub paths for tools with resources. A standalone `plugin.json` is rejected if its referenced files are missing. Relative MCP scripts are copied with source files into the shared repository's `.mcp-packages/` directory and launch paths are rewritten; `node_modules` is excluded. npm / PyPI dependencies download when the agent first starts the MCP server, requiring Node.js / uv. Secrets use `${ENV_VAR}` references; preview warns about unset variables.
-
-Limits: 20 MB per download/upload, 50 MB expanded source and selected installation, 2000 source entries. GitHub limits apply to the entire snapshot. Encrypted ZIPs, links, special files, unsafe and duplicate paths are rejected. Git metadata, dependency directories and system metadata are skipped. Existing tools are never overwritten; failed writes roll back; changed content requires a fresh preview. Installation does not execute scripts, link projects, or push commits. Failed search providers show warnings without discarding other results. Demo mode does not perform external installations.
