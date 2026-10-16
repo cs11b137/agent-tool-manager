@@ -6,6 +6,29 @@ import { MockApiClient } from '../api/mock';
 import { renderWithProviders } from '../test/utils';
 
 describe('shared repository workflow', () => {
+  it('navigates tool types without submitting and dismisses the menu before the dialog', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithProviders(<CreateToolDialog onClose={onClose} />);
+    const select = screen.getByRole('combobox', { name: '工具类型' });
+    await user.click(select);
+    expect(screen.getByRole('option', { name: 'Skill' })).toHaveAttribute('aria-selected', 'true');
+    await user.keyboard('{End}{Enter}');
+    expect(select).toHaveTextContent('插件（Claude Code）');
+    expect(select).toHaveFocus();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await user.keyboard('{ArrowDown}{Escape}');
+    expect(select).toHaveAttribute('aria-expanded', 'false');
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(select);
+    await user.click(screen.getByLabelText('名称'));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await user.click(select);
+    await user.keyboard('{Tab}');
+    expect(screen.getByLabelText('名称')).toHaveFocus();
+    expect(select).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('blocks the application until initialization succeeds and preserves the form after failure', async () => {
     const api = new MockApiClient({ latency: 0 });
     const status = await api.getSharedRepository();
@@ -29,7 +52,8 @@ describe('shared repository workflow', () => {
     const create = vi.spyOn(api, 'createSharedTool').mockRejectedValueOnce(new Error('工具已存在'));
     const onClose = vi.fn();
     renderWithProviders(<CreateToolDialog onClose={onClose} />, { api });
-    await userEvent.selectOptions(screen.getByLabelText('工具类型'), 'plugin');
+    await userEvent.click(screen.getByRole('combobox', { name: '工具类型' }));
+    await userEvent.click(screen.getByRole('option', { name: '插件（Claude Code）' }));
     await userEvent.type(screen.getByLabelText('名称'), 'team');
     await userEvent.type(screen.getByLabelText('描述'), 'Team guide');
     await userEvent.type(screen.getByLabelText('工具指令'), 'Follow team rules');

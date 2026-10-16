@@ -7,10 +7,47 @@ import { renderWithProviders } from '../test/utils';
 import { msg, setLocale } from '../lib/i18n';
 import en from '../locales/en.json';
 import zh from '../locales/zh.json';
+import { DoctorPage } from '../pages/Doctor';
+import { OverviewPage } from '../pages/Overview';
 
 afterEach(() => setLocale('zh-CN'));
 
 describe('navigation and localization', () => {
+  it('shows an honest empty health state and removes the overview search', async () => {
+    const api = new MockApiClient({ latency: 0 });
+    vi.spyOn(api, 'getProjects').mockResolvedValue([]);
+    const getDoctor = api.getDoctor.bind(api);
+    vi.spyOn(api, 'getDoctor').mockImplementation(((id?: string, opts?: { measure?: boolean }) => {
+      if (opts?.measure) return getDoctor(id, { measure: true });
+      return Promise.resolve({
+        checkedAt: new Date().toISOString(), measured: false,
+        counts: { error: 0, warn: 0, info: 0 }, issues: [], projects: [],
+      });
+    }) as typeof api.getDoctor);
+    const view = renderWithProviders(<OverviewPage />, { api });
+    expect(await screen.findByText('暂无项目')).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    view.unmount();
+    renderWithProviders(<DoctorPage />, { api });
+    expect(await screen.findByText('暂无项目可检查。添加项目后，可查看工具链接、配置和上下文占用情况。')).toBeInTheDocument();
+    expect(screen.queryByText('所有项目都很健康。')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '错误' })).not.toBeInTheDocument();
+  });
+
+  it('localizes diagnostic explanations while preserving original details', async () => {
+    renderWithProviders(<DoctorPage />);
+    expect(await screen.findByText('工具链接失效')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '错误' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '警告' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '提示' })).toBeInTheDocument();
+    const details = within(screen.getByRole('region', { name: '错误' })).getByText('原始诊断与处理建议').closest('details');
+    expect(details).not.toHaveAttribute('open');
+    expect(details).toHaveTextContent('断链');
+    await userEvent.click(within(details!).getByText('原始诊断与处理建议'));
+    expect(details).toHaveAttribute('open');
+    expect(within(details!).getByText('atm install')).toBeInTheDocument();
+  });
+
   it('switches an open settings form without losing input or translating paths', async () => {
     const user = userEvent.setup();
     renderWithProviders(<App />, { route: '/library' });

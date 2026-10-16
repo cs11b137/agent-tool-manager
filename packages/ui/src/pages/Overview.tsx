@@ -1,8 +1,8 @@
 import { msg, useLocale } from '../lib/i18n';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useApi } from '../api/context';
-import { useActivity, useConfig, useDoctor, useLibrary, useProjects, useRepos } from '../api/queries';
+import { useActivity, useConfig, useDoctor, useProjects, useRepos } from '../api/queries';
 import type { ActivityEntry, ProjectSummary, WriteResult } from '../api/types';
 import { ContextBar, DoctorChip, Empty, ErrorBox, KindChip, Loading, PageHeader, Rich } from '../components/ui';
 import { OpFlow, type OpFlowConfig } from '../components/flows';
@@ -107,16 +107,16 @@ function ActivityRow({ e, last }: { e: ActivityEntry; last: boolean }) {
       <span className="mono w-[52px] text-[12px] text-ink3">{hhmm(e.at)}</span>
       {e.level === 'error' ? (
         <span className="chip" style={{ background: 'var(--err-soft)', color: 'var(--err-ink)' }}>
-          ERROR
+          {msg('错误')}
         </span>
       ) : e.kind ? (
         <KindChip kind={e.kind} />
       ) : e.level === 'warn' ? (
         <span className="chip" style={{ background: 'var(--warn-soft)', color: 'var(--warn-ink)' }}>
-          WARN
+          {msg('警告')}
         </span>
       ) : (
-        <span className="chip c-muted">INFO</span>
+        <span className="chip c-muted">{msg('提示')}</span>
       )}
       {e.projectName &&
         (e.projectId ? (
@@ -143,8 +143,6 @@ export function OverviewPage() {
   const doctor = useDoctor();
   const repos = useRepos();
   const activity = useActivity();
-  const library = useLibrary();
-  const [q, setQ] = useState('');
   const [flow, setFlow] = useState<OpFlowConfig | null>(null);
   const [relocate, setRelocate] = useState<ProjectSummary | null>(null);
   const [unregister, setUnregister] = useState<ProjectSummary | null>(null);
@@ -155,13 +153,6 @@ export function OverviewPage() {
   const totals = live.reduce((a, p) => ({ s: a.s + p.counts.skills, m: a.m + p.counts.mcp, p: a.p + p.counts.plugins }), { s: 0, m: 0, p: 0 });
   const counts = doctor.data?.counts ?? { error: 0, warn: 0, info: 0 };
   const dirty = (repos.data ?? []).filter((r) => r.dirty || r.ahead > 0);
-
-  const shown = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return list;
-    const toolHits = new Set((library.data ?? []).filter((i) => i.name.toLowerCase().includes(needle)).flatMap((i) => i.usedBy));
-    return list.filter((p) => p.name.toLowerCase().includes(needle) || p.path.toLowerCase().includes(needle) || toolHits.has(p.id));
-  }, [q, list, library.data]);
 
   const fixableFor = (id: string) => (doctor.data?.issues ?? []).filter((i) => i.projectId === id && i.fixable);
 
@@ -188,11 +179,6 @@ export function OverviewPage() {
         title={msg("总览")}
         actions={
           <>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="ov-search" className="text-[12px] font-medium text-ink2">
-                {msg("搜索")}</label>
-              <input id="ov-search" type="search" className="input w-[220px]" placeholder={msg("项目或工具")} value={q} onChange={(e) => setQ(e.target.value)} />
-            </div>
             <button type="button" className="btn btn-g" onClick={syncAll}>
               {msg("全部 sync")}</button>
             <button type="button" className="btn btn-p" disabled={!live.length} onClick={() => setFlow(installFlow(live.filter((p) => p.initialized)))}>
@@ -209,14 +195,16 @@ export function OverviewPage() {
         <Link to="/doctor" className="glass lift flex flex-col gap-1 rounded-[16px] px-[18px] py-4 text-ink no-underline">
           <span className="cap">{msg("体检")}</span>
           <span className="mono text-[28px] font-semibold">
-            {counts.error + counts.warn === 0 ? (
-              <span style={{ color: 'var(--ok-ink)' }}>ok</span>
+            {!doctor.data ? (
+              <span className="text-ink3">{doctor.error ? msg('检查失败') : msg('检查中…')}</span>
+            ) : counts.error + counts.warn === 0 ? (
+              <span style={{ color: doctor.data.projects.length ? 'var(--ok-ink)' : 'var(--ink3)' }}>{doctor.data.projects.length ? msg('正常') : msg('暂无项目')}</span>
             ) : (
               <>
                 <span style={{ color: 'var(--err-ink)' }}>{counts.error}</span>
-                <span className="text-[13px] font-normal text-ink3"> error </span>
+                <span className="text-[13px] font-normal text-ink3">{msg('项错误')} </span>
                 <span style={{ color: 'var(--warn-ink)' }}>{counts.warn}</span>
-                <span className="text-[13px] font-normal text-ink3"> warn</span>
+                <span className="text-[13px] font-normal text-ink3">{msg('项警告')}</span>
               </>
             )}
           </span>
@@ -233,7 +221,7 @@ export function OverviewPage() {
         <Loading />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
-          {shown.map((p, i) => {
+          {list.map((p, i) => {
             const delay = Math.min(5, i + 2);
             return p.exists ? (
               <ProjectCard
@@ -256,7 +244,7 @@ export function OverviewPage() {
               <MissingCard key={p.id} p={p} delay={delay} onRelocate={() => setRelocate(p)} onRemove={() => setUnregister(p)} />
             );
           })}
-          {!shown.length && <Empty className="glass rounded-[20px]">{q ? msg("没有匹配「{0}」的项目", {0: q}) : <><strong className="block text-ink">{msg("共享仓库已就绪")}</strong><span className="mt-2 block">{msg("先在工具库新建工具，再添加项目目录并关联。")}</span><Link className="btn btn-p mt-4" to="/library">{msg("前往工具库")}</Link></>}</Empty>}
+          {!list.length && <Empty className="glass rounded-[20px]">{<><strong className="block text-ink">{msg("共享仓库已就绪")}</strong><span className="mt-2 block">{msg("先在工具库新建工具，再添加项目目录并关联。")}</span><Link className="btn btn-p mt-4" to="/library">{msg("前往工具库")}</Link></>}</Empty>}
         </div>
       )}
 

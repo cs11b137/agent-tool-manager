@@ -80,7 +80,7 @@ function SidebarContent({ onAdd, onSettings, onNavigate }: { onAdd: () => void; 
   const errors = doctor.data?.counts.error ?? 0;
   const links = (items: typeof PRIMARY) => items.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} onClick={onNavigate} className={({isActive}) => `sidebar-link ${isActive ? 'is-active' : ''}`}>
     <Icon size={18} aria-hidden /><span>{msg(label)}</span>
-    {to === '/doctor' && errors > 0 && <span className="sidebar-badge error" aria-label={msg('{0} 个 error', {0: errors})}>{errors}</span>}
+    {to === '/doctor' && errors > 0 && <span className="sidebar-badge error" aria-label={msg('{0} 项错误', {0: errors})}>{errors}</span>}
   </NavLink>);
   return <>
     <div className="sidebar-brand"><AtmMark size={34} /><div><strong>Agent Tools</strong><span>{msg('集中管理，按需关联')}</span></div></div>

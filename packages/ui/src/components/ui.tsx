@@ -47,7 +47,7 @@ export function DoctorChip({ counts }: { counts: DoctorCounts }) {
   return (
     <span className="chip gap-1.5" style={style}>
       <LevelGlyph level={w} size={6} />
-      {w === 'error' ? `${counts.error} error` : w === 'warn' ? `${counts.warn} warn` : 'ok'}
+      {w === 'error' ? msg('{0} 项错误', {0: counts.error}) : w === 'warn' ? msg('{0} 项警告', {0: counts.warn}) : msg('正常')}
     </span>
   );
 }

@@ -6,6 +6,7 @@ import { useApi } from '../api/context';
 import { useSharedRepository } from '../api/queries';
 import { InitSharedDirectoryDialog, NewMcpDialog, useSubmit } from './dialogs';
 import { SimpleDialog } from './Dialog';
+import { Select } from './Select';
 import { ErrorBox, Loading } from './ui';
 import { useToast } from './Toaster';
 
@@ -49,7 +50,9 @@ export function CreateToolDialog({ onClose }: { onClose: () => void }) {
     <button className="btn btn-p" type="submit" form="create-tool" disabled={busy || !name.trim() || !description.trim() || !content.trim()}>{busy ? msg("创建中…") : msg("创建工具")}</button>
   </>}>
     <form id="create-tool" className="flex flex-col gap-4" onSubmit={(e) => { if (busy) e.preventDefault(); else void submit(e); }}>
-      <label className="flex flex-col gap-1.5">{msg("工具类型")}<select className="input" value={kind} disabled={busy} onChange={(e) => setKind(e.target.value as typeof kind)}><option value="skill">Skill</option><option value="mcp">MCP</option><option value="plugin">{msg("插件（Claude Code）")}</option></select></label>
+      <Select label={msg("工具类型")} value={kind} disabled={busy} onChange={setKind} options={[
+        { value: 'skill', label: 'Skill' }, { value: 'mcp', label: 'MCP' }, { value: 'plugin', label: msg("插件（Claude Code）") },
+      ]} />
       <label className="flex flex-col gap-1.5">{msg("名称")}<input className="input mono" placeholder="my-tool" value={name} disabled={busy} onChange={(e) => setName(e.target.value)} /></label>
       <label className="flex flex-col gap-1.5">{msg("描述")}<input className="input" value={description} disabled={busy} onChange={(e) => setDescription(e.target.value)} /></label>
       <label className="flex flex-col gap-1.5">{msg("工具指令")}<textarea className="input min-h-40" placeholder={msg("描述工具的用途、执行步骤和输出要求…")} value={content} disabled={busy} onChange={(e) => setContent(e.target.value)} /></label>

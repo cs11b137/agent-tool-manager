@@ -104,13 +104,13 @@ test.describe('write flows against the mock', () => {
 
   test('doctor: one-click fix rebuilds the broken link', async ({ page }) => {
     await page.goto('/doctor');
-    await page.getByRole('button', { name: '一键修复安全项（1）' }).click();
+    await page.getByRole('button', { name: '自动修复（1）' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('tab', { name: /baoyu-comic/ })).toBeVisible();
     await dialog.getByRole('button', { name: '写入 1 个文件' }).click();
     await dialog.getByRole('button', { name: '完成' }).click();
-    await expect(page.getByText('没有其他 error')).toBeVisible();
-    await expect(page.getByRole('button', { name: '没有可自动修复的项' })).toBeDisabled();
+    await expect(page.getByText('未发现其他错误', { exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: '暂无可自动修复项' })).toBeDisabled();
   });
 
   test('global: migrate wizard (pick projects → diff → confirm)', async ({ page }) => {

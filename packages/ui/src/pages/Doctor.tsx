@@ -11,6 +11,7 @@ import { SimpleDialog } from '../components/Dialog';
 import { useToast } from '../components/Toaster';
 import { useAcknowledged } from '../lib/ack';
 import { hhmm, tildify } from '../lib/format';
+import { doctorCopy } from '../lib/doctor-copy';
 
 function RepoDialog({ repo, onClose }: { repo: string; onClose: () => void }) {
   useLocale();
@@ -38,7 +39,7 @@ function RepoDialog({ repo, onClose }: { repo: string; onClose: () => void }) {
             <dd className="mono m-0 break-all">{tildify(r.dir)}</dd>
             <dt className="text-ink3">{msg("分支")}</dt>
             <dd className="mono m-0">
-              {r.branch ?? '(detached)'} · {r.head.slice(0, 7)}
+              {r.branch ?? msg('未关联分支')} · {r.head.slice(0, 7)}
             </dd>
             <dt className="text-ink3">{msg("状态")}</dt>
             <dd className="m-0">
@@ -56,7 +57,7 @@ function RepoDialog({ repo, onClose }: { repo: string; onClose: () => void }) {
               git -C {tildify(r.dir)} diff
             </code>
           </div>
-          <p className="m-0 text-[12px] leading-[1.6] text-ink3">{msg("atm 不会替你提交或丢弃改动。改动已经对所有引用它的项目生效；确认无误可以给上游提 PR。")}</p>
+          <p className="m-0 text-[12px] leading-[1.6] text-ink3">{msg("不会自动提交或丢弃改动。共享仓库的改动会影响引用它的项目，请确认后再提交。")}</p>
         </>
       )}
     </SimpleDialog>
@@ -70,8 +71,8 @@ function Section({ level, children, delay }: { level: DoctorLevel; children: Rea
   return (
     <section aria-labelledby={`h-${level}`} className={`glass rise d${delay} overflow-hidden rounded-[20px]`}>
       <h2 id={`h-${level}`} className="cap m-0 flex items-center gap-2 border-b border-line px-5 py-3.5" style={{ color: LEVEL_INK[level] }}>
-        <LevelGlyph level={level} size={level === 'info' ? 8 : 8} />
-        {level}
+        <LevelGlyph level={level} size={8} />
+        {msg({ error: '错误', warn: '警告', info: '提示' }[level])}
       </h2>
       {children}
     </section>
@@ -90,6 +91,17 @@ function ProjectRef({ issue, link }: { issue: DoctorIssue; link: boolean }) {
   );
 }
 
+function DiagnosticDetails({ issue }: { issue: DoctorIssue }) {
+  return <details className="text-[12px] text-ink3">
+    <summary className="cursor-pointer">{msg('原始诊断与处理建议')}</summary>
+    <div className="mt-2 flex flex-col gap-1.5 break-words">
+      <Rich text={issue.title} />
+      {issue.detail && <Rich text={issue.detail} />}
+      {issue.nextCommand && <code className="mono break-all">{issue.nextCommand}</code>}
+    </div>
+  </details>;
+}
+
 export function DoctorPage() {
   useLocale();
   const api = useApi();
@@ -102,7 +114,7 @@ export function DoctorPage() {
   const [migrate, setMigrate] = useState<DoctorIssue | null>(null);
 
   if (doctor.isLoading) return <Loading />;
-  if (doctor.error || !doctor.data) return <ErrorBox error={doctor.error ?? new Error(msg("无法读取体检结果"))} />;
+  if (doctor.error || !doctor.data) return <ErrorBox error={doctor.error ?? new Error(msg("无法读取检查结果"))} />;
 
   const report = doctor.data;
   const issues = report.issues.filter((i) => !acked.includes(i.id));
@@ -120,7 +132,7 @@ export function DoctorPage() {
       title: <span>{list.length === 1 ? msg("重建软链 {0}", {0: list[0]!.name ?? ''}) : msg("修复 {0} 项", {0: list.length})}</span>,
       run: (dryRun) => api.fix(ids, { dryRun }),
       onCommitted: () => setFixedNote(note),
-      footnote: msg("只处理能安全修复的项：按清单重建软链，不改动清单与 Agent 配置。"),
+      footnote: msg("仅按工具清单重建缺失或失效的链接，不修改清单和应用配置。"),
     });
   };
 
@@ -128,7 +140,7 @@ export function DoctorPage() {
     api.getDoctor(undefined, { measure: true }).catch((e: unknown) => toast.push({ tone: 'err', title: msg("检查失败"), detail: (e as Error).message }));
   };
 
-  const errText = errors.length ? (errors.every((i) => i.fixable) ? msg("error · 可安全修复") : msg("error · 需要处理")) : fixedNote ? msg("error · 全部已修复") : msg("error · 无");
+  const errText = errors.length ? (errors.every((i) => i.fixable) ? msg("错误 · 可自动修复") : msg("错误 · 需要处理")) : fixedNote ? msg("错误 · 已修复") : msg("错误 · 未发现");
 
   const warnActions = (i: DoctorIssue): ReactNode => {
     if (i.code === 'mcp-dup-plugin' && i.projectId && i.name) {
@@ -141,10 +153,10 @@ export function DoctorPage() {
             className="btn btn-g"
             onClick={() => {
               ack(i.id);
-              toast.push({ tone: 'ok', title: msg("保留清单里的 {0}", {0: name}), detail: msg("这条告警已在本机隐藏") });
+              toast.push({ tone: 'ok', title: msg("保留清单里的 {0}", {0: name}), detail: msg("这条警告已在本机隐藏") });
             }}
           >
-            {msg("保留清单的 MCP")}</button>
+            {msg("保留清单版本")}</button>
           <button
             type="button"
             className="btn btn-g"
@@ -174,8 +186,8 @@ export function DoctorPage() {
     if (i.code === 'rev-mismatch' && i.projectId) {
       const pid = i.projectId;
       return (
-        <button type="button" className="btn btn-g" onClick={() => setFlow({ eyebrow: `${i.projectName ?? ''} · install`, title: <span className="mono ca">atm install</span>, run: (dryRun, o) => api.install(pid, { dryRun, adopt: o.adopt, force: o.force, strict: o.strict }), writeOptions: ['strict', 'adopt', 'force'] })}>
-          install
+        <button type="button" className="btn btn-g" onClick={() => setFlow({ eyebrow: msg('{0} · 还原工具', {0: i.projectName ?? ''}), title: msg('按清单还原工具'), run: (dryRun, o) => api.install(pid, { dryRun, adopt: o.adopt, force: o.force, strict: o.strict }), writeOptions: ['strict', 'adopt', 'force'] })}>
+          {msg('还原工具')}
         </button>
       );
     }
@@ -207,14 +219,14 @@ export function DoctorPage() {
   return (
     <>
       <PageHeader
-        cap={msg("{0} 个项目 · atm doctor · {1} 更新", {0: report.projects.length, 1: hhmm(report.checkedAt)})}
+        cap={msg("已检查 {0} 个项目 · {1} 更新", {0: report.projects.length, 1: hhmm(report.checkedAt)})}
         title={msg("体检")}
         actions={
           <>
             <button type="button" className="btn btn-g" onClick={measure}>
-              {msg("重新检查（含 --measure）")}</button>
+              {msg("重新检查")}</button>
             <button type="button" className="btn btn-p" disabled={!fixable.length} onClick={() => fix(fixable)}>
-              {fixable.length ? msg("一键修复安全项（{0}）", {0: fixable.length}) : msg("没有可自动修复的项")}
+              {fixable.length ? msg("自动修复（{0}）", {0: fixable.length}) : msg("暂无可自动修复项")}
             </button>
           </>
         }
@@ -236,7 +248,7 @@ export function DoctorPage() {
           </span>
           <span className="flex flex-col gap-0.5">
             <span className="mono text-[34px] leading-none font-semibold">{warns.length}</span>
-            <span className="text-[13px] text-ink2">{msg("warn · 需要你决定")}</span>
+            <span className="text-[13px] text-ink2">{warns.length ? msg("警告 · 需要确认") : msg("警告 · 未发现")}</span>
           </span>
         </div>
         <div className="glass flex items-center gap-4 rounded-[20px] px-[22px] py-5">
@@ -245,18 +257,18 @@ export function DoctorPage() {
           </span>
           <span className="flex flex-col gap-0.5">
             <span className="mono text-[34px] leading-none font-semibold">{infos.length}</span>
-            <span className="text-[13px] text-ink2">info</span>
+            <span className="text-[13px] text-ink2">{msg('提示 · 供参考')}</span>
           </span>
         </div>
       </div>
 
-      <Section level="error" delay={2}>
+      {(errors.length > 0 || report.projects.length > 0) && <Section level="error" delay={2}>
         {errors.length === 0 && (
           <div className="morph flex flex-wrap items-center gap-3 px-5 py-[18px] text-[14px]" style={{ background: 'var(--ok-soft)' }}>
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-white" style={{ background: 'var(--ok)' }}>
               <Check size={13} strokeWidth={3} aria-hidden />
             </span>
-            <span>{fixedNote ? <Rich text={msg("已重建软链 {0}，没有其他 error", {0: fixedNote})} /> : msg("没有 error")}</span>
+            <span>{fixedNote ? <Rich text={msg("已重建链接 {0}，未发现其他错误", {0: fixedNote})} /> : msg("未发现错误")}</span>
           </div>
         )}
         {errors.map((i, idx) => (
@@ -265,14 +277,11 @@ export function DoctorPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <ProjectRef issue={i} link={false} />
                 {i.kind && <KindChip kind={i.kind} />}
-                <strong className="text-[15px]">{i.title}</strong>
+                <strong className="text-[15px]">{doctorCopy(i, report).title}</strong>
+                {i.name && <span className="mono text-[12px] text-ink2">{i.name}</span>}
               </div>
-              {i.detail && (
-                <code className="mono text-[12px] break-all text-ink2">
-                  <Rich text={i.detail} />
-                </code>
-              )}
-              {i.nextCommand && <span className="mono text-[12px] text-ink3">{msg("下一步：")}{i.nextCommand}</span>}
+              <p className="m-0 text-[13px] leading-[1.6] text-ink2">{doctorCopy(i, report).detail}</p>
+              <DiagnosticDetails issue={i} />
             </div>
             {i.fixable && (
               <button type="button" className="btn btn-p" onClick={() => fix([i])}>
@@ -285,7 +294,7 @@ export function DoctorPage() {
             )}
           </div>
         ))}
-      </Section>
+      </Section>}
 
       {warns.length > 0 && (
         <Section level="warn" delay={3}>
@@ -295,16 +304,11 @@ export function DoctorPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <ProjectRef issue={i} link />
                   {i.kind && <KindChip kind={i.kind} />}
-                  <strong className="text-[15px]">{i.title}</strong>
+                  <strong className="text-[15px]">{doctorCopy(i, report).title}</strong>
+                  {i.name && <span className="mono text-[12px] text-ink2">{i.name}</span>}
                 </div>
-                {i.detail && (
-                  <span className="text-[14px] leading-[1.6] text-ink2">
-                    <Rich text={i.detail} />
-                  </span>
-                )}
-                <span className="text-[12px] text-ink3">
-                  {i.code === 'mcp-dup-plugin' ? msg("需要你决定保留哪一个，atm 不会自动处理") : i.code === 'skill-shadowed' ? msg("需要你决定保留哪一份，atm 不会自动处理") : msg("下一步：{0}", {0: i.nextCommand ?? 'atm doctor'})}
-                </span>
+                <p className="m-0 text-[13px] leading-[1.6] text-ink2">{doctorCopy(i, report).detail}</p>
+                <DiagnosticDetails issue={i} />
               </div>
               <div className="flex flex-wrap gap-2">{warnActions(i)}</div>
             </div>
@@ -317,14 +321,13 @@ export function DoctorPage() {
           {infos.map((i, idx) => (
             <div key={i.id} className={`hover-row flex flex-wrap items-center gap-4 px-5 py-4 ${idx < infos.length - 1 ? 'border-b border-line' : ''}`}>
               <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-1">
-                <span className="text-[14px]">
-                  <Rich text={i.title} />
-                </span>
-                {i.detail && (
-                  <span className="text-[12px] text-ink3">
-                    <Rich text={i.detail} />
-                  </span>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <ProjectRef issue={i} link />
+                  <span className="text-[14px]">{doctorCopy(i, report).title}</span>
+                  {i.name && <span className="mono text-[12px] text-ink2">{i.name}</span>}
+                </div>
+                <p className="m-0 text-[12px] text-ink3">{doctorCopy(i, report).detail}</p>
+                <DiagnosticDetails issue={i} />
               </div>
               {infoAction(i)}
             </div>
@@ -332,7 +335,7 @@ export function DoctorPage() {
         </Section>
       )}
 
-      {issues.length === 0 && <Empty className="glass rounded-[20px]">{msg("所有项目都很健康。")}</Empty>}
+      {report.projects.length === 0 && <Empty className="glass rounded-[20px]">{msg("暂无项目可检查。添加项目后，可查看工具链接、配置和上下文占用情况。")}</Empty>}
 
       <OpFlow config={flow} onClose={() => setFlow(null)} />
       {repo && <RepoDialog repo={repo} onClose={() => setRepo(null)} />}
