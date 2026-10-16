@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { Hono, type Context } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { AtmError, type Atm, type AtmEvent, type CreateSharedToolInput, type InstallOptions, type McpDefScope, type ProjectDetail, type WriteOptions } from '@atm/core';
 import { BadRequest, toErrorResponse, type ServerErrorJson } from './errors.js';
 import { EventHub } from './events.js';
@@ -195,6 +196,21 @@ export function createApp(deps: AppDeps): Hono {
     else throw new BadRequest('kind must be skill, mcp or plugin');
     return c.json(await atm.createSharedTool(input));
   });
+
+  app.post('/api/tool-packages', bodyLimit({ maxSize: 28 * 1024 * 1024, onError: (c) => c.json({ error: { code: 'INVALID_MANIFEST', message: '工具包请求超过大小限制（20 MB）' } }, 413) }), async (c) => {
+    const body = v.obj(await readBody(c));
+    const source = v.obj(body.source);
+    const sha256 = v.optStr(body, 'sha256');
+    const selection = body.selection === undefined ? undefined : v.strArr(body.selection, 'selection');
+    if (source.type === 'url') return c.json(await atm.importToolPackage({ source: { type: 'url', url: v.reqStr(source, 'url') }, sha256, selection }));
+    if (source.type === 'upload') return c.json(await atm.importToolPackage({ source: { type: 'upload', filename: v.reqStr(source, 'filename'), base64: v.reqStr(source, 'base64') }, sha256, selection }));
+    if (source.type === 'directory') return c.json(await atm.importToolPackage({ source: { type: 'directory', path: v.reqStr(source, 'path') }, sha256, selection }));
+    if (source.type === 'github') return c.json(await atm.importToolPackage({ source: { type: 'github', repo: v.reqStr(source, 'repo'), ref: v.optStr(source, 'ref'), path: v.optStr(source, 'path') }, sha256, selection }));
+    if (source.type === 'mcp') return c.json(await atm.importToolPackage({ source: { type: 'mcp', spec: v.reqStr(source, 'spec') }, sha256, selection }));
+    throw new BadRequest('unsupported tool source');
+  });
+
+  app.get('/api/external-tools', async (c) => c.json(await atm.searchExternalTools({ query: c.req.query('q') ?? '', kind: v.kind(c.req.query('kind') ?? 'skill') })));
 
   // ── projects ──
   app.get('/api/projects', async (c) => c.json(await atm.projects()));

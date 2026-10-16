@@ -29,6 +29,8 @@ await fs.mkdir(runtime, { recursive: true });
 await build({
   entryPoints: [path.join(root, 'src/backend.mjs')], outfile: path.join(resources, 'backend.mjs'),
   bundle: true, platform: 'node', format: 'esm', target: 'node22', sourcemap: false,
+  // ZIP decoding uses CommonJS dependencies that require Node built-ins.
+  banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
 });
 await fs.rm(path.join(resources, 'ui'), { recursive: true, force: true });
 await fs.cp(path.join(root, '../ui/dist'), path.join(resources, 'ui'), { recursive: true });

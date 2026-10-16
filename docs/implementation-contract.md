@@ -194,3 +194,33 @@ src/
 Skill 的共享仓库引用为 `atm:shared`，lock 路径为 `skills/<name>`。插件建立 `.claude-plugin/plugin.json` 和内置 Skill，marketplace 为 `atm-shared`。项目仅在 Claude Code 启用时写入该 marketplace 的绝对目录和 enabledPlugins；移除最后一个本地插件时，仅移除 lock 标记为管理的 marketplace 条目，保留手写设置。
 
 目录初始化复用旧接口的目录校验与回滚；新增 Git 和默认文件失败时清理本次创建内容，配置不变。新工具内容可继续通过编辑器修改；共享目录文件监听刷新工具库。外置 MCP registry 保持原路径，界面明确提示不会随仓库推送。旧 `initSharedDirectory` 接口仍只创建目录，供现有客户端兼容。
+
+### External tool installation
+
+`Atm.importToolPackage(input: ToolPackageInput): Promise<ToolPackageResult>` and authenticated `POST /api/tool-packages` share one preview/install contract:
+
+```ts
+type ToolPackageSource =
+  | { type: 'url'; url: string }
+  | { type: 'upload'; filename: string; base64: string }
+  | { type: 'directory'; path: string }
+  | { type: 'github'; repo: string; ref?: string; path?: string }
+  | { type: 'mcp'; spec: string };
+interface ToolPackageInput {
+  source: ToolPackageSource;
+  sha256?: string;
+  selection?: string[]; // kind:name; omitted means all detected tools
+}
+```
+
+Without `sha256`, return preview (`installed: false`, digest of sorted paths/content/executable bits, tools with kind/name/path/file count/conflict, total installed bytes and warnings). Passing the digest installs selected tools only if the source content still matches. Unknown or empty selections are rejected. HTTP uses existing bearer/origin checks and a 28 MiB JSON body limit.
+
+Sources accept native Markdown Skill manifests, MCP JSON, plugin.json, full directories, ZIP and `.skill` archives. GitHub sources download a bounded codeload snapshot without executing Git hooks; optional revision and subpath select content. Selecting SKILL.md or a plugin manifest includes its parent tool directory. GitHub limits apply before subpath filtering. URL input also accepts GitHub references and npm:/pypi: package specs.
+
+MCP supports individual definitions, `mcpServers`, VS Code `servers`, and official registry HTTP/npm/PyPI server definitions. Existing validation applies. Package specs generate npx/uvx launch definitions; dependencies are fetched at first agent startup, not during import. Registry secrets become environment references and preview warns about missing values. Relative local scripts copy source assets into `.mcp-packages/<name>` (included in shared repository management), with rewritten absolute runtime paths. Missing explicit local files are rejected. Plugin manifest file references must exist within the imported tree, and plugins register in the shared marketplace.
+
+Downloads require HTTPS port 443, validate and pin DNS on each redirect (at most five), time out after 60 seconds and cap bodies at 20 MiB. Nonpublic addresses are rejected, except desktop fake-IP proxy addresses in 198.18.0.0/15 for an exact allowlist of GitHub/registry hosts; normal TLS hostname verification remains enabled. Arbitrary hostnames and literal fake-IP URLs do not receive that exception.
+
+ZIP processing is lazy, validates CRC, portable paths and file types, and limits source entries to 2000 and expanded bytes to 50 MiB. Directory imports enforce the same entry/byte limits, reject links/special files and skip Git metadata/dependencies. Selected installation size is also capped at 50 MiB. Imported files preserve executable bits but never execute. Writes use the config lock and exclusive creation, reject symlink parents and existing destinations, and roll back on failure. Success emits `library.changed` and activity. Installation does not automatically link tools to projects or commit/push the shared repository.
+
+`Atm.searchExternalTools({query, kind})` and `GET /api/external-tools?q=...&kind=skill|mcp|plugin` return `{items, warnings}`. Each item carries an install source for the same preview flow. Searches combine the matching curated provider (Agent Skills, MCP Registry, Claude official marketplace) with GitHub repository search. Supported active MCP entries are pinned to their registry version. Partial provider failures remain visible without losing successful results. UI pages results in groups of five and lets users select individual tools before installation. Mock mode explicitly reports that external search/installation requires a local server.

@@ -13,6 +13,10 @@ import type {
   SharedRepositoryInput,
   SharedRepositoryStatus,
   CreateSharedToolInput,
+  ToolPackageInput,
+  ExternalToolQuery,
+  ExternalToolSearchResult,
+  ToolPackageResult,
   GlobalReport,
   LibraryItem,
   LibraryOptions,
@@ -73,6 +77,8 @@ export interface ApiClient {
   setSharedRemote(remote: string): Promise<SharedRepositoryStatus>;
   commitSharedRepository(message: string): Promise<SharedRepositoryStatus>;
   pushSharedRepository(): Promise<SharedRepositoryStatus>;
+  searchExternalTools(input: ExternalToolQuery): Promise<ExternalToolSearchResult>;
+  importToolPackage(input: ToolPackageInput): Promise<ToolPackageResult>;
   createSharedTool(input: CreateSharedToolInput): Promise<{ path: string }>;
 
   // projects

@@ -55,7 +55,7 @@ export async function initSharedRepository(ctx: Ctx, input: SharedRepositoryInpu
 }
 
 function scopes(cfg: GlobalConfig): string[] {
-  return ['README.md', '.gitignore', 'skills', 'plugins', '.claude-plugin',
+  return ['README.md', '.gitignore', 'skills', 'plugins', '.claude-plugin', '.mcp-packages',
     ...(inside(cfg.root, cfg.mcpRegistry) ? [path.relative(cfg.root, cfg.mcpRegistry)] : [])];
 }
 async function changes(ctx: Ctx, cfg: GlobalConfig): Promise<string[]> {

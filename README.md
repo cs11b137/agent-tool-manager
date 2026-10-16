@@ -46,7 +46,7 @@
 
 ### 桌面版
 
-从 [GitHub Releases](https://github.com/cs11b137/agent-tool-manager/releases) 下载桌面版。`v0.1.0` 预览版提供 macOS 14+、Apple Silicon（M 系列）安装包，下载后打开 DMG，将应用拖入 Applications。发布页面附有 SHA-256 校验文件。
+从 [GitHub Releases](https://github.com/cs11b137/agent-tool-manager/releases) 下载桌面版。`v0.2.0` 预览版提供 macOS 14+、Apple Silicon（M 系列）安装包，下载后打开 DMG，将应用拖入 Applications。发布页面附有 SHA-256 校验文件。
 
 应用内置 Node 和本地服务，无需终端即可使用，支持托盘、单实例和可选登录启动。当前预览版尚未使用 Apple Developer ID 签名或通过公证，macOS 可能阻止打开；暂未提供 Intel Mac、Windows 或 Linux 安装包。Git 操作仍需本机 Git，MCP 自身依赖与凭据需自行配置。
 
@@ -109,6 +109,8 @@ pnpm desktop:build                        # 当前平台安装包
 
 开发时使用终端打印的带 token 链接打开页面；默认读取本机配置、已注册项目和工具库，界面写操作会修改真实文件。`dev:mock` 仅用于演示，不写本机工具配置。
 
+`dev` 会监听 core / server 源码，变化后重新构建并重启开发服务；自动重启保留当前会话 token，避免新界面连接旧接口。UI 源码继续使用热更新。
+
 测试从不碰真实的 `~`：core 接受 `home` / `env` 覆盖，所有 fixture 在临时目录中。
 
 ## 安全
@@ -116,3 +118,19 @@ pnpm desktop:build                        # 当前平台安装包
 - server 只监听 `127.0.0.1`，每次启动生成随机 token，并校验 `Host` / `Origin`。网页模式默认随机端口；桌面版优先复用上次端口，冲突时换用空闲端口
 - 使用 `${VAR}` 等变量引用避免在配置中保存明文密钥；`doctor` 扫描可能的明文密钥
 - 合并写入只改动 lock `managed` 中列出的条目，手写配置不受影响
+
+### 从外部安装工具
+
+在**工具库**选择「搜索安装…」「下载安装…」或「上传工具包…」。弹窗支持搜索、地址、GitHub、本地文件和本地目录；先预览并勾选工具，再确认安装。安装后可将工具关联到项目。
+
+| 来源 | 支持内容 |
+| --- | --- |
+| 原生文件或目录 | Skill 的 `SKILL.md` 及资源；MCP JSON（单个定义、`mcpServers`、VS Code `servers`、官方 `server.json`）；Claude Code 的 `.claude-plugin/plugin.json` 及插件资源 |
+| GitHub | `owner/repo`、仓库地址、目录或文件地址；可指定分支、标签、提交及仓库内路径 |
+| MCP 包名 | 地址栏输入 `npm:@组织/包名@版本` 或 `pypi:包名==版本`，生成 npx / uvx 启动配置 |
+| 搜索 | Agent Skills 目录、MCP Registry、Claude 官方插件市场及 GitHub 仓库搜索 |
+| 压缩包 | `.skill`、ZIP；支持单工具或多工具，以及仓库下载包的外层目录 |
+
+有脚本或资源的 Skill / Plugin 应导入完整目录或 GitHub 路径。单独上传 `plugin.json` 时，其引用的外部文件必须同时存在，否则拒绝安装。MCP 相对脚本随完整来源保存在共享仓库的 `.mcp-packages/`，配置引用安装后的路径；`node_modules` 不复制。MCP npm / PyPI 依赖由 Agent 首次启动时下载，需要预先安装 Node.js / uv。密钥使用 `${ENV_VAR}` 引用，预览会提示缺少的变量。
+
+下载或上传文件最多 20 MB，来源展开后及所选工具安装后最多 50 MB、来源最多 2000 项。GitHub 限制按整个仓库快照计算。加密 ZIP、软链、特殊文件、路径穿越及重复路径会被拒绝；Git 元数据、依赖目录和系统元数据跳过。同名工具不覆盖，写入失败会回滚；预览后内容变化需重新预览。安装不执行脚本，不自动关联项目或推送仓库。搜索来源失败会显示提示，其他来源仍可使用；演示模式不执行外部安装。

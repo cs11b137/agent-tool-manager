@@ -1,15 +1,15 @@
 {
   "name": "@atm/ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @atm/server... build && node scripts/dev.mjs",
+    "dev": "node scripts/dev-watch.mjs",
     "dev:mock": "vite --mode mock",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/*.test.mjs",
     "test:watch": "vitest",
     "e2e": "playwright test",
     "e2e:real": "playwright test -c playwright.real.config.ts"

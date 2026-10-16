@@ -16,6 +16,10 @@ import type {
   SharedRepositoryInput,
   SharedRepositoryStatus,
   CreateSharedToolInput,
+  ToolPackageInput,
+  ExternalToolQuery,
+  ExternalToolSearchResult,
+  ToolPackageResult,
   GlobalReport,
   LibraryItem,
   LibraryOptions,
@@ -715,6 +719,12 @@ export class MockApiClient implements ApiClient {
   async setSharedRemote(remote: string) { this.sharedRemote = remote; return this.getSharedRepository(); }
   async commitSharedRepository(_message: string) { this.sharedHead = 'demo-commit'; return this.getSharedRepository(); }
   async pushSharedRepository() { return this.getSharedRepository(); }
+  async searchExternalTools(_input: ExternalToolQuery): Promise<ExternalToolSearchResult> { return { items: [], warnings: ['演示模式不搜索外部工具，请连接本地服务。'] }; }
+
+  async importToolPackage(_input: ToolPackageInput): Promise<ToolPackageResult> {
+    throw new ApiError('UNSUPPORTED', '演示模式不安装外部工具包，请连接本地服务。');
+  }
+
   async createSharedTool(input: CreateSharedToolInput) {
     if (input.kind === 'mcp') {
       if (this.s.mcp.some((c) => c.def.name === input.def.name)) throw new ApiError('ALREADY_EXISTS', '工具已存在');

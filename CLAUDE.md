@@ -2,7 +2,7 @@
 
 pnpm monorepo. Node ≥ 20, TypeScript strict, ESM.
 
-- `packages/core` — all business logic (`@atm/core`). Pure Node, only runtime dep is `smol-toml`.
+- `packages/core` — all business logic (`@atm/core`). Pure Node, runtime deps are `smol-toml` and `yauzl`.
 - `packages/cli` — `atm` binary, thin wrapper over core.
 - `packages/server` — Hono HTTP + SSE wrapper over core, serves the UI build.
 - `packages/ui` — React + Vite + Tailwind v4 GUI. `VITE_ATM_MOCK=1` runs against in-memory mock data.

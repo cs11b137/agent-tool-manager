@@ -56,12 +56,25 @@ test('bundled runtime serves real UI and authenticated tool/project flow without
   assert.match(await (await fetch(service.url)).text(), /<html/);
   assert.equal((await fetch(new URL('/api/config', service.url))).status, 401);
   assert.equal((await fetch(new URL('/api/config', service.url), { headers: { authorization: `Bearer ${service.token}`, origin: 'https://foreign.example' } })).status, 403);
+  // The packaged backend must contain the same installation endpoints as the UI.
+  const search = await fetch(new URL('/api/external-tools?q=x&kind=skill', service.url), { headers: { authorization: `Bearer ${service.token}` } });
+  assert.equal(search.status, 400);
+  assert.equal((await search.json()).error.code, 'INVALID_MANIFEST');
   assert.deepEqual(await service.api('/api/projects'), []);
   assert.deepEqual(await service.api('/api/library'), []);
   assert.equal((await service.api('/api/shared-repository')).initialized, false);
   const root = path.join(home, '.agent-tools');
   await service.api('/api/shared-repository/init', { root, mcpRegistry: path.join(root, 'mcp-registry') });
+  const native = await service.api('/api/tool-packages', { source: { type: 'upload', filename: 'SKILL.md', base64: Buffer.from('---\nname: native-preview\ndescription: Native file\n---\nReview.').toString('base64') } });
+  assert.equal(native.tools[0].name, 'native-preview');
+  assert.equal(native.installed, false);
   await service.api('/api/shared-repository/tools', { kind: 'skill', name: 'desktop-skill', description: 'Desktop integration fixture', content: 'Use this test skill.' });
+  const source = { type: 'upload', filename: 'review.zip', base64: 'UEsDBBQAAAAAAAAAAABDRSyqMAAAADAAAAAIAAAAU0tJTEwubWQtLS0KbmFtZTogcmV2aWV3CmRlc2NyaXB0aW9uOiBSZXZpZXcKLS0tClJldmlldy5QSwECFAMUAAAAAAAAAAAAQ0UsqjAAAAAwAAAACAAAAAAAAAAAAAAApIEAAAAAU0tJTEwubWRQSwUGAAAAAAEAAQA2AAAAVgAAAAAA' };
+  const preview = await service.api('/api/tool-packages', { source });
+  assert.equal(preview.installed, false);
+  assert.equal(preview.tools[0].name, 'review');
+  assert.equal((await service.api('/api/tool-packages', { source, sha256: preview.sha256 })).installed, true);
+  assert.match(await fs.readFile(path.join(root, 'skills/review/SKILL.md'), 'utf8'), /Review/);
   const projectDir = path.join(base, 'project');
   await fs.mkdir(projectDir);
   const project = await service.api('/api/projects', { path: projectDir });

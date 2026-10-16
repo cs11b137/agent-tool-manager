@@ -1,6 +1,6 @@
 {
   "name": "@atm/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,6 +16,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "smol-toml": "^1.4.0"
+    "smol-toml": "^1.4.0",
+    "yauzl": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/yauzl": "^3.4.0"
   }
 }

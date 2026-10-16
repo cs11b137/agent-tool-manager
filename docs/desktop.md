@@ -4,7 +4,7 @@
 
 ## 使用
 
-1. macOS 打开 DMG，将 **Agent Tool Manager.app** 拖入 Applications，双击启动。首次使用与 Web 版一致：创建共享仓库 → 新建工具 → 添加项目 → 关联工具。
+1. macOS 打开 DMG，将 **Agent Tool Manager.app** 拖入 Applications，双击启动。首次使用与 Web 版一致：创建共享仓库 → 搜索、导入或新建工具 → 添加项目 → 关联工具。
 2. 关闭窗口后继续驻留托盘；点击托盘的「打开窗口 / Open window」或 Dock 图标重新打开。系统不支持托盘时，关闭窗口会退出。
 3. 「登录时启动 / Launch at login」默认关闭，可从菜单启用；登录启动时仅驻留托盘，不弹出窗口。
 4. 服务异常时显示错误页，从应用菜单或托盘选择「重启服务 / Restart service」。选择「退出 / Quit」或 Cmd/Ctrl+Q 会同时关闭应用和后台服务。
@@ -25,7 +25,13 @@ pnpm desktop:build
 
 `desktop:build` 产物位于 `packages/desktop/src-tauri/target/release/bundle/`。macOS 为 `.app` / `.dmg`，Windows 和 Linux 由 Tauri 的当前平台打包器生成安装包。构建脚本复制当前构建环境的 Node，记录版本、平台、架构、SHA-256，并包含 Node 许可证。首次构建需联网获取依赖和运行时许可证。
 
-没有配置发布者签名时，产物用于本机验证。向外部分发 macOS 应用前需设置 Apple Developer 签名和公证凭据；Windows 分发按组织要求配置代码签名。这些账号凭据不放入仓库。参考 [Tauri macOS 签名](https://v2.tauri.app/distribute/sign/macos/)。
+正式分发 macOS 应用应设置 Apple Developer 签名和公证凭据；当前桌面预览版未配置 Developer ID 签名或公证，发布说明必须明确标注。Windows 分发按组织要求配置代码签名。这些账号凭据不放入仓库。参考 [Tauri macOS 签名](https://v2.tauri.app/distribute/sign/macos/)。
+
+## v0.2.0 桌面预览版
+
+工具库新增搜索、下载及本地上传安装。支持原生 Skill 文件及资源目录、MCP JSON / npm / PyPI、Claude Code Plugin 清单及目录，以及 `.skill` / ZIP。GitHub 可指定仓库、版本及子目录。搜索结果来自 Agent Skills、MCP Registry、Claude 官方插件市场与 GitHub；预览后可逐项勾选，已有同名工具不会被覆盖。
+
+安装仅保存资源与启动配置，不执行工具脚本。MCP npm / PyPI 依赖由 Agent 首次启动时下载；Git 和所需运行环境仍需自行安装。安装包继续面向 macOS 14+ Apple Silicon，保持未签名、未公证的预览状态。
 
 ## 生命周期和安全
 
@@ -51,6 +57,12 @@ pnpm typecheck
 Node 集成测试使用临时 HOME 和内置 Node，覆盖空白首次启动、真实静态页面、鉴权、共享 Git 仓库、创建 Skill、项目关联、父进程管道关闭、SIGTERM、端口复用与冲突回退。Rust 测试覆盖启动地址校验和导航边界。
 
 发布前在目标系统检查：双击启动、窗口关闭与托盘恢复、重复启动、服务故障后重启、退出无遗留进程、登录启动开关。Windows/Linux 的原生窗口和系统集成需要在各自平台验收，不能用 macOS 构建结果替代。
+
+### v0.2.0 验收记录（2026-10-16）
+
+1. macOS Apple Silicon release 构建成功，应用版本为 0.2.0，DMG 约 40 MB；桌面窗口能进入工具库、搜索 `pdf` 并显示真实来源结果。
+2. 233 项工作区测试、2 项 Rust 测试、类型检查、Rust Clippy 及两条浏览器安装流程通过；直接使用 `.app` 内资源额外重跑 3 项集成测试通过，包含搜索接口存在性及原生文件预览检查。
+3. Cmd+Q 后应用退出，后台服务端口不再监听。本次未重复登录启动、其他系统或签名公证验收；预览版限制与上一版相同。
 
 ### 本次验收记录（2026-10-15）
 

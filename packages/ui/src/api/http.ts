@@ -15,6 +15,10 @@ import type {
   SharedRepositoryInput,
   SharedRepositoryStatus,
   CreateSharedToolInput,
+  ToolPackageInput,
+  ExternalToolQuery,
+  ExternalToolSearchResult,
+  ToolPackageResult,
   GlobalReport,
   LibraryItem,
   LibraryOptions,
@@ -104,6 +108,8 @@ export class HttpApiClient implements ApiClient {
   setSharedRemote(remote: string) { return this.req<SharedRepositoryStatus>('PUT', '/shared-repository/remote', { remote }); }
   commitSharedRepository(message: string) { return this.req<SharedRepositoryStatus>('POST', '/shared-repository/commit', { message }); }
   pushSharedRepository() { return this.req<SharedRepositoryStatus>('POST', '/shared-repository/push'); }
+  searchExternalTools(input: ExternalToolQuery) { return this.req<ExternalToolSearchResult>('GET', '/external-tools', undefined, { q: input.query, kind: input.kind }); }
+  importToolPackage(input: ToolPackageInput) { return this.req<ToolPackageResult>('POST', '/tool-packages', input); }
   createSharedTool(input: CreateSharedToolInput) { return this.req<{ path: string }>('POST', '/shared-repository/tools', input); }
 
   getProjects() {

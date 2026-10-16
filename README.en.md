@@ -45,7 +45,7 @@ Additional documentation is currently in Chinese:
 
 ### Desktop app
 
-Download the desktop app from [GitHub Releases](https://github.com/cs11b137/agent-tool-manager/releases). The `v0.1.0` preview provides an installer for Apple Silicon Macs (M-series) running macOS 14 or later. Open the DMG and drag the app into Applications. A SHA-256 checksum file is included on the release page.
+Download the desktop app from [GitHub Releases](https://github.com/cs11b137/agent-tool-manager/releases). The `v0.2.0` preview provides an installer for Apple Silicon Macs (M-series) running macOS 14 or later. Open the DMG and drag the app into Applications. A SHA-256 checksum file is included on the release page.
 
 The app bundles Node and the local server, so no terminal is needed to use it. It supports a system tray, single-instance operation, and optional launch at login. This preview is not signed with an Apple Developer ID or notarized, so macOS may block it from opening. Intel Mac, Windows, and Linux installers are not currently provided. Git operations still require a local Git installation; MCP dependencies and credentials must be configured separately.
 
@@ -108,6 +108,8 @@ pnpm desktop:build                        # Installer for the current platform
 
 During development, open the token-bearing URL printed in the terminal. The default mode reads your real local configuration, registered projects, and tool library; UI write operations modify real files. `dev:mock` is for demos and does not write to your local tool configuration.
 
+`dev` watches core/server sources and rebuilds and restarts the development stack when they change. Automatic restarts preserve the session token so the browser stays authenticated and uses current endpoints. UI sources still use hot module replacement.
+
 Tests use temporary directories instead of your real home directory. Core accepts `home` and `env` overrides for fixtures.
 
 ## Security
@@ -115,3 +117,19 @@ Tests use temporary directories instead of your real home directory. Core accept
 - The server listens only on `127.0.0.1`, generates a new random token on each launch, and validates `Host` and `Origin`. Web mode uses a random port by default; desktop mode reuses its previous port when available and falls back to a free port on conflict.
 - Use variable references such as `${VAR}` to avoid storing plaintext secrets in configuration. `doctor` scans for potential plaintext secrets.
 - Configuration merging only changes entries tracked in the lock file's `managed` section, preserving handwritten configuration.
+
+### Install external tools
+
+In **Tool library**, choose **Search and install…**, **Download and install…**, or **Upload package…**. The dialog offers search, URL, GitHub, local file, and local directory inputs. Preview and select tools before confirming, then link installed tools to projects.
+
+| Source | Supported content |
+| --- | --- |
+| Native files/directories | Skill `SKILL.md` with resources; MCP JSON (single definitions, `mcpServers`, VS Code `servers`, official `server.json`); Claude Code `.claude-plugin/plugin.json` with plugin resources |
+| GitHub | `owner/repo`, repository, tree or blob URLs, with optional branch/tag/commit and subpath |
+| MCP package identifiers | Enter `npm:@scope/package@version` or `pypi:package==version` in the URL field to generate npx / uvx launch configuration |
+| Search | Agent Skills catalog, MCP Registry, Claude official plugin marketplace, and GitHub repository search |
+| Archives | `.skill` and ZIP, containing one or multiple tools, with optional repository wrapper directory |
+
+Import complete directories or GitHub paths for tools with resources. A standalone `plugin.json` is rejected if its referenced files are missing. Relative MCP scripts are copied with source files into the shared repository's `.mcp-packages/` directory and launch paths are rewritten; `node_modules` is excluded. npm / PyPI dependencies download when the agent first starts the MCP server, requiring Node.js / uv. Secrets use `${ENV_VAR}` references; preview warns about unset variables.
+
+Limits: 20 MB per download/upload, 50 MB expanded source and selected installation, 2000 source entries. GitHub limits apply to the entire snapshot. Encrypted ZIPs, links, special files, unsafe and duplicate paths are rejected. Git metadata, dependency directories and system metadata are skipped. Existing tools are never overwritten; failed writes roll back; changed content requires a fresh preview. Installation does not execute scripts, link projects, or push commits. Failed search providers show warnings without discarding other results. Demo mode does not perform external installations.

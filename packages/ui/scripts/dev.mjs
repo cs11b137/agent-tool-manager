@@ -1,9 +1,15 @@
 import { createServer } from 'vite';
-import { startServer } from '../../server/dist/index.js';
+import { execFileSync } from 'node:child_process';
+
+// Rebuild before importing: ESM caches the backend for this process's lifetime.
+const pnpmEntry = process.env.npm_execpath;
+if (!pnpmEntry) throw new Error('Run pnpm --filter @atm/ui dev.');
+execFileSync(process.execPath, [pnpmEntry, '--filter', '@atm/server...', 'build'], { stdio: 'inherit' });
+const { startServer } = await import('../../server/dist/index.js');
 
 // Real local data is the default. Demo mode has a separate dev:mock command.
 process.env.VITE_ATM_MOCK = '0';
-const backend = await startServer();
+const backend = await startServer({ token: process.env.ATM_DEV_TOKEN });
 const backendOrigin = new URL(backend.url).origin;
 let frontend;
 let closing;

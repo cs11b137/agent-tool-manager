@@ -18,6 +18,8 @@ import { measureMcp } from './ops/measure.js';
 import { pinSkill } from './ops/pin.js';
 import { removeTool } from './ops/remove.js';
 import { syncRepos } from './ops/sync.js';
+import { searchExternalTools } from './ops/external-tools.js';
+import { importToolPackage } from './ops/tool-package.js';
 import * as sharedRepo from './ops/shared-repository.js';
 import { startWatch } from './watch.js';
 
@@ -61,6 +63,8 @@ export function createAtm(opts: CreateAtmOptions = {}): Atm {
     setSharedRemote: (remote) => sharedRepo.setSharedRemote(ctx, remote),
     commitSharedRepository: (message) => sharedRepo.commitSharedRepository(ctx, message),
     pushSharedRepository: () => sharedRepo.pushSharedRepository(ctx),
+    searchExternalTools: (input) => searchExternalTools(ctx, input),
+    importToolPackage: (input) => importToolPackage(ctx, input),
     createSharedTool: (input) => sharedRepo.createSharedTool(ctx, input),
     config: () => loadConfig(ctx),
     saveConfig: (patch) => saveConfig(ctx, patch),

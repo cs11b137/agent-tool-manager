@@ -1,3 +1,4 @@
+import { InstallToolDialog } from '../components/InstallToolDialog';
 import { msg, useLocale } from '../lib/i18n';
 import { CreateToolDialog, SharedRepositoryPanel } from '../components/SharedRepository';
 import { useMemo, useState } from 'react';
@@ -146,7 +147,7 @@ export function LibraryPage() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [sel, setSel] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<'clone' | 'mcp' | 'tool' | 'project' | null>(null);
+  const [dialog, setDialog] = useState<'clone' | 'mcp' | 'tool' | 'project' | 'url' | 'upload' | 'search' | 'github' | null>(null);
 
   const all = library.data ?? [];
   const counts = useMemo(() => {
@@ -163,11 +164,14 @@ export function LibraryPage() {
   return (
     <>
       <PageHeader
-        cap={msg("{0} · {1} · 已添加的插件", {0: config.data ? tildify(config.data.root) : '~/.agent-tools', 1: config.data ? tildify(config.data.mcpRegistry) : 'MCP registry'})}
+        cap={<span className="break-all">{msg("{0} · {1} · 已添加的插件", {0: config.data ? tildify(config.data.root) : '~/.agent-tools', 1: config.data ? tildify(config.data.mcpRegistry) : 'MCP registry'})}</span>}
         title={msg("工具库")}
         actions={
           <>
             <button type="button" className="btn btn-p" onClick={() => setDialog('tool')}>{msg("新建工具…")}</button>
+            <button type="button" className="btn btn-g" onClick={() => setDialog('search')}>{msg("搜索安装…")}</button>
+            <button type="button" className="btn btn-g" onClick={() => setDialog('url')}>{msg("下载安装…")}</button>
+            <button type="button" className="btn btn-g" onClick={() => setDialog('upload')}>{msg("上传工具包…")}</button>
             <button type="button" className="btn btn-g" onClick={() => setDialog('project')}>{msg("添加项目目录…")}</button>
             <button type="button" className="btn btn-g" onClick={() => setDialog('clone')}>
               {msg("克隆仓库…")}</button>
@@ -209,7 +213,7 @@ export function LibraryPage() {
               {!library.isLoading && !library.error && rows.length === 0 && <Empty>
                 {all.length === 0 && !needle ? <>
                   <strong className="block text-ink">{msg("还没有添加工具")}</strong>
-                  <span className="mt-2 block">{msg("共享仓库已准备好。新建 Skill、MCP 或插件，再添加项目并关联工具。")}</span>
+                  <span className="mt-2 block">{msg("共享仓库已准备好。下载、上传或新建工具，再关联到项目。")}</span>
                   <button type="button" className="btn btn-p mt-4" onClick={() => setDialog('tool')}>{msg("新建第一个工具")}</button>
                 </> : msg("没有匹配的工具。")}
               </Empty>}
@@ -247,6 +251,7 @@ export function LibraryPage() {
       <SharedRepositoryPanel />
       <RepoList />
 
+      {(dialog === 'url' || dialog === 'upload' || dialog === 'search' || dialog === 'github') && <InstallToolDialog mode={dialog} onClose={() => setDialog(null)} />}
       {dialog === 'tool' && <CreateToolDialog onClose={() => setDialog(null)} />}
       {dialog === 'project' && <RegisterProjectDialog onClose={() => setDialog(null)} />}
       {dialog === 'clone' && <CloneRepoDialog onClose={() => setDialog(null)} />}

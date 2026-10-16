@@ -501,6 +501,8 @@ export interface Atm {
   setSharedRemote(remote: string): Promise<SharedRepositoryStatus>;
   commitSharedRepository(message: string): Promise<SharedRepositoryStatus>;
   pushSharedRepository(): Promise<SharedRepositoryStatus>;
+  searchExternalTools(input: ExternalToolQuery): Promise<ExternalToolSearchResult>;
+  importToolPackage(input: ToolPackageInput): Promise<ToolPackageResult>;
   createSharedTool(input: CreateSharedToolInput): Promise<{ path: string }>;
   config(): Promise<GlobalConfig>;
   saveConfig(patch: Partial<GlobalConfig>): Promise<GlobalConfig>;
@@ -552,3 +554,30 @@ export interface SharedRepositoryStatus {
 export type CreateSharedToolInput =
   | { kind: 'skill' | 'plugin'; name: string; description: string; content: string }
   | { kind: 'mcp'; def: McpDef };
+
+/** Native files, directories, GitHub repositories and package specifications. */
+export type ToolPackageSource =
+  | { type: 'url'; url: string }
+  | { type: 'upload'; filename: string; base64: string }
+  | { type: 'directory'; path: string }
+  | { type: 'github'; repo: string; ref?: string; path?: string }
+  | { type: 'mcp'; spec: string };
+export interface ExternalToolQuery { query: string; kind: ToolKind }
+export interface ExternalToolSearchResult {
+  items: Array<{ id: string; name: string; description: string; provider: string; url: string; source: ToolPackageSource }>;
+  warnings: string[];
+}
+export interface ToolPackageInput {
+  source: ToolPackageSource;
+  /** Install only these kind:name keys; omission selects all. */
+  selection?: string[];
+  /** Omit to preview only. Installation requires the digest returned by the preview. */
+  sha256?: string;
+}
+export interface ToolPackageResult {
+  installed: boolean;
+  sha256: string;
+  tools: Array<{ kind: ToolKind; name: string; path: string; files: number; conflict: boolean }>;
+  totalBytes: number;
+  warnings?: string[];
+}
