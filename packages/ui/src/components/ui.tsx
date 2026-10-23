@@ -34,18 +34,13 @@ export function worstLevel(c: DoctorCounts): 'error' | 'warn' | 'ok' {
   return c.error ? 'error' : c.warn ? 'warn' : 'ok';
 }
 
-/** "1 warn" / "1 error" / "ok" chip used on project cards. */
+/** "1 warn" / "1 error" / "ok" badge used on project rows（两级强调：err 实色、warn 柔和、ok 中性）. */
 export function DoctorChip({ counts }: { counts: DoctorCounts }) {
   useLocale();
   const w = worstLevel(counts);
-  const style: CSSProperties =
-    w === 'error'
-      ? { background: 'var(--err-soft)', color: 'var(--err-ink)' }
-      : w === 'warn'
-        ? { background: 'var(--warn-soft)', color: 'var(--warn-ink)' }
-        : { background: 'var(--ok-soft)', color: 'var(--ok-ink)' };
+  const cls = w === 'error' ? 'st st-err' : w === 'warn' ? 'st st-warn' : 'st st-ok';
   return (
-    <span className="chip gap-1.5" style={style}>
+    <span className={cls}>
       <LevelGlyph level={w} size={6} />
       {w === 'error' ? msg('{0} 项错误', {0: counts.error}) : w === 'warn' ? msg('{0} 项警告', {0: counts.warn}) : msg('正常')}
     </span>
@@ -80,10 +75,10 @@ export function Switch({
 }
 
 /** Skill / MCP / 插件 segments against a 10k budget; hatched tail for unmeasured tools. */
-export function ContextBar({ context, height = 8 }: { context: ContextBreakdown; height?: number }) {
+export function ContextBar({ context, height = 6 }: { context: ContextBreakdown; height?: number }) {
   useLocale();
   return (
-    <div className="flex overflow-hidden rounded-full bg-line" style={{ height, gap: 2 }}>
+    <div className="flex overflow-hidden rounded-[3px] bg-line" style={{ height, gap: 2 }}>
       {context.skill > 0 && <div className="bar" style={{ width: budgetPct(context.skill), background: 'var(--skill)' }} />}
       {context.mcp > 0 && <div className="bar" style={{ width: budgetPct(context.mcp), background: 'var(--mcp)' }} />}
       {context.plugin > 0 && <div className="bar" style={{ width: budgetPct(context.plugin), background: 'var(--plugin)' }} />}
@@ -144,11 +139,11 @@ export function Rich({ text, codeClass = '' }: { text: string; codeClass?: strin
 export function PageHeader({ cap, title, titleClass = '', sub, actions, crumb }: { cap?: ReactNode; title: ReactNode; titleClass?: string; sub?: ReactNode; actions?: ReactNode; crumb?: ReactNode }) {
   useLocale();
   return (
-    <div className="rise flex flex-wrap items-end justify-between gap-4">
-      <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-1">
         {crumb}
         {cap && <span className="cap">{cap}</span>}
-        <h1 className={`ca m-0 text-[36px] leading-tight font-bold tracking-[-0.02em] ${titleClass}`}>{title}</h1>
+        <h1 className={`m-0 text-[15px] leading-snug font-semibold tracking-[-0.01em] ${titleClass}`}>{title}</h1>
         {sub}
       </div>
       {actions && <div className="flex flex-wrap items-end gap-2">{actions}</div>}
@@ -161,7 +156,7 @@ export function ErrorBox({ error, className = '' }: { error: unknown; className?
   const e = error instanceof ApiError ? error : null;
   const message = error instanceof Error ? error.message : String(error);
   return (
-    <div role="alert" className={`flex gap-2.5 rounded-[12px] px-3.5 py-3 text-[13px] leading-[1.6] ${className}`} style={{ background: 'var(--err-soft)' }}>
+    <div className={`flex gap-2.5 rounded-[8px] px-3.5 py-3 text-[13px] leading-[1.6] ${className}`} role="alert" style={{ background: 'var(--err-soft)' }}>
       <LevelGlyph level="error" size={8} className="mt-[7px]" />
       <div className="flex min-w-0 flex-col gap-0.5">
         <span>
@@ -195,10 +190,10 @@ export function PendingBar({ label, sub, onReset, onApply, applyLabel, sticky = 
   return (
     <div
       role="status"
-      className={`glass iri toast z-20 flex flex-wrap items-center gap-3 rounded-[16px] py-3 pr-3.5 pl-5 ${sticky ? 'sticky bottom-4' : ''}`}
-      style={{ background: 'var(--glass-strong)' }}
+      className={`toast z-20 flex flex-wrap items-center gap-3 rounded-[8px] border border-line2 py-2.5 pr-3 pl-4 ${sticky ? 'sticky bottom-4' : ''}`}
+      style={{ background: 'var(--overlay)', boxShadow: 'var(--shadow)' }}
     >
-      <span className="flex-[1_1_240px] text-[14px] font-medium">
+      <span className="flex-[1_1_240px] text-[13px] font-medium">
         {label} {sub && <span className="font-normal text-ink3">· {sub}</span>}
       </span>
       <button type="button" className="btn btn-g" onClick={onReset}>

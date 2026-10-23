@@ -14,8 +14,8 @@ const cellKey = (i: LibraryItem, p: ProjectSummary) => `${itemKey(i)}|${p.id}`;
 type CellLook = { style: CSSProperties; glyph: string };
 
 const LOOK = {
-  on: { style: { border: 0, background: 'var(--accent)', color: '#FFFFFF', boxShadow: '0 4px 14px rgba(0,102,255,.3), inset 0 1px 0 rgba(255,255,255,.35)' }, glyph: '✓' },
-  off: { style: { border: '1px solid var(--line2)', background: 'var(--glass-2)', color: 'var(--ink3)' }, glyph: '' },
+  on: { style: { border: 0, background: 'var(--accent)', color: '#FFFFFF' }, glyph: '✓' },
+  off: { style: { border: '1px solid var(--line2)', background: 'transparent', color: 'var(--ink3)' }, glyph: '' },
   add: { style: { border: '1.5px dashed var(--accent)', background: 'var(--accent-soft)', color: 'var(--accent-ink)' }, glyph: '+' },
   remove: { style: { border: '1.5px dashed var(--err-ink)', background: 'var(--err-soft)', color: 'var(--err-ink)' }, glyph: '−' },
   na: {
@@ -27,7 +27,7 @@ const LOOK = {
 function Legend() {
   useLocale();
   return (
-    <div className="glass flex flex-wrap gap-4 rounded-full px-4 py-2.5 text-[12px] text-ink2">
+    <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] text-ink3">
       <span className="inline-flex items-center gap-1.5">
         <span className="h-3 w-3.5 rounded-[4px] bg-accent" />
         {msg("启用")}</span>
@@ -121,35 +121,35 @@ export function MatrixPage() {
       />
       {err != null && <ErrorBox error={err} />}
 
-      {!rows.length || !cols.length ? <Empty className="glass rounded-[20px] p-8">
+      {!rows.length || !cols.length ? <Empty className="glass rounded-[8px] p-8">
         <strong className="block text-base text-ink">{msg(!rows.length ? '还没有可关联的工具' : '先添加一个项目')}</strong>
         <p>{msg(!rows.length ? '先在工具库创建工具，再添加项目。' : '添加项目后，即可在这里勾选要关联的工具。')}</p>
         <Link className="btn btn-p" to="/library">{msg('前往工具库')}</Link>
-      </Empty> : <section className="glass rise d1 overflow-hidden rounded-[20px]">
+      </Empty> : <section className="tbl">
         <div className="overflow-x-auto">
           <div role="grid" aria-label={msg("工具 × 项目")} style={{ minWidth: 240 + cols.length * 140 + 80 }}>
             <div role="row" className="grid border-b border-line" style={{ gridTemplateColumns: grid }}>
-              <span role="columnheader" className="cap px-[18px] py-4">
+              <span role="columnheader" className="cap px-[14px] py-2.5">
                 {msg("工具")}</span>
               {cols.map((p) =>
                 p.exists ? (
-                  <Link key={p.id} role="columnheader" to={`/projects/${p.id}`} className="mono truncate px-3 py-4 text-center text-[13px] font-semibold text-ink no-underline hover:underline">
+                  <Link key={p.id} role="columnheader" to={`/projects/${p.id}`} className="mono truncate px-3 py-2.5 text-center text-[13px] font-semibold text-ink no-underline hover:underline">
                     {p.name}
                   </Link>
                 ) : (
-                  <span key={p.id} role="columnheader" className="mono truncate px-3 py-4 text-center text-[13px] font-semibold text-ink3 line-through">
+                  <span key={p.id} role="columnheader" className="mono truncate px-3 py-2.5 text-center text-[13px] font-semibold text-ink3 line-through">
                     {p.name}
                   </span>
                 ),
               )}
-              <span role="columnheader" className="cap px-[18px] py-4 text-right">
+              <span role="columnheader" className="cap px-[14px] py-2.5 text-right">
                 tokens
               </span>
             </div>
 
             {rows.map((i) => (
               <div key={itemKey(i)} role="row" className="hover-row grid items-center border-b border-line" style={{ gridTemplateColumns: grid }}>
-                <span role="rowheader" className="flex min-w-0 items-center gap-3 px-[18px] py-2.5">
+                <span role="rowheader" className="flex min-w-0 items-center gap-3 px-[14px] py-2">
                   <KindChip kind={i.kind} className="w-[62px] shrink-0 justify-center" />
                   <span className="mono truncate text-[14px] font-medium">{displayName(i.kind, i.name)}</span>
                 </span>
@@ -184,11 +184,11 @@ export function MatrixPage() {
                     </span>
                   );
                 })}
-                <span className="mono px-[18px] py-2.5 text-right text-[13px] font-semibold text-ink2">{fmtTokShort(i.contextTokens)}</span>
+                <span className="mono px-[14px] py-2 text-right text-[13px] font-semibold text-ink2">{fmtTokShort(i.contextTokens)}</span>
               </div>
             ))}
 
-            <div role="row" className="grid items-center bg-glass-2" style={{ gridTemplateColumns: grid }}>
+            <div role="row" className="grid items-center bg-surface-2" style={{ gridTemplateColumns: grid }}>
               <span className="px-[18px] py-4 text-[14px] font-semibold">{msg("上下文合计")}</span>
               {totals.map((t, idx) => (
                 <span key={cols[idx]!.id} className="flex flex-col items-center gap-2 px-3 py-4">
@@ -210,7 +210,7 @@ export function MatrixPage() {
         <PendingBar label={msg("{0} 处改动待提交 · 涉及 {1} 个项目", {0: diff.size, 1: pendingProjects.size})} onReset={() => setDiff(new Set())} onApply={preview} applyLabel={msg("预览 diff")} />
       )}
 
-      <p className="rise d2 m-0 text-[12px] leading-[1.6] text-ink3">{msg("插件只对 Claude Code 生效；在只启用了 Cursor 的项目里，插件单元格会显示为不可用。")}</p>
+      <p className="m-0 text-[12px] leading-[1.6] text-ink3">{msg("插件只对 Claude Code 生效；在只启用了 Cursor 的项目里，插件单元格会显示为不可用。")}</p>
 
       <OpFlow config={flow} onClose={() => setFlow(null)} />
     </>

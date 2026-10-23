@@ -103,7 +103,7 @@ function EnvBlock({ item }: { item: LibraryItem }) {
     <div className="flex flex-col gap-2">
       <h2 className="cap m-0">{msg("环境变量")}</h2>
       {vars.map((v) => (
-        <div key={v.name} className="flex min-h-11 items-center gap-2 rounded-[12px] px-3.5" style={{ background: v.set ? 'var(--ok-soft)' : 'var(--warn-soft)' }}>
+        <div key={v.name} className="flex min-h-9 items-center gap-2 rounded-[8px] px-3" style={{ background: v.set ? 'var(--ok-soft)' : 'var(--warn-soft)' }}>
           <span className="mono text-[13px]">{v.name}</span>
           <span className="ml-auto inline-flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: v.set ? 'var(--ok-ink)' : 'var(--warn-ink)' }}>
             {v.set ? <LevelGlyph level="ok" size={6} /> : <LevelGlyph level="warn" size={6} />}
@@ -194,7 +194,7 @@ export function AddToolFlow({
   const title = item ? (
     <>
       <KindChip kind={item.kind} />
-      <span className="mono ca">{displayName(item.kind, item.name)}</span>
+      <span className="mono">{displayName(item.kind, item.name)}</span>
     </>
   ) : (
     <>
@@ -258,7 +258,7 @@ export function AddToolFlow({
         <div className="flex flex-col gap-2">
           <h2 className="cap m-0">{msg("上下文影响")}</h2>
           <div className="flex items-baseline gap-2.5">
-            <span className="mono ca text-[26px] font-semibold">
+            <span className="mono text-[22px] font-medium">
               {fmtTok(before)} → {item.contextTokens === null ? '?' : fmtTok(before + item.contextTokens)}
             </span>
             {item.contextTokens === null && <span className="text-[12px] text-ink3">{displayName(item.kind, item.name)} {msg("尚未测量")}</span>}
@@ -337,7 +337,7 @@ export function MigrateFlow({ onClose, kind, name, suggested }: { onClose: () =>
       title={
         <>
           <KindChip kind={kind} />
-          <span className="mono ca">{displayName(kind, name)}</span>
+          <span className="mono">{displayName(kind, name)}</span>
         </>
       }
       select={{
@@ -362,7 +362,7 @@ export function MigrateFlow({ onClose, kind, name, suggested }: { onClose: () =>
             </fieldset>
             <div className="flex min-w-0 flex-[2_1_260px] flex-col gap-3">
               <h2 className="cap m-0">{msg("全局")}</h2>
-              <div className="flex items-center gap-3.5 rounded-[14px] border border-line2 bg-glass-2 px-4 py-3.5">
+              <div className="flex items-center gap-3.5 rounded-[8px] border border-line2 bg-field px-4 py-3.5">
                 <Switch checked={removeGlobal} onChange={setRemoveGlobal} label={msg("迁移后从全局移除")} />
                 <span className="flex flex-col gap-0.5">
                   <span className="text-[14px] font-medium">{msg("迁移后从全局移除")}</span>

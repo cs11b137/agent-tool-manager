@@ -38,13 +38,13 @@ function RepoList() {
   };
   if (!repos.data?.length) return null;
   return (
-    <section aria-label={msg("共享仓库")} className="glass rise d3 overflow-hidden rounded-[20px]">
-      <div className="flex items-center gap-2.5 border-b border-line px-[18px] py-4">
-        <h2 className="m-0 text-[16px] font-semibold">{msg("共享仓库")}</h2>
+    <section aria-label={msg("共享仓库")} className="overflow-hidden rounded-[8px] border border-line bg-surface">
+      <div className="flex items-center gap-2.5 border-b border-line px-3.5 py-3">
+        <h2 className="m-0 text-[13px] font-semibold">{msg("共享仓库")}</h2>
         <span className="mono text-[13px] text-ink3">{repos.data.length}</span>
       </div>
       {repos.data.map((r) => (
-        <div key={r.repo} className="hover-row flex flex-wrap items-center gap-3 border-b border-line px-[18px] py-3 last:border-0">
+        <div key={r.repo} className="hover-row flex flex-wrap items-center gap-3 border-b border-line px-[14px] py-3 last:border-0">
           <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-0.5">
             <span className="mono truncate text-[14px] font-medium">{r.repo}</span>
             <span className="mono truncate text-[12px] text-ink3">{tildify(r.dir)}</span>
@@ -53,11 +53,11 @@ function RepoList() {
             {r.branch ?? 'HEAD'} · {shortHash(r.head)}
           </span>
           {r.dirty && (
-            <span className="chip" style={{ background: 'var(--warn-soft)', color: 'var(--warn-ink)' }}>
+            <span className="st st-warn">
               {msg("有未提交改动")}</span>
           )}
           {r.ahead > 0 && (
-            <span className="chip" style={{ background: 'var(--warn-soft)', color: 'var(--warn-ink)' }}>
+            <span className="st st-warn">
               {msg("领先远端 {0} 个提交", {0: r.ahead})}
             </span>
           )}
@@ -103,10 +103,10 @@ function AddPanel({ item, projects }: { item: LibraryItem; projects: ProjectSumm
   const [open, setOpen] = useState(false);
   const targets = picked.filter((id) => projects.some((p) => p.id === id && eligible(item, p).ok));
   return (
-    <aside aria-label={msg("添加到项目")} className="glass iri rise d3 box-border flex flex-[1_1_300px] flex-col gap-[18px] rounded-[20px] p-[22px]" style={{ background: 'var(--glass-strong)' }}>
+    <aside aria-label={msg("添加到项目")} className="box-border flex flex-[1_1_300px] flex-col gap-3.5 rounded-[8px] border border-line bg-surface p-4">
       <div key={key(item)} className="swap flex flex-col gap-2">
         <KindChip kind={item.kind} className="self-start" />
-        <h2 className="mono ca m-0 text-[22px] font-semibold break-all">{displayName(item.kind, item.name)}</h2>
+        <h2 className="mono m-0 text-[15px] font-semibold break-all">{displayName(item.kind, item.name)}</h2>
         {subLine(item) && <span className="text-[14px] leading-[1.6] text-ink2">{subLine(item)}</span>}
         <code className="mono text-[12px] break-all text-ink3">{sourceLabel(item)}</code>
         {item.mcp?.envVars.some((v) => !v.set) && (
@@ -171,23 +171,25 @@ export function LibraryPage() {
             <button type="button" className="btn btn-p" onClick={() => setDialog('tool')}>{msg("新建工具…")}</button>
             <button type="button" className="btn btn-g" onClick={() => setDialog('search')}>{msg("搜索安装…")}</button>
             <button type="button" className="btn btn-g" onClick={() => setDialog('url')}>{msg("下载安装…")}</button>
-            <button type="button" className="btn btn-g" onClick={() => setDialog('upload')}>{msg("上传工具包…")}</button>
-            <button type="button" className="btn btn-g" onClick={() => setDialog('project')}>{msg("添加项目目录…")}</button>
-            <button type="button" className="btn btn-g" onClick={() => setDialog('clone')}>
-              {msg("克隆仓库…")}</button>
             <button type="button" className="btn btn-g" onClick={() => setDialog('mcp')}>
               {msg("新建 MCP 定义…")}</button>
           </>
         }
       />
 
-      <div className="rise d1 flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-[1_1_280px] flex-col gap-1.5">
           <label htmlFor="lib-search" className="label">
             {msg("搜索工具")}</label>
           <input id="lib-search" type="search" className="input input-lg" placeholder={msg("按名称、仓库或描述搜索")} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <div role="tablist" aria-label={msg("类型")} className="glass flex gap-1 rounded-full p-1">
+        <div className="ml-auto flex items-center gap-1">
+          <button type="button" className="btn btn-t btn-sm" onClick={() => setDialog('upload')}>{msg("上传工具包…")}</button>
+          <button type="button" className="btn btn-t btn-sm" onClick={() => setDialog('project')}>{msg("添加项目目录…")}</button>
+          <button type="button" className="btn btn-t btn-sm" onClick={() => setDialog('clone')}>
+            {msg("克隆仓库…")}</button>
+        </div>
+        <div role="tablist" aria-label={msg("类型")} className="seg-group">
           {FILTERS.map(([f, label]) => (
             <button key={f} type="button" role="tab" className="seg" aria-selected={filter === f} onClick={() => setFilter(f)}>
               {msg(label)} <span className="mono text-[12px] opacity-70">{counts[f]}</span>
@@ -199,10 +201,10 @@ export function LibraryPage() {
       {library.error != null && <ErrorBox error={library.error} />}
 
       <div className="flex flex-wrap items-start gap-4">
-        <section aria-label={msg("工具列表")} className="glass rise d2 min-w-0 flex-[999_1_520px] overflow-hidden rounded-[20px]">
+        <section aria-label={msg("工具列表")} className="glass min-w-0 flex-[999_1_520px] overflow-hidden rounded-[8px]">
           <div className="overflow-x-auto">
             <div className="min-w-[640px]">
-              <div className="cap grid gap-3 border-b border-line px-[18px] py-3.5" style={{ gridTemplateColumns: GRID }}>
+              <div className="tbl-head grid gap-3 border-b border-line px-[14px] py-2" style={{ gridTemplateColumns: GRID }}>
                 <span>{msg("类型")}</span>
                 <span>{msg("名称")}</span>
                 <span>{msg("来源")}</span>
@@ -226,19 +228,19 @@ export function LibraryPage() {
                     type="button"
                     aria-pressed={on}
                     onClick={() => setSel(key(i))}
-                    className="hover-row grid min-h-[60px] w-full cursor-pointer items-center gap-3 border-0 border-b border-solid border-line px-[18px] py-2 text-left font-sans text-ink"
-                    style={{ gridTemplateColumns: GRID, background: on ? 'var(--accent-soft)' : 'transparent' }}
+                    className="hover-row grid min-h-[44px] w-full cursor-pointer items-center gap-3 border-0 border-b border-solid border-line px-[14px] py-2 text-left font-sans text-ink"
+                    style={{ gridTemplateColumns: GRID, background: on ? 'var(--surface-2)' : 'transparent', boxShadow: on ? 'inset 2px 0 0 var(--accent)' : undefined }}
                   >
                     <KindChip kind={i.kind} className="justify-self-start" />
                     <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="mono truncate text-[14px] font-medium">{displayName(i.kind, i.name)}</span>
+                      <span className="mono truncate text-[13px] font-medium">{displayName(i.kind, i.name)}</span>
                       <span className="truncate text-[12px] text-ink3">{subLine(i)}</span>
                     </span>
                     <span className="mono truncate text-[12px] text-ink2">{sourceLabel(i)}</span>
                     <span className="text-[13px]" style={{ color: i.global || i.usedBy.length ? 'var(--ink)' : 'var(--ink3)' }}>
                       {used}
                     </span>
-                    <span className="mono text-right text-[13px] font-semibold">{tokLabel(i)}</span>
+                    <span className="mono text-right text-[13px] font-medium">{tokLabel(i)}</span>
                   </button>
                 );
               })}

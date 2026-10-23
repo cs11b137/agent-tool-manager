@@ -1,0 +1,209 @@
+/*
+ * atm Console v3 — design tokens（实施第 1 步直接替换 packages/ui/src/styles/tokens.css）。
+ * 结构与现版一致：亮色 :root + [data-theme='dark'] + @theme inline。
+ * 保留全部旧变量名（--glass* 变为实色别名），组件零改动换肤；详见 design-system.md §2。
+ */
+
+:root {
+  /* 表面（亮） */
+  --bg: oklch(0.975 0.003 262); /* #f4f5f7 近白灰 */
+  --surface: #ffffff;
+  --surface-2: oklch(0.955 0.004 262); /* #eceef1 hover/表头 */
+  --overlay: #ffffff;
+
+  /* 文字四档 */
+  --ink: oklch(0.24 0.01 262); /* #1d2025 */
+  --ink2: oklch(0.45 0.012 262); /* #4a4f57 */
+  --ink3: oklch(0.6 0.014 262); /* #71767e */
+
+  /* 线 */
+  --line: rgba(16, 20, 28, 0.08);
+  --line2: rgba(16, 20, 28, 0.16);
+
+  /* 强调（唯一品牌色） */
+  --accent: #0066ff;
+  --accent-h: #005ce6;
+  --accent-soft: rgba(0, 102, 255, 0.1);
+  --accent-ink: #0052cc;
+
+  /* 类型（小面积标记：chip 圆点 / ContextBar 分段） */
+  --skill: #1499ac;
+  --skill-ink: #0a6474;
+  --skill-soft: rgba(20, 153, 172, 0.12);
+  --mcp: #0066ff;
+  --mcp-ink: #0052cc;
+  --mcp-soft: rgba(0, 102, 255, 0.1);
+  --plugin: #7c3aed;
+  --plugin-ink: #5b2bb5;
+  --plugin-soft: rgba(124, 58, 237, 0.1);
+
+  /* 状态 */
+  --err: #d92d20;
+  --err-ink: #b42318;
+  --err-soft: rgba(217, 45, 32, 0.1);
+  --warn: #dc8a0e;
+  --warn-ink: #8a4b06;
+  --warn-soft: rgba(220, 138, 14, 0.14);
+  --ok: #079455;
+  --ok-ink: #067647;
+  --ok-soft: rgba(7, 148, 85, 0.1);
+
+  /* 兼容别名：旧玻璃令牌 → 实色表面（浮层如需玻璃只改 overlay 一处 + backdrop-filter） */
+  --glass: var(--surface);
+  --glass-2: var(--surface-2);
+  --glass-strong: var(--overlay);
+  --glass-dialog: var(--overlay);
+  --edge: var(--surface);
+  --hi: rgba(255, 255, 255, 0.6);
+  --scrim: rgba(16, 20, 28, 0.32);
+
+  /* 旧的 mesh blob 色保留为 token（不再用于背景；diff 未测量斜纹等仍可引用 ink3） */
+  --b1: var(--mcp-soft);
+  --b2: var(--plugin-soft);
+  --b3: var(--skill-soft);
+  --b4: var(--err-soft);
+  --iri: none;
+
+  /* 阴影：只给浮层 */
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow: 0 4px 16px rgba(16, 24, 40, 0.1), 0 16px 40px rgba(16, 24, 40, 0.12);
+
+  --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC',
+    'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* 形状 */
+  --radius-cell: 4px;
+  --radius-card: 8px;
+  --radius-panel: 10px;
+  --radius-dialog: 12px;
+
+  /* 动效 */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-hover: 120ms;
+  --dur-rise: 180ms;
+  --dur-page: 160ms;
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg: oklch(0.17 0.006 262); /* #0f1116 */
+  --surface: oklch(0.21 0.006 262); /* #16181d */
+  --surface-2: oklch(0.25 0.007 262); /* #1e2127 */
+  --overlay: oklch(0.23 0.007 262);
+
+  --ink: oklch(0.96 0.004 262);
+  --ink2: oklch(0.76 0.008 262);
+  --ink3: oklch(0.585 0.012 262);
+
+  --line: rgba(255, 255, 255, 0.09);
+  --line2: rgba(255, 255, 255, 0.16);
+
+  --accent: #3d8bff;
+  --accent-h: #5a9cff;
+  --accent-soft: rgba(61, 139, 255, 0.14);
+  --accent-ink: #8dbbff;
+
+  --skill: #5fd3e2;
+  --skill-ink: #86e3ee;
+  --skill-soft: rgba(95, 211, 226, 0.14);
+  --mcp: #3d8bff;
+  --mcp-ink: #8dbbff;
+  --mcp-soft: rgba(61, 139, 255, 0.14);
+  --plugin: #b795ff;
+  --plugin-ink: #c9aeff;
+  --plugin-soft: rgba(183, 149, 255, 0.14);
+
+  --err: #ff6a5e;
+  --err-ink: #ff8a80;
+  --err-soft: rgba(255, 106, 94, 0.14);
+  --warn: #ffb84d;
+  --warn-ink: #ffc266;
+  --warn-soft: rgba(255, 184, 77, 0.14);
+  --ok: #34d399;
+  --ok-ink: #5ce0a0;
+  --ok-soft: rgba(52, 211, 153, 0.12);
+
+  --glass: var(--surface);
+  --glass-2: var(--surface-2);
+  --glass-strong: var(--overlay);
+  --glass-dialog: var(--overlay);
+  --edge: var(--surface);
+  --hi: rgba(255, 255, 255, 0.06);
+  --scrim: rgba(0, 0, 0, 0.45);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}
+
+/* Tailwind v4 工具类映射（新增表面系 + 旧名全保留） */
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-ink3: var(--ink3);
+  --color-accent: var(--accent);
+  --color-accent-h: var(--accent-h);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-overlay: var(--overlay);
+  --color-glass: var(--glass);
+  --color-glass-2: var(--glass-2);
+  --color-glass-strong: var(--glass-strong);
+  --color-edge: var(--edge);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-bg: var(--bg);
+  --color-skill: var(--skill);
+  --color-skill-ink: var(--skill-ink);
+  --color-skill-soft: var(--skill-soft);
+  --color-mcp: var(--mcp);
+  --color-mcp-ink: var(--mcp-ink);
+  --color-mcp-soft: var(--mcp-soft);
+  --color-plugin: var(--plugin);
+  --color-plugin-ink: var(--plugin-ink);
+  --color-plugin-soft: var(--plugin-soft);
+  --color-err: var(--err);
+  --color-err-ink: var(--err-ink);
+  --color-err-soft: var(--err-soft);
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-soft: var(--warn-soft);
+  --color-ok: var(--ok);
+  --color-ok-ink: var(--ok-ink);
+  --color-ok-soft: var(--ok-soft);
+  --font-sans: var(--sans);
+  --font-mono: var(--mono);
+  --radius-cell: 4px;
+  --radius-card: 8px;
+  --radius-panel: 10px;
+  --radius-dialog: 12px;
+  --shadow-glass: var(--shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  [data-theme='dark'] {
+    --dur-hover: 0ms;
+    --dur-rise: 0ms;
+    --dur-page: 0ms;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: rgba(16, 20, 28, 0.28);
+    --line2: rgba(16, 20, 28, 0.4);
+    --ink3: oklch(0.45 0.012 262);
+  }
+  [data-theme='dark'] {
+    --line: rgba(255, 255, 255, 0.24);
+    --line2: rgba(255, 255, 255, 0.36);
+    --ink3: oklch(0.72 0.01 262);
+  }
+}

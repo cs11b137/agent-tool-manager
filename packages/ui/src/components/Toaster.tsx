@@ -85,8 +85,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role="status"
-            className="glass toast pointer-events-auto flex items-start gap-3 rounded-[16px] px-4 py-3"
-            style={{ background: 'var(--glass-strong)' }}
+            className="toast pointer-events-auto flex items-start gap-3 rounded-[8px] border border-line2 px-4 py-3"
+            style={{
+              background: 'var(--overlay)',
+              boxShadow: 'var(--shadow)',
+              borderLeft: `3px solid ${t.tone === 'ok' ? 'var(--ok)' : t.tone === 'err' ? 'var(--err)' : 'var(--accent)'}`,
+            }}
           >
             <span className="mt-0.5 shrink-0">
               {t.tone === 'running' ? (

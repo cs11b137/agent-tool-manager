@@ -123,7 +123,7 @@ test.describe('write flows against the mock', () => {
     await expect(dialog.getByRole('tab', { name: /~\/\.claude\/settings\.json/ })).toBeVisible();
     await dialog.getByRole('button', { name: /写入 \d+ 个文件/ }).click();
     await dialog.getByRole('button', { name: '完成' }).click();
-    await expect(page.getByText('没有本机工具启用的插件。')).toBeVisible();
+    await expect(page.getByText('没有全局启用的插件。')).toBeVisible();
   });
 
   test('narrow viewport collapses the sidebar into a top nav', async ({ browser }) => {

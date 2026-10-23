@@ -11,112 +11,37 @@ import { useConnection } from '../components/LiveProvider';
 import { useToast } from '../components/Toaster';
 import { AGENT_LABEL, fmtTok, hhmm, tildify } from '../lib/format';
 
+/** 项目表列宽：项目 / Agent / 上下文 / S/M/P / 状态 / 行尾动作 */
+const ROW_GRID = 'minmax(150px,1.4fr) minmax(90px,.9fr) minmax(120px,1fr) 86px 84px 76px';
+/** Link 只占前 5 列（动作按钮不能嵌在 a 里），内部网格与外层前 5 轨对齐 */
+const ROW_LINK_GRID = 'minmax(150px,1.4fr) minmax(90px,.9fr) minmax(120px,1fr) 86px 84px';
+const ROW_CLS = 'hover-row group grid min-h-[44px] items-center gap-3 border-t border-line px-[14px] py-2 text-ink no-underline';
+const ACTS_CLS = 'flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100';
+
 function Stat({ cap, value, sub }: { cap: string; value: ReactNode; sub: ReactNode }) {
   useLocale();
   return (
-    <div className="glass flex flex-col gap-1 rounded-[16px] px-[18px] py-4">
+    <div className="flex min-w-0 flex-col gap-1">
       <span className="cap">{cap}</span>
-      <span className="mono text-[28px] font-semibold">{value}</span>
+      <span className="mono text-[22px] font-medium">{value}</span>
       <span className="text-[12px] text-ink3">{sub}</span>
     </div>
-  );
-}
-
-function ProjectCard({ p, featured, delay, onInstall, onFix, fixable }: { p: ProjectSummary; featured: boolean; delay: number; onInstall: () => void; onFix: () => void; fixable: number }) {
-  useLocale();
-  const c = p.counts;
-  return (
-    <article
-      className={`glass lift rise d${delay} flex flex-col gap-4 rounded-[20px] p-[22px] ${featured ? 'iri' : ''}`}
-      style={featured ? { background: 'var(--glass-strong)' } : undefined}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="mono m-0 text-[18px] font-semibold">{p.name}</h2>
-          <span className="mono text-[12px] break-all text-ink3">{tildify(p.path)}</span>
-        </div>
-        <DoctorChip counts={p.doctor} />
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {p.agents.map((a) => (
-          <span key={a} className="chip c-agent">
-            {AGENT_LABEL[a]}
-          </span>
-        ))}
-        {!p.initialized && <span className="chip c-muted font-sans">{msg("未初始化")}</span>}
-      </div>
-      <div className="flex items-baseline justify-between">
-        <span className="text-[13px] text-ink2">{msg("常驻上下文")}</span>
-        <span className={`mono text-[26px] font-semibold ${featured ? 'ca' : ''}`}>
-          ≈ {fmtTok(p.context.total)}
-          {p.context.unmeasured > 0 && <span className="text-[14px] text-ink3"> + ?</span>}
-        </span>
-      </div>
-      <ContextBar context={p.context} />
-      <div className="flex flex-wrap gap-2">
-        <span className={`chip ${c.skills ? 'c-skill' : 'c-muted'}`}>SKILL {c.skills}</span>
-        <span className={`chip ${c.mcp ? 'c-mcp' : 'c-muted'}`}>MCP {c.mcp}</span>
-        <span className={`chip ${c.plugins ? 'c-plugin' : 'c-muted'}`}>PLUGIN {c.plugins}</span>
-      </div>
-      <div className="mt-auto flex gap-2 border-t border-line pt-4">
-        <Link to={`/projects/${p.id}`} className="btn btn-p">
-          {msg("打开")}</Link>
-        {fixable > 0 ? (
-          <button type="button" className="btn btn-g" onClick={onFix}>
-            {msg("修复断链")}</button>
-        ) : (
-          <button type="button" className="btn btn-g" onClick={onInstall}>
-            {msg('还原工具')}
-          </button>
-        )}
-      </div>
-    </article>
-  );
-}
-
-function MissingCard({ p, delay, onRelocate, onRemove }: { p: ProjectSummary; delay: number; onRelocate: () => void; onRemove: () => void }) {
-  useLocale();
-  return (
-    <article
-      className={`rise d${delay} flex flex-col gap-4 rounded-[20px] p-[22px]`}
-      style={{ border: '1.5px dashed var(--line2)', background: 'repeating-linear-gradient(135deg, var(--glass-2) 0 8px, transparent 8px 16px)' }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="mono m-0 text-[18px] font-semibold text-ink3">{p.name}</h2>
-          <span className="mono text-[12px] break-all text-ink3">{tildify(p.path)}</span>
-        </div>
-        <span className="chip c-muted font-sans !text-ink2">{msg("目录不存在")}</span>
-      </div>
-      <p className="m-0 text-[14px] leading-[1.6] text-ink2">
-        {msg("注册表里还记着这个项目，但目录已经找不到了。只是移动了位置的话可以重新定位；否则从注册表移除，不会删除任何文件。")}</p>
-      <div className="mt-auto flex flex-wrap gap-2 border-t border-line pt-4">
-        <button type="button" className="btn btn-g" onClick={onRelocate}>
-          {msg("重新定位…")}</button>
-        <button type="button" className="btn btn-d" onClick={onRemove}>
-          {msg("从注册表移除")}</button>
-      </div>
-    </article>
   );
 }
 
 function ActivityRow({ e, last }: { e: ActivityEntry; last: boolean }) {
   useLocale();
   return (
-    <div className={`flex flex-wrap items-center gap-3 px-5 py-[13px] text-[14px] ${last ? '' : 'border-b border-line'}`}>
+    <div className={`flex flex-wrap items-center gap-3 px-3.5 py-2.5 text-[12.5px] ${last ? '' : 'border-b border-line'}`}>
       <span className="mono w-[52px] text-[12px] text-ink3">{hhmm(e.at)}</span>
       {e.level === 'error' ? (
-        <span className="chip" style={{ background: 'var(--err-soft)', color: 'var(--err-ink)' }}>
-          {msg('错误')}
-        </span>
+        <span className="st st-err">{msg('错误')}</span>
       ) : e.kind ? (
         <KindChip kind={e.kind} />
       ) : e.level === 'warn' ? (
-        <span className="chip" style={{ background: 'var(--warn-soft)', color: 'var(--warn-ink)' }}>
-          {msg('警告')}
-        </span>
+        <span className="st st-warn">{msg('警告')}</span>
       ) : (
-        <span className="chip c-muted">{msg('提示')}</span>
+        <span className="st text-ink3">{msg('提示')}</span>
       )}
       {e.projectName &&
         (e.projectId ? (
@@ -151,6 +76,7 @@ export function OverviewPage() {
   const live = list.filter((p) => p.exists);
   const missing = list.length - live.length;
   const totals = live.reduce((a, p) => ({ s: a.s + p.counts.skills, m: a.m + p.counts.mcp, p: a.p + p.counts.plugins }), { s: 0, m: 0, p: 0 });
+  const ctxTotal = live.reduce((a, p) => a + p.context.total, 0);
   const counts = doctor.data?.counts ?? { error: 0, warn: 0, info: 0 };
   const dirty = (repos.data ?? []).filter((r) => r.dirty || r.ahead > 0);
 
@@ -158,7 +84,7 @@ export function OverviewPage() {
 
   const installFlow = (targets: ProjectSummary[]): OpFlowConfig => ({
     eyebrow: targets.length === 1 ? msg("{0} · 按清单还原", {0: targets[0]!.name}) : msg("{0} 个项目 · 按清单还原", {0: targets.length}),
-    title: <span className="mono ca">atm install</span>,
+    title: <span className="mono">atm install</span>,
     run: async (dryRun, o) => {
       const out: WriteResult[] = [];
       for (const p of targets) out.push(await api.install(p.id, { dryRun, adopt: o.adopt, force: o.force, strict: o.strict }));
@@ -189,12 +115,16 @@ export function OverviewPage() {
 
       {projects.error != null && <ErrorBox error={projects.error} />}
 
-      <div className="rise d1 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
+      <div className="statbar" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' }}>
         <Stat cap={msg("项目")} value={list.length} sub={missing ? msg("{0} 个目录缺失", {0: missing}) : !list.length ? msg("添加项目后显示状态") : msg("全部目录可用")} />
-        <Stat cap={msg("启用的工具")} value={totals.s + totals.m + totals.p} sub={msg("Skill {0} · MCP {1} · 插件 {2}", {0: totals.s, 1: totals.m, 2: totals.p})} />
-        <Link to="/doctor" className="glass lift flex flex-col gap-1 rounded-[16px] px-[18px] py-4 text-ink no-underline">
+        <Stat
+          cap={msg("启用的工具")}
+          value={totals.s + totals.m + totals.p}
+          sub={`${msg("Skill {0} · MCP {1} · 插件 {2}", {0: totals.s, 1: totals.m, 2: totals.p})} · Σ≈${fmtTok(ctxTotal)}`}
+        />
+        <Link to="/doctor" className="flex min-w-0 flex-col gap-1 text-ink no-underline">
           <span className="cap">{msg("体检")}</span>
-          <span className="mono text-[28px] font-semibold">
+          <span className="mono text-[22px] font-medium">
             {!doctor.data ? (
               <span className="text-ink3">{doctor.error ? msg('检查失败') : msg('检查中…')}</span>
             ) : counts.error + counts.warn === 0 ? (
@@ -217,48 +147,118 @@ export function OverviewPage() {
         />
       </div>
 
-      {projects.isLoading ? (
-        <Loading />
-      ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
-          {list.map((p, i) => {
-            const delay = Math.min(5, i + 2);
-            return p.exists ? (
-              <ProjectCard
-                key={p.id}
-                p={p}
-                featured={i === 0}
-                delay={delay}
-                fixable={fixableFor(p.id).length}
-                onInstall={() => setFlow(installFlow([p]))}
-                onFix={() => {
-                  const ids = fixableFor(p.id).map((x) => x.id);
-                  setFlow({
-                    eyebrow: msg("{0} · 一键修复", {0: p.name}),
-                    title: <span>{msg("修复 {0} 项", {0: ids.length})}</span>,
-                    run: (dryRun) => api.fix(ids, { dryRun }),
-                  });
-                }}
-              />
-            ) : (
-              <MissingCard key={p.id} p={p} delay={delay} onRelocate={() => setRelocate(p)} onRemove={() => setUnregister(p)} />
-            );
-          })}
-          {!list.length && <Empty className="glass rounded-[20px]">{<><strong className="block text-ink">{msg("共享仓库已就绪")}</strong><span className="mt-2 block">{msg("先在工具库新建工具，再添加项目目录并关联。")}</span><Link className="btn btn-p mt-4" to="/library">{msg("前往工具库")}</Link></>}</Empty>}
-        </div>
-      )}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        {projects.isLoading ? (
+          <Loading />
+        ) : !list.length ? (
+          <Empty className="glass rounded-[8px]">{<><strong className="block text-ink">{msg("共享仓库已就绪")}</strong><span className="mt-2 block">{msg("先在工具库新建工具，再添加项目目录并关联。")}</span><Link className="btn btn-p mt-4" to="/library">{msg("前往工具库")}</Link></>}</Empty>
+        ) : (
+          <section className="tbl">
+            <div className="tbl-head grid min-h-[32px] items-center gap-3 border-b border-line px-[14px] py-2" style={{ gridTemplateColumns: ROW_GRID }}>
+              <span>{msg("项目")}</span>
+              <span>Agent</span>
+              <span>{msg("常驻上下文")}</span>
+              <span className="text-right">S/M/P</span>
+              <span>{msg("状态")}</span>
+              <span />
+            </div>
+            {list.map((p) => {
+              if (!p.exists) {
+                return (
+                  <div key={p.id} className={ROW_CLS} style={{ gridTemplateColumns: ROW_GRID }}>
+                    <span className="min-w-0">
+                      <h2 className="m-0 truncate text-[13px] font-medium text-ink3 line-through">{p.name}</h2>
+                      <span className="mono block break-all text-[11px] text-ink4">{tildify(p.path)}</span>
+                    </span>
+                    <span className="flex min-w-0 gap-1 overflow-hidden">
+                      <span className="chip c-muted shrink-0">{msg("目录不存在")}</span>
+                    </span>
+                    <span className="text-[12px] text-ink3">—</span>
+                    <span className="mono text-right text-[12px] text-ink3">0 / 0 / 0</span>
+                    <span />
+                    <span className={ACTS_CLS}>
+                      <button type="button" className="btn btn-t btn-sm" onClick={() => setRelocate(p)}>
+                        {msg("重新定位…")}</button>
+                      <button type="button" className="btn btn-t btn-sm text-err-ink" onClick={() => setUnregister(p)}>
+                        {msg("从注册表移除")}</button>
+                    </span>
+                  </div>
+                );
+              }
+              const c = p.counts;
+              const fixable = fixableFor(p.id).length;
+              return (
+                <div key={p.id} className={ROW_CLS} style={{ gridTemplateColumns: ROW_GRID }}>
+                  <Link
+                    to={`/projects/${p.id}`}
+                    className="grid min-w-0 items-center gap-3 text-ink no-underline"
+                    style={{ gridColumn: '1 / 6', gridTemplateColumns: ROW_LINK_GRID }}
+                  >
+                    <span className="min-w-0">
+                      <h2 className="m-0 truncate text-[13px] font-medium">{p.name}</h2>
+                      <span className="mono block break-all text-[11px] text-ink4">{tildify(p.path)}</span>
+                    </span>
+                    <span className="flex min-w-0 gap-1 overflow-hidden">
+                      {p.agents.map((a) => (
+                        <span key={a} className="chip c-agent shrink-0">
+                          {AGENT_LABEL[a]}
+                        </span>
+                      ))}
+                      {!p.initialized && <span className="chip c-muted shrink-0">{msg("未初始化")}</span>}
+                    </span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="w-[72px] shrink-0">
+                        <ContextBar context={p.context} height={6} />
+                      </span>
+                      <span className="mono truncate text-[12px] text-ink3">
+                        ≈{fmtTok(p.context.total)}
+                        {p.context.unmeasured > 0 && ' +?'}
+                      </span>
+                    </span>
+                    <span className="mono text-right text-[12px] text-ink3">{`${c.skills} / ${c.mcp} / ${c.plugins}`}</span>
+                    <span className="min-w-0 overflow-hidden">
+                      <DoctorChip counts={p.doctor} />
+                    </span>
+                  </Link>
+                  <span className={ACTS_CLS}>
+                    {fixable > 0 ? (
+                      <button
+                        type="button"
+                        className="btn btn-g btn-sm"
+                        onClick={() => {
+                          const ids = fixableFor(p.id).map((x) => x.id);
+                          setFlow({
+                            eyebrow: msg("{0} · 一键修复", {0: p.name}),
+                            title: <span>{msg("修复 {0} 项", {0: ids.length})}</span>,
+                            run: (dryRun) => api.fix(ids, { dryRun }),
+                          });
+                        }}
+                      >
+                        {msg("修复断链")}</button>
+                    ) : (
+                      <button type="button" className="btn btn-g btn-sm" onClick={() => setFlow(installFlow([p]))}>
+                        {msg('还原工具')}
+                      </button>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </section>
+        )}
 
-      <section className="glass rise d5 overflow-hidden rounded-[20px]">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-4">
-          <h2 className="m-0 text-[16px] font-semibold">{msg("最近变更")}</h2>
-          <span className="inline-flex items-center gap-1.5 text-[12px] text-ink3">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: conn === 'open' ? 'var(--ok)' : 'var(--warn)' }} />
-            {msg("监听 .agents/ 与 Agent 配置")}</span>
-        </div>
-        {activity.isLoading && <Loading />}
-        {activity.data?.length === 0 && <Empty>{msg("还没有变更记录。")}</Empty>}
-        {activity.data?.slice(0, 8).map((e, i, arr) => <ActivityRow key={`${e.at}-${i}`} e={e} last={i === arr.length - 1} />)}
-      </section>
+        <section className="glass overflow-hidden rounded-[8px]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3.5 py-3">
+            <h2 className="m-0 text-[13px] font-semibold">{msg("最近变更")}</h2>
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-ink3">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: conn === 'open' ? 'var(--ok)' : 'var(--warn)' }} />
+              {msg("监听 .agents/ 与 Agent 配置")}</span>
+          </div>
+          {activity.isLoading && <Loading />}
+          {activity.data?.length === 0 && <Empty>{msg("还没有变更记录。")}</Empty>}
+          {activity.data?.slice(0, 8).map((e, i, arr) => <ActivityRow key={`${e.at}-${i}`} e={e} last={i === arr.length - 1} />)}
+        </section>
+      </div>
 
       <OpFlow config={flow} onClose={() => setFlow(null)} />
       {relocate && <RelocateDialog project={relocate} onClose={() => setRelocate(null)} />}

@@ -81,7 +81,7 @@ export function SharedRepositoryPanel() {
   };
   const status = query.data;
   if (!status?.initialized) return null;
-  return <section className="glass flex flex-col gap-4 rounded-[20px] p-5" aria-label={msg("共享仓库版本管理")}>
+  return <section className="glass flex flex-col gap-3.5 rounded-[8px] p-4" aria-label={msg("共享仓库版本管理")}>
     <div><h2 className="m-0 text-lg font-semibold">{msg("共享仓库 · Git")}</h2><p className="mono mb-0 break-all text-xs text-ink3">{status.root} · {status.branch || msg("无分支")} · {status.head ? status.head.slice(0, 7) : msg("尚未提交")}</p></div>
     <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); void run(msg("保存远程地址"), () => api.setSharedRemote(remote ?? status.remote)); }}>
       <label className="flex min-w-60 flex-1 flex-col gap-1.5">{msg("远程仓库地址")}<input className="input mono" placeholder="git@github.com:your-name/agent-tools.git" value={remote ?? status.remote} disabled={!!busy} onChange={(e) => setRemote(e.target.value)} /></label>

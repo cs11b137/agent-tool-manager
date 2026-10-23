@@ -11,15 +11,15 @@
 
 Manage Skills, MCP servers, and Claude Code plugins in one place, then assign them to Claude Code, Cursor, and Codex projects through the desktop app, web UI, or CLI. Tools live in a shared Git repository (default: `~/.agent-tools`); each project declares its tools in `.agents/tools.json`. Skills use symbolic links, MCP definitions generate native agent configurations, and plugins are enabled per project.
 
-[Download v0.2.0 · macOS Apple Silicon](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/Agent-Tool-Manager_0.2.0_macos-arm64.dmg) · [Release notes](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.2.0) · [SHA-256 checksums](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/SHA256SUMS.txt)
+[Download v0.3.0 · macOS Apple Silicon](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.3.0/Agent-Tool-Manager_0.3.0_macos-arm64.dmg) · [Release notes](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.3.0) · [SHA-256 checksums](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.3.0/SHA256SUMS.txt)
 
-Requires macOS 14+ and an M-series chip. This desktop preview is not Apple Developer ID signed or notarized.
+Requires macOS 14+ and an M-series chip. The installer is not Apple Developer ID signed or notarized.
 
-## New in v0.2.0
+## New in v0.3.0
 
-1. **Search and install**: Find tools in Agent Skills, MCP Registry, the Claude official plugin marketplace, and GitHub. Preview and select tools before installation.
-2. **Multiple sources**: Import native Skill, MCP, and Plugin files or complete directories; install from GitHub repositories with optional revisions and subpaths, or use `.skill` / ZIP archives.
-3. **Development reloads**: Backend source changes automatically rebuild and restart the service while preserving the session, keeping the UI and endpoints in sync.
+1. **Workbench UI overhaul**: a content-first, high-density console — solid surfaces, 1px hairlines, row-based project and tool lists, and a compact association matrix; all figures in tabular monospace, color reserved for status and type markers.
+2. **First-class dark & light themes**: every color is now an OKLCH token with system-theme support; density and contrast tuned to developer-console standards.
+3. **Fixes**: UI test environment compatibility on Node 26; end-to-end specs realigned with current copy.
 
 The tool library starts empty until you add tools. Creating the shared directory does not import installed plugins automatically. Select installed plugins explicitly when adding tools to a project, or scan for them on the **Local tools** page.
 
@@ -71,7 +71,7 @@ Additional documentation is currently in Chinese:
 
 ### Desktop app
 
-Download the [v0.2.0 installer](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/Agent-Tool-Manager_0.2.0_macos-arm64.dmg), open the DMG, and drag the app into Applications. Requires macOS 14+ and Apple Silicon (M-series). The [release page](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.2.0) includes release notes and SHA-256 checksums.
+Download the [v0.3.0 installer](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.3.0/Agent-Tool-Manager_0.3.0_macos-arm64.dmg), open the DMG, and drag the app into Applications. Requires macOS 14+ and Apple Silicon (M-series). The [release page](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.3.0) includes release notes and SHA-256 checksums.
 
 The app bundles Node and the local server, so no terminal is needed to use it. It supports a system tray, single-instance operation, and optional launch at login. This preview is not signed with an Apple Developer ID or notarized, so macOS may block it from opening. Intel Mac, Windows, and Linux installers are not currently provided. Git operations still require a local Git installation; MCP dependencies and credentials must be configured separately.
 

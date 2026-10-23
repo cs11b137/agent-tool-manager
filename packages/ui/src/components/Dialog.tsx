@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 
 /**
  * Minimal accessible modal: portal, scrim, Esc to close, initial focus + focus restore, Tab trap.
- * Visual: glass-strong + iridescent border + pop (prototype 03).
+ * Visual: solid overlay surface + line2 border + pop (v4).
  */
 export function Dialog({
   open,
@@ -64,7 +64,7 @@ export function Dialog({
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-6 md:py-12" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      {/* scrim is a sibling (not an ancestor) of the dialog so the dialog's backdrop-filter blurs the page */}
+      {/* scrim is a sibling (not an ancestor) of the dialog so it never clips the panel */}
       <div aria-hidden className="pointer-events-none fixed inset-0" style={{ background: 'var(--scrim)', animation: 'fade .25s ease backwards' }} />
       <div
         ref={ref}
@@ -72,8 +72,8 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
-        className={`glass iri pop relative flex w-full flex-col rounded-[24px] outline-none ${className}`}
-        style={{ maxWidth, background: 'var(--glass-dialog)', boxShadow: '0 32px 80px rgba(10,14,30,.35), inset 0 1px 0 var(--hi)' }}
+        className={`pop relative flex w-full flex-col rounded-[12px] border border-line2 outline-none ${className}`}
+        style={{ maxWidth, background: 'var(--overlay)', boxShadow: 'var(--shadow)' }}
       >
         {children}
       </div>
@@ -104,19 +104,19 @@ export function SimpleDialog({
   const id = useId();
   return (
     <Dialog open={open} onClose={onClose} labelledBy={id} maxWidth={maxWidth}>
-      <header className="flex items-start gap-4 border-b border-line px-[26px] py-[22px]">
+      <header className="flex items-start gap-4 border-b border-line px-4 py-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           {cap && <span className="cap">{cap}</span>}
-          <h1 id={id} className="m-0 text-[22px] font-bold">
+          <h1 id={id} className="m-0 text-[14px] font-semibold">
             {title}
           </h1>
         </div>
-        <button type="button" aria-label={msg("关闭")} className="btn btn-t btn-lg !w-11 !p-0" onClick={onClose}>
+        <button type="button" aria-label={msg("关闭")} className="btn btn-t !h-8 !w-8 !p-0" onClick={onClose}>
           <X size={18} aria-hidden />
         </button>
       </header>
-      <div className="flex flex-col gap-4 px-[26px] py-[22px]">{children}</div>
-      {footer && <footer className="flex flex-wrap items-center justify-end gap-2.5 border-t border-line px-[26px] py-[18px]">{footer}</footer>}
+      <div className="flex flex-col gap-4 px-4 py-3.5">{children}</div>
+      {footer && <footer className="flex flex-wrap items-center justify-end gap-2.5 border-t border-line px-4 py-3">{footer}</footer>}
     </Dialog>
   );
 }

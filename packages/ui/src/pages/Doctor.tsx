@@ -51,7 +51,7 @@ function RepoDialog({ repo, onClose }: { repo: string; onClose: () => void }) {
           </dl>
           <div className="flex flex-col gap-1.5">
             <span className="cap">{msg("在终端查看")}</span>
-            <code className="mono rounded-[12px] border border-line2 bg-glass-2 px-3.5 py-2.5 text-[12px] leading-[1.8] break-all">
+            <code className="mono rounded-[8px] border border-line2 bg-field px-3.5 py-2.5 text-[12px] leading-[1.8] break-all">
               git -C {tildify(r.dir)} status
               <br />
               git -C {tildify(r.dir)} diff
@@ -66,11 +66,11 @@ function RepoDialog({ repo, onClose }: { repo: string; onClose: () => void }) {
 
 const LEVEL_INK: Record<DoctorLevel, string> = { error: 'var(--err-ink)', warn: 'var(--warn-ink)', info: 'var(--ink3)' };
 
-function Section({ level, children, delay }: { level: DoctorLevel; children: ReactNode; delay: number }) {
+function Section({ level, children }: { level: DoctorLevel; children: ReactNode }) {
   useLocale();
   return (
-    <section aria-labelledby={`h-${level}`} className={`glass rise d${delay} overflow-hidden rounded-[20px]`}>
-      <h2 id={`h-${level}`} className="cap m-0 flex items-center gap-2 border-b border-line px-5 py-3.5" style={{ color: LEVEL_INK[level] }}>
+    <section aria-labelledby={`h-${level}`} className="glass overflow-hidden rounded-[8px]">
+      <h2 id={`h-${level}`} className="cap m-0 flex items-center gap-2 border-b border-line px-3.5 py-2.5" style={{ color: LEVEL_INK[level] }}>
         <LevelGlyph level={level} size={8} />
         {msg({ error: '错误', warn: '警告', info: '提示' }[level])}
       </h2>
@@ -166,7 +166,7 @@ export function DoctorPage() {
                 title: (
                   <>
                     <KindChip kind="mcp" />
-                    <span className="mono ca">{msg("移除 {0}", {0: name})}</span>
+                    <span className="mono">{msg("移除 {0}", {0: name})}</span>
                   </>
                 ),
                 run: (dryRun) => api.removeTool(pid, 'mcp', name, { dryRun }),
@@ -232,39 +232,33 @@ export function DoctorPage() {
         }
       />
 
-      <div className="rise d1 grid gap-3 md:grid-cols-[5fr_4fr_3fr]">
-        <div className={`glass flex items-center gap-4 rounded-[20px] px-[22px] py-5 ${errors.length ? 'iri' : ''}`} style={{ background: 'var(--glass-strong)' }}>
-          <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: errors.length ? 'var(--err-soft)' : 'var(--ok-soft)', transition: 'background-color .5s' }}>
-            <span className="h-3.5 w-3.5 rounded-full" style={{ background: errors.length ? 'var(--err)' : 'var(--ok)', transition: 'background-color .5s' }} />
-          </span>
+      <div className="statbar" style={{ gridTemplateColumns: 'repeat(3,minmax(0,1fr))' }}>
+        <div className="flex items-center gap-3">
+          <LevelGlyph level={errors.length ? 'error' : 'ok'} size={10} />
           <span className="flex flex-col gap-0.5">
-            <span className="mono ca text-[34px] leading-none font-semibold">{errors.length}</span>
-            <span className="text-[13px] text-ink2">{errText}</span>
+            <span className="mono text-[22px] font-medium">{errors.length}</span>
+            <span className="text-[12px] text-ink2">{errText}</span>
           </span>
         </div>
-        <div className="glass flex items-center gap-4 rounded-[20px] px-[22px] py-5">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: 'var(--warn-soft)' }}>
-            <LevelGlyph level="warn" size={14} />
-          </span>
+        <div className="flex items-center gap-3">
+          <LevelGlyph level="warn" size={10} />
           <span className="flex flex-col gap-0.5">
-            <span className="mono text-[34px] leading-none font-semibold">{warns.length}</span>
-            <span className="text-[13px] text-ink2">{warns.length ? msg("警告 · 需要确认") : msg("警告 · 未发现")}</span>
+            <span className="mono text-[22px] font-medium">{warns.length}</span>
+            <span className="text-[12px] text-ink2">{warns.length ? msg("警告 · 需要确认") : msg("警告 · 未发现")}</span>
           </span>
         </div>
-        <div className="glass flex items-center gap-4 rounded-[20px] px-[22px] py-5">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-line">
-            <LevelGlyph level="info" size={12} />
-          </span>
+        <div className="flex items-center gap-3">
+          <LevelGlyph level="info" size={10} />
           <span className="flex flex-col gap-0.5">
-            <span className="mono text-[34px] leading-none font-semibold">{infos.length}</span>
-            <span className="text-[13px] text-ink2">{msg('提示 · 供参考')}</span>
+            <span className="mono text-[22px] font-medium">{infos.length}</span>
+            <span className="text-[12px] text-ink2">{msg('提示 · 供参考')}</span>
           </span>
         </div>
       </div>
 
-      {(errors.length > 0 || report.projects.length > 0) && <Section level="error" delay={2}>
+      {(errors.length > 0 || report.projects.length > 0) && <Section level="error">
         {errors.length === 0 && (
-          <div className="morph flex flex-wrap items-center gap-3 px-5 py-[18px] text-[14px]" style={{ background: 'var(--ok-soft)' }}>
+          <div className="flex flex-wrap items-center gap-3 px-3.5 py-3 text-[14px]" style={{ background: 'var(--ok-soft)' }}>
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-white" style={{ background: 'var(--ok)' }}>
               <Check size={13} strokeWidth={3} aria-hidden />
             </span>
@@ -272,7 +266,7 @@ export function DoctorPage() {
           </div>
         )}
         {errors.map((i, idx) => (
-          <div key={i.id} className={`hover-row flex flex-wrap items-center gap-4 px-5 py-[18px] ${idx < errors.length - 1 ? 'border-b border-line' : ''}`}>
+          <div key={i.id} className={`hover-row flex flex-wrap items-center gap-4 px-3.5 py-3 ${idx < errors.length - 1 ? 'border-b border-line' : ''}`}>
             <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <ProjectRef issue={i} link={false} />
@@ -284,7 +278,7 @@ export function DoctorPage() {
               <DiagnosticDetails issue={i} />
             </div>
             {i.fixable && (
-              <button type="button" className="btn btn-p" onClick={() => fix([i])}>
+              <button type="button" className="btn btn-g" onClick={() => fix([i])}>
                 {i.code === 'broken-link' || i.code === 'missing-link' ? msg("重建软链") : msg("修复")}
               </button>
             )}
@@ -297,9 +291,9 @@ export function DoctorPage() {
       </Section>}
 
       {warns.length > 0 && (
-        <Section level="warn" delay={3}>
+        <Section level="warn">
           {warns.map((i, idx) => (
-            <div key={i.id} className={`hover-row flex flex-wrap items-center gap-4 px-5 py-[18px] ${idx < warns.length - 1 ? 'border-b border-line' : ''}`}>
+            <div key={i.id} className={`hover-row flex flex-wrap items-center gap-4 px-3.5 py-3 ${idx < warns.length - 1 ? 'border-b border-line' : ''}`}>
               <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <ProjectRef issue={i} link />
@@ -317,9 +311,9 @@ export function DoctorPage() {
       )}
 
       {infos.length > 0 && (
-        <Section level="info" delay={4}>
+        <Section level="info">
           {infos.map((i, idx) => (
-            <div key={i.id} className={`hover-row flex flex-wrap items-center gap-4 px-5 py-4 ${idx < infos.length - 1 ? 'border-b border-line' : ''}`}>
+            <div key={i.id} className={`hover-row flex flex-wrap items-center gap-4 px-3.5 py-3 ${idx < infos.length - 1 ? 'border-b border-line' : ''}`}>
               <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <ProjectRef issue={i} link />
@@ -335,7 +329,7 @@ export function DoctorPage() {
         </Section>
       )}
 
-      {report.projects.length === 0 && <Empty className="glass rounded-[20px]">{msg("暂无项目可检查。添加项目后，可查看工具链接、配置和上下文占用情况。")}</Empty>}
+      {report.projects.length === 0 && <Empty className="glass rounded-[8px]">{msg("暂无项目可检查。添加项目后，可查看工具链接、配置和上下文占用情况。")}</Empty>}
 
       <OpFlow config={flow} onClose={() => setFlow(null)} />
       {repo && <RepoDialog repo={repo} onClose={() => setRepo(null)} />}

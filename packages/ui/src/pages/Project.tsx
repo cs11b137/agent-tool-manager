@@ -53,24 +53,24 @@ function ToolRow({ t, on, onToggle, onPin }: { t: ToolEntry; on: boolean; onTogg
   const chip = revChip(t);
   const name = displayName(t.kind, t.name);
   return (
-    <div className="hover-row flex gap-3.5 border-b border-line px-[18px] py-4" style={{ opacity: on ? 1 : 0.5 }}>
+    <div className="hover-row flex gap-3.5 border-b border-line px-3.5 py-3" style={{ opacity: on ? 1 : 0.5 }}>
       <Switch checked={on} onChange={onToggle} label={msg("启用 {0}", {0: name})} />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex justify-between gap-2">
-          <span className="mono truncate text-[14px] font-medium">{name}</span>
-          <span className="mono text-[13px] font-semibold">{t.contextTokens === null ? '?' : fmtTok(t.contextTokens)}</span>
+          <span className="mono truncate text-[13px] font-medium">{name}</span>
+          <span className="mono text-[13px] font-medium">{t.contextTokens === null ? '?' : fmtTok(t.contextTokens)}</span>
         </div>
         <span className="mono truncate text-[12px] text-ink3">{sourceLine(t)}</span>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="chip font-medium" style={chip.tone === 'err' ? { background: 'var(--err-soft)', color: 'var(--err-ink)' } : { background: 'var(--line)', color: 'var(--ink2)' }}>
+          <span className={`chip font-medium ${chip.tone === 'err' ? '' : 'c-muted'}`} style={chip.tone === 'err' ? { background: 'var(--err-soft)', color: 'var(--err-ink)' } : undefined}>
             {chip.text}
           </span>
           {t.skill?.broken && (
-            <span className="chip" style={{ background: 'var(--err-soft)', color: 'var(--err-ink)' }}>
+            <span className="st st-err">
               {msg("断链")}</span>
           )}
           {t.mcp?.envVars.some((v) => !v.set) && (
-            <span className="chip" style={{ background: 'var(--warn-soft)', color: 'var(--warn-ink)' }} title={t.mcp.envVars.filter((v) => !v.set).map((v) => v.name).join(', ')}>
+            <span className="st st-warn" title={t.mcp.envVars.filter((v) => !v.set).map((v) => v.name).join(', ')}>
               {msg("变量未设置")}</span>
           )}
           <span className="text-[12px] text-ink2">{agentsLabel(t.agents)}</span>
@@ -94,7 +94,6 @@ function Column({
   onPin,
   footer,
   flex,
-  delay,
 }: {
   kind: ToolKind;
   title: string;
@@ -105,14 +104,13 @@ function Column({
   onPin?: (t: ToolEntry) => void;
   footer: ReactNode;
   flex: string;
-  delay: number;
 }) {
   useLocale();
   return (
-    <section className={`glass rise d${delay} min-w-0 overflow-hidden rounded-[20px]`} style={{ flex }}>
-      <div className="flex items-center gap-2.5 border-b border-line px-[18px] py-4">
+    <section className="min-w-0 overflow-hidden rounded-[8px] border border-line bg-surface" style={{ flex }}>
+      <div className="flex items-center gap-2.5 border-b border-line px-3.5 py-3">
         <KindChip kind={kind} />
-        <h2 className="m-0 text-[16px] font-semibold">{title}</h2>
+        <h2 className="m-0 text-[13px] font-semibold">{title}</h2>
         <span className="mono text-[13px] text-ink3">{tools.length}</span>
         <button type="button" className="ml-auto border-0 bg-transparent p-0 text-[14px] font-medium text-accent-ink hover:underline" onClick={onAdd}>
           {msg("+ 添加")}</button>
@@ -121,7 +119,7 @@ function Column({
       {tools.map((t) => (
         <ToolRow key={t.name} t={t} on={!off.has(`${t.kind}:${t.name}`)} onToggle={() => onToggle(t)} {...(onPin && t.kind === 'skill' ? { onPin: () => onPin(t) } : {})} />
       ))}
-      <p className="m-0 px-[18px] py-3 text-[12px] leading-[1.5] text-ink3">{footer}</p>
+      <p className="m-0 px-3.5 py-2.5 text-[12px] leading-[1.5] text-ink3">{footer}</p>
     </section>
   );
 }
@@ -139,23 +137,20 @@ function GeneratedDialog({ project, onClose }: { project: ProjectDetail; onClose
   const drift = (q.data ?? []).filter((c) => c.additions + c.deletions > 0).length;
   return (
     <Dialog open onClose={onClose} labelledBy={id}>
-      <header className="flex flex-wrap items-center gap-4 border-b border-line px-[26px] py-[22px]">
+      <header className="flex flex-wrap items-center gap-4 border-b border-line px-4 py-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <span className="cap">{project.name} {msg("· 清单渲染结果 vs 磁盘")}</span>
-          <h1 id={id} className="m-0 text-[24px] font-bold">
+          <h1 id={id} className="m-0 text-[14px] font-semibold">
             {msg("查看生成的配置")}</h1>
         </div>
-        <span
-          className="chip"
-          style={drift ? { background: 'var(--warn-soft)', color: 'var(--warn-ink)' } : { background: 'var(--ok-soft)', color: 'var(--ok-ink)' }}
-        >
+        <span className={drift ? 'st st-warn' : 'st st-ok'}>
           {drift ? msg("{0} 个文件与清单不一致", {0: drift}) : msg("与磁盘一致")}
         </span>
-        <button type="button" aria-label={msg("关闭")} className="btn btn-t btn-lg !w-11 !p-0" onClick={onClose}>
+        <button type="button" aria-label={msg("关闭")} className="btn btn-t !h-8 !w-8 !p-0" onClick={onClose}>
           <X size={18} aria-hidden />
         </button>
       </header>
-      <div className="flex flex-col gap-3.5 px-[26px] py-[22px]">
+      <div className="flex flex-col gap-3.5 px-4 py-3.5">
         {q.isLoading && <Loading className="!px-0" />}
         {q.error != null && <ErrorBox error={q.error} />}
         {files.length > 0 && <DiffTabs files={files} initial={0} />}
@@ -184,22 +179,14 @@ export function ProjectPage() {
   if (isLoading) return <Loading />;
   if (error || !p) return <ErrorBox error={error ?? new Error(msg("项目不存在"))} />;
 
-  const crumb = (
-    <span className="text-[13px] text-ink3">
-      <Link to="/" className="text-ink3">
-        {msg("总览")}</Link>{' '}
-      {msg("/ 项目")}</span>
-  );
-
   if (!p.exists) {
     return (
       <>
-        <div className="rise flex flex-col gap-1.5">
-          {crumb}
-          <h1 className="mono m-0 text-[36px] font-bold tracking-[-0.02em] text-ink3 line-through">{p.name}</h1>
-          <span className="mono text-[12px] text-ink3">{tildify(p.path)}</span>
+        <div className="flex flex-col gap-1.5">
+          <h1 className="m-0 text-[15px] font-semibold text-ink3 line-through">{p.name}</h1>
+          <span className="mono text-[11px] text-ink4">{tildify(p.path)}</span>
         </div>
-        <section className="rise d1 flex flex-col gap-4 rounded-[20px] p-[22px]" style={{ border: '1.5px dashed var(--line2)', background: 'repeating-linear-gradient(135deg, var(--glass-2) 0 8px, transparent 8px 16px)' }}>
+        <section className="flex flex-col gap-4 rounded-[8px] p-4" style={{ border: '1.5px dashed var(--line2)', background: 'repeating-linear-gradient(135deg, var(--surface-2) 0 8px, transparent 8px 16px)' }}>
           <span className="chip c-muted self-start font-sans">{msg("目录不存在")}</span>
           <p className="m-0 max-w-[60ch] text-[14px] leading-[1.6] text-ink2">{msg("注册表里还记着这个项目，但目录已经找不到了。只是移动了位置的话可以重新定位；否则从注册表移除，不会删除任何文件。")}</p>
           <div className="flex flex-wrap gap-2">
@@ -259,7 +246,7 @@ export function ProjectPage() {
   const install = () =>
     setFlow({
       eyebrow: msg("{0} · 按清单还原", {0: p.name}),
-      title: <span className="mono ca">atm install</span>,
+      title: <span className="mono">atm install</span>,
       run: (dryRun, o) => api.install(p.id, { dryRun, adopt: o.adopt, force: o.force, strict: o.strict }),
       writeOptions: ['strict', 'adopt', 'force'],
       footnote: msg("install 是幂等的：只补齐缺失的软链与 Agent 配置，已经一致的文件不会被改写。"),
@@ -271,11 +258,10 @@ export function ProjectPage() {
 
   return (
     <>
-      <div className="rise flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1.5">
-          {crumb}
-          <h1 className="mono ca m-0 text-[36px] font-bold tracking-[-0.02em]">{p.name}</h1>
-          <span className="mono text-[12px] text-ink3">
+          <h1 className="m-0 text-[15px] font-semibold">{p.name}</h1>
+          <span className="mono text-[11px] text-ink4">
             {tildify(p.path)} · {p.initialized ? '.agents/tools.json' : msg("未初始化")}
           </span>
         </div>
@@ -292,7 +278,7 @@ export function ProjectPage() {
       </div>
 
       {!p.initialized ? (
-        <section className="glass iri rise d1 flex flex-wrap items-center gap-4 rounded-[20px] px-6 py-[22px]" style={{ background: 'var(--glass-strong)' }}>
+        <section className="flex flex-wrap items-center gap-4 rounded-[8px] border border-line bg-surface px-4 py-3.5">
           <div className="flex flex-[1_1_320px] flex-col gap-1">
             <strong className="text-[16px]">{msg("这个目录还没有 atm 清单")}</strong>
             <span className="text-[13px] leading-[1.6] text-ink2">
@@ -302,7 +288,7 @@ export function ProjectPage() {
             type="button"
             className="btn btn-p"
             onClick={() =>
-              setFlow({ eyebrow: msg("{0} · 初始化", {0: p.name}), title: <span className="mono ca">atm init</span>, run: (dryRun, o) => api.initProject(p.id, { dryRun, force: o.force }), writeOptions: ['force'] })
+              setFlow({ eyebrow: msg("{0} · 初始化", {0: p.name}), title: <span className="mono">atm init</span>, run: (dryRun, o) => api.initProject(p.id, { dryRun, force: o.force }), writeOptions: ['force'] })
             }
           >
             atm init
@@ -310,11 +296,11 @@ export function ProjectPage() {
         </section>
       ) : (
         <>
-          <section className="glass iri rise d1 flex flex-wrap items-center gap-8 rounded-[20px] px-6 py-[22px]" style={{ background: 'var(--glass-strong)' }}>
+          <section className="flex flex-wrap items-center gap-8 rounded-[8px] border border-line bg-surface px-4 py-3.5">
             <div className="flex flex-[7_1_360px] flex-col gap-3">
               <div className="flex items-baseline justify-between">
                 <span className="cap">{msg("常驻上下文")}</span>
-                <span className="mono ca text-[32px] font-semibold">
+                <span className="mono text-[22px] font-medium">
                   ≈ {fmtTok(ctx.total)}
                   {ctx.unmeasured > 0 && ' + ?'}{' '}
                   <span className="text-[13px] font-normal text-ink3" style={{ textShadow: 'none' }}>
@@ -322,7 +308,7 @@ export function ProjectPage() {
                   </span>
                 </span>
               </div>
-              <ContextBar context={ctx} height={12} />
+              <ContextBar context={ctx} height={8} />
               <ContextLegend context={ctx} />
             </div>
             <fieldset className="m-0 flex flex-[5_1_280px] flex-col gap-2.5 border-0 p-0">
@@ -345,7 +331,7 @@ export function ProjectPage() {
             <div
               key={i.id}
               role="status"
-              className="glass rise d2 flex flex-wrap items-center gap-3 rounded-[14px] px-4 py-3 text-[14px] leading-[1.5]"
+              className="flex flex-wrap items-center gap-3 rounded-[8px] px-4 py-3 text-[14px] leading-[1.5]"
               style={{ background: i.level === 'error' ? 'var(--err-soft)' : 'var(--warn-soft)' }}
             >
               <LevelGlyph level={i.level} size={9} />
@@ -367,7 +353,6 @@ export function ProjectPage() {
               onAdd={() => setAdding('skill')}
               onPin={setPinning}
               flex="4 1 280px"
-              delay={3}
               footer={
                 <>
                   {msg("软链到")}<code className="mono">{config.data ? tildify(config.data.root) : '~/.agent-tools'}</code>{msg("，所有 Agent 共用 .agents/skills")}</>
@@ -381,7 +366,6 @@ export function ProjectPage() {
               onToggle={toggle}
               onAdd={() => setAdding('mcp')}
               flex="5 1 300px"
-              delay={4}
               footer={msg("渲染到 {0}，只改动 atm 管理的条目", {0: mcpFiles.join(msg(' 与 '))})}
             />
             <Column
@@ -392,7 +376,6 @@ export function ProjectPage() {
               onToggle={toggle}
               onAdd={() => setAdding('plugin')}
               flex="3 1 260px"
-              delay={5}
               footer={msg("写入 .claude/settings.json 的 enabledPlugins，只对 Claude Code 生效")}
             />
           </div>
@@ -418,7 +401,7 @@ export function ProjectPage() {
               title: (
                 <>
                   <KindChip kind="skill" />
-                  <span className="mono ca">{skill}</span>
+                  <span className="mono">{skill}</span>
                   <span className="mono text-[16px] text-ink3">@ {rev}</span>
                 </>
               ),

@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>atm Console · v3 设计原型</title>
+<style>
+/* ═════════ tokens（与 design/redesign/tokens.css 同步）═════════ */
+:root{
+  --bg:oklch(.975 .003 262); --surface:#fff; --surface-2:oklch(.955 .004 262); --overlay:#fff;
+  --ink:oklch(.24 .01 262); --ink2:oklch(.45 .012 262); --ink3:oklch(.6 .014 262);
+  --line:rgba(16,20,28,.08); --line2:rgba(16,20,28,.16);
+  --accent:#0066ff; --accent-h:#005ce6; --accent-soft:rgba(0,102,255,.1); --accent-ink:#0052cc;
+  --skill:#1499ac; --skill-ink:#0a6474; --skill-soft:rgba(20,153,172,.12);
+  --mcp:#0066ff; --mcp-ink:#0052cc; --mcp-soft:rgba(0,102,255,.1);
+  --plugin:#7c3aed; --plugin-ink:#5b2bb5; --plugin-soft:rgba(124,58,237,.1);
+  --err:#d92d20; --err-ink:#b42318; --err-soft:rgba(217,45,32,.1);
+  --warn:#dc8a0e; --warn-ink:#8a4b06; --warn-soft:rgba(220,138,14,.14);
+  --ok:#079455; --ok-ink:#067647; --ok-soft:rgba(7,148,85,.1);
+  --scrim:rgba(16,20,28,.32);
+  --shadow:0 4px 16px rgba(16,24,40,.1),0 16px 40px rgba(16,24,40,.12);
+  --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Hiragino Sans GB','Noto Sans SC','Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --r-cell:4px; --r-card:8px; --r-panel:10px; --r-dialog:12px;
+  --ease:cubic-bezier(.2,.8,.2,1); --d1:120ms; --d2:180ms;
+  --row-h:40px; --pad:16px;
+  color-scheme:light;
+}
+[data-theme='dark']{
+  --bg:oklch(.17 .006 262); --surface:oklch(.21 .006 262); --surface-2:oklch(.25 .007 262); --overlay:oklch(.23 .007 262);
+  --ink:oklch(.96 .004 262); --ink2:oklch(.76 .008 262); --ink3:oklch(.585 .012 262);
+  --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.16);
+  --accent:#3d8bff; --accent-h:#5a9cff; --accent-soft:rgba(61,139,255,.14); --accent-ink:#8dbbff;
+  --skill:#5fd3e2; --skill-ink:#86e3ee; --skill-soft:rgba(95,211,226,.14);
+  --mcp:#3d8bff; --mcp-ink:#8dbbff; --mcp-soft:rgba(61,139,255,.14);
+  --plugin:#b795ff; --plugin-ink:#c9aeff; --plugin-soft:rgba(183,149,255,.14);
+  --err:#ff6a5e; --err-ink:#ff8a80; --err-soft:rgba(255,106,94,.14);
+  --warn:#ffb84d; --warn-ink:#ffc266; --warn-soft:rgba(255,184,77,.14);
+  --ok:#34d399; --ok-ink:#5ce0a0; --ok-soft:rgba(52,211,153,.12);
+  --scrim:rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+body.compact{ --row-h:32px; --pad:12px; }
+
+/* ═════════ base ═════════ */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:13px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent-ink);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.cap{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+svg.ic{width:16px;height:16px;stroke-width:1.75;flex:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-cell)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (prefers-contrast:more){:root{--line:rgba(16,20,28,.28);--line2:rgba(16,20,28,.4)}[data-theme='dark']{--line:rgba(255,255,255,.24);--line2:rgba(255,255,255,.36)}}
+
+/* ═════════ shell ═════════ */
+#app{display:grid;grid-template-columns:232px 1fr;height:100vh}
+.side{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow-y:auto}
+.side-brand{display:flex;align-items:center;gap:9px;padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+.logo{width:22px;height:22px;border-radius:6px;background:var(--accent);color:#fff;display:grid;place-items:center;font:700 11px var(--mono)}
+.side-brand b{font-size:13px;font-weight:600}
+.side-brand span{font:11px var(--mono);color:var(--ink3)}
+nav{padding:10px 8px;flex:1}
+.nav-cap{padding:10px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r-cell);color:var(--ink2);cursor:pointer;font-size:13px;border:0;background:none;width:100%;text-align:left;transition:background var(--d1) var(--ease),color var(--d1)}
+.nav-item:hover{background:var(--surface-2);color:var(--ink)}
+.nav-item.on{background:var(--accent-soft);color:var(--accent-ink);box-shadow:inset 2px 0 0 var(--accent)}
+.nav-item.on svg{color:var(--accent)}
+.nav-item .cnt{margin-left:auto;font:11px var(--mono);color:var(--ink3)}
+.nav-item.miss{color:var(--ink3)}
+.nav-item.miss .nm{text-decoration:line-through;text-decoration-color:var(--err)}
+.side-foot{border-top:1px solid var(--line);padding:8px;display:flex;gap:6px;align-items:center}
+
+/* topbar */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.top{height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--line);background:color-mix(in oklab,var(--bg),var(--surface) 40%)}
+.crumb{display:flex;align-items:center;gap:6px;color:var(--ink3);font-size:12.5px}
+.crumb b{color:var(--ink);font-weight:600}
+.crumb svg{width:13px;height:13px}
+.top .sp{flex:1}
+.kbd{font:11px var(--mono);color:var(--ink3);border:1px solid var(--line2);border-radius:var(--r-cell);padding:2px 6px;display:inline-flex;gap:4px;align-items:center;cursor:pointer;transition:border-color var(--d1)}
+.kbd:hover{border-color:var(--ink3)}
+.scroll{flex:1;overflow-y:auto}
+.page{max-width:1180px;margin:0 auto;padding:20px 24px 48px;animation:pg var(--d2) var(--ease)}
+@keyframes pg{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.phead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.phead h1{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.phead .sub{margin-top:2px;color:var(--ink3);font-size:12px}
+.phead .sub .mono{color:var(--ink2)}
+.acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* ═════════ primitives ═════════ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 12px;border-radius:var(--r-cell);border:1px solid var(--line2);background:var(--surface);color:var(--ink);font:500 12.5px var(--sans);cursor:pointer;transition:background var(--d1) var(--ease),border-color var(--d1),color var(--d1),transform var(--d1)}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:translateY(1px)}
+.btn.p{background:var(--accent);border-color:transparent;color:#fff}
+.btn.p:hover{background:var(--accent-h)}
+.btn.d{background:var(--err-soft);border-color:var(--err);color:var(--err-ink)}
+.btn.t{border-color:transparent;background:none;color:var(--ink2)}
+.btn.t:hover{background:var(--surface-2);color:var(--ink)}
+.btn.sm{height:24px;padding:0 8px;font-size:12px}
+.btn.icb{width:28px;height:28px;padding:0}
+
+.chip{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px 0 6px;border:1px solid var(--line2);border-radius:var(--r-cell);font-size:11.5px;color:var(--ink2);background:transparent;white-space:nowrap}
+.chip .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.chip.s-skill .dot{background:var(--skill)} .chip.s-mcp .dot{background:var(--mcp)} .chip.s-plugin .dot{background:var(--plugin)}
+.chip.agent{color:var(--ink3);border-color:var(--line)}
+.chip.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+.chip.sel .dot{background:var(--accent)}
+.st{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:var(--r-cell);font-size:11.5px;font-weight:500}
+.st.err{background:var(--err-soft);color:var(--err-ink)} .st.warn{background:var(--warn-soft);color:var(--warn-ink)} .st.ok{background:var(--ok-soft);color:var(--ok-ink)}
+.g{display:inline-block;width:7px;height:7px;border-radius:50%;flex:none}
+.g.e{background:var(--err)} .g.o{background:var(--ok)}
+.g.w{width:6px;height:6px;border-radius:1px;background:var(--warn);transform:rotate(45deg)}
+.g.i{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--ink3)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card)}
+.kpi{flex:1;min-width:150px;padding:12px var(--pad);display:flex;flex-direction:column;gap:3px}
+.kpi .v{font:500 22px/1.1 var(--mono);font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12px;color:var(--ink3)}
+.kpi .s b{font-weight:500;color:var(--ink2)}
+
+.inp{display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-cell);color:var(--ink3);min-width:180px;transition:border-color var(--d1)}
+.inp:focus-within{border-color:var(--accent)}
+.inp input{border:0;outline:0;background:none;color:var(--ink);font:12.5px var(--sans);width:100%}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:var(--r-cell);overflow:hidden}
+.seg button{border:0;background:none;padding:0 10px;height:28px;font:500 12px var(--sans);color:var(--ink3);cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--surface-2);color:var(--ink)}
+.sw{position:relative;width:30px;height:17px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line2);cursor:pointer;transition:background var(--d1);flex:none}
+.sw i{position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--ink3);transition:left var(--d1) var(--ease),background var(--d1)}
+.sw.on{background:var(--accent);border-color:transparent}
+.sw.on i{left:15px;background:#fff}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line);gap:2px;min-width:72px}
+.bar b{border-radius:1.5px}
+.hatch{background:repeating-linear-gradient(135deg,var(--line2) 0 3px,transparent 3px 6px)}
+
+/* tables */
+table{width:100%;border-collapse:collapse}
+th{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td{padding:0 10px;height:var(--row-h);border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr{transition:background var(--d1) var(--ease)}
+tbody tr:hover{background:var(--surface-2)}
+tr.miss td{color:var(--ink3)}
+tr.miss .nm{text-decoration:line-through;text-decoration-color:var(--err)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+td.num{color:var(--ink2)}
+.feat td{background:color-mix(in oklab,var(--accent-soft) 55%,transparent)}
+tr.feat:hover td{background:var(--accent-soft)}
+
+/* ═════════ screens ═════════ */
+.grid-kpi{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.ov{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start}
+.feed{padding:2px 0}
+.feed li{display:flex;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);list-style:none;font-size:12.5px;color:var(--ink2)}
+.feed li:last-child{border-bottom:0}
+.feed time{font:11px var(--mono);color:var(--ink3);flex:none;padding-top:1px}
+.mtxwrap{overflow-x:auto}
+.mtx td,.mtx th{padding:4px 6px}
+.mtx td.c{text-align:center}
+.cell{width:26px;height:22px;border-radius:var(--r-cell);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;color:var(--ink3);transition:all var(--d1)}
+.cell.on{background:var(--accent);border-color:transparent;color:#fff}
+.cell.add{border:1.5px dashed var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+.cell.rm{border:1.5px dashed var(--err);background:var(--err-soft);color:var(--err-ink)}
+.cell.na{background:repeating-linear-gradient(135deg,var(--line) 0 3px,transparent 3px 6px);cursor:not-allowed}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--ink2);align-items:center;flex-wrap:wrap}
+.legend i{width:13px;height:11px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+
+.pending{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;border-radius:var(--r-card);background:var(--accent-soft);border:1px dashed var(--accent);color:var(--accent-ink);font-size:12.5px}
+.pending .sp{flex:1}
+
+.issues td{height:44px}
+.exp{display:none;padding:8px 10px 12px;color:var(--ink3);font-size:12.5px}
+.exp code{font-family:var(--mono);color:var(--ink2)}
+details[open] .exp{display:block}
+details summary{list-style:none;cursor:pointer}
+details summary::-webkit-details-marker{display:none}
+
+/* dialog */
+#scrim{position:fixed;inset:0;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity var(--d2);z-index:40}
+#scrim.on{opacity:1;pointer-events:auto}
+.dlg{position:fixed;z-index:41;left:50%;top:8vh;transform:translate(-50%,8px);width:min(720px,92vw);max-height:82vh;display:none;flex-direction:column;background:var(--overlay);border:1px solid var(--line2);border-radius:var(--r-dialog);box-shadow:var(--shadow);opacity:0;transition:opacity var(--d2) var(--ease),transform var(--d2) var(--ease)}
+.dlg.on{display:flex;opacity:1;transform:translate(-50%,0)}
+.dlg-h{display:flex;align-items:center;gap:10px;height:52px;padding:0 18px;border-bottom:1px solid var(--line);flex:none}
+.dlg-h b{font-size:14px;font-weight:600}
+.dlg-h .sp{flex:1}
+.dlg-b{padding:16px 18px;overflow-y:auto}
+.dlg-f{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex:none}
+.dlg-f .sp{flex:1}
+.frow{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.frow label{font-size:12px;color:var(--ink2);font-weight:500}
+.fv{display:flex;gap:6px;flex-wrap:wrap}
+
+.diff{border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden;font:12px/1.7 var(--mono)}
+.diff-h{display:flex;justify-content:space-between;background:var(--surface-2);padding:6px 12px;color:var(--ink2);font-size:11.5px;border-bottom:1px solid var(--line)}
+.diff-b{white-space:pre;overflow-x:auto;padding:8px 0}
+.diff-b div{padding:0 12px 0 0}
+.diff-b .plus{background:var(--ok-soft)} .diff-b .plus::before{content:'+';padding:0 10px 0 12px;color:var(--ok-ink)}
+.diff-b .minus{background:var(--err-soft)} .diff-b .minus::before{content:'−';padding:0 10px 0 12px;color:var(--err-ink)}
+.diff-b .ctx{color:var(--ink3)} .diff-b .ctx::before{content:' ';padding:0 12px}
+
+.empty{padding:36px 0;text-align:center;color:var(--ink3);font-size:12.5px}
+.foot{max-width:1180px;margin:0 auto;padding:0 24px 16px;color:var(--ink3);font:11px var(--mono);display:flex;gap:14px}
+.foot a{color:var(--ink3)}
+@media (max-width:900px){ .ov{grid-template-columns:1fr} #app{grid-template-columns:64px 1fr} .side-brand b,.nav-item span,.nav-cap{display:none} .nav-item{justify-content:center} }
+</style>
+</head>
+<body>
+
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <symbol id="i-dash" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+  <symbol id="i-lib" viewBox="0 0 24 24"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 12h18"/><path d="M12 3v18"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/></symbol>
+  <symbol id="i-drive" viewBox="0 0 24 24"><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+  <symbol id="i-slider" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol>
+</svg>
+
+<div id="app">
+  <aside class="side">
+    <div class="side-brand"><span class="logo">atm</span><b>Agent Tools</b><span>v0.3</span></div>
+    <nav id="nav">
+      <div class="nav-cap cap">工作区</div>
+      <button class="nav-item on" data-go="#/overview"><svg class="ic"><use href="#i-dash"/></svg><span>总览</span></button>
+      <button class="nav-item" data-go="#/library"><svg class="ic"><use href="#i-lib"/></svg><span>工具库</span><span class="cnt mono">9</span></button>
+      <button class="nav-item" data-go="#/matrix"><svg class="ic"><use href="#i-grid"/></svg><span>工具关联</span></button>
+      <div class="nav-cap cap">项目</div>
+      <button class="nav-item" data-go="#/project"><svg class="ic"><use href="#i-folder"/></svg><span class="nm">web-app</span><span class="st warn" style="height:16px;padding:0 5px;font-size:10px"><i class="g w"></i>1</span></button>
+      <button class="nav-item" data-go="#/project"><svg class="ic"><use href="#i-folder"/></svg><span class="nm">agent-tool-manager</span></button>
+      <button class="nav-item miss" data-go="#/overview"><svg class="ic"><use href="#i-folder"/></svg><span class="nm">old-landing</span></button>
+      <button class="nav-item" data-go="#/overview" style="color:var(--ink3)"><svg class="ic"><use href="#i-plus"/></svg><span>添加项目…</span></button>
+      <div class="nav-cap cap">维护</div>
+      <button class="nav-item" data-go="#/doctor"><svg class="ic"><use href="#i-pulse"/></svg><span>健康检查</span><span class="st err" style="height:16px;padding:0 5px;font-size:10px"><i class="g e"></i>1</span></button>
+      <button class="nav-item" data-go="#/global"><svg class="ic"><use href="#i-drive"/></svg><span>本机工具</span></button>
+    </nav>
+    <div class="side-foot">
+      <button class="btn icb t" id="theme" title="切换主题"><svg class="ic"><use href="#i-moon"/></svg></button>
+      <button class="btn icb t" title="紧凑密度" id="dens"><svg class="ic"><use href="#i-slider"/></svg></button>
+      <span class="sp" style="flex:1"></span>
+      <button class="btn icb t" title="设置"><svg class="ic"><use href="#i-slider"/></svg></button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="top">
+      <span class="crumb" id="crumb"><b>总览</b></span>
+      <span class="sp"></span>
+      <span class="kbd"><svg class="ic" style="width:12px;height:12px"><use href="#i-search"/></svg>搜索<kbd style="border:0;padding:0;font:inherit;color:var(--ink3)">⌘K</kbd></span>
+      <button class="btn icb t" title="同步仓库"><svg class="ic"><use href="#i-sync"/></svg></button>
+    </div>
+    <div class="scroll">
+      <main class="page" id="view"></main>
+      <div class="foot"><span>atm Console v3 原型</span><span>·</span><span>暗/亮 × 紧凑密度可切换</span><span style="flex:1"></span><span data-count></span></div>
+    </div>
+  </div>
+</div>
+
+<div id="scrim"></div>
+<div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+  <div class="dlg-h"><b id="dlg-title">添加工具 · web-app</b><span class="cap" style="margin-left:2px">dryRun=1</span><span class="sp"></span><button class="btn icb t" data-close><svg class="ic"><use href="#i-x"/></svg></button></div>
+  <div class="dlg-b" id="dlg-body"></div>
+  <div class="dlg-f"><span class="cap" id="dlg-note">仅预览 · 尚未修改文件</span><span class="sp"></span><button class="btn t" data-close>取消</button><button class="btn p">预览并应用</button></div>
+</div>
+
+<script>
+/* ── mock 数据（镜像 packages/ui/src/api/mock-data.ts）── */
+const P = [
+  {name:'web-app', path:'~/code/web-app', agents:['claude-code','cursor'], ctx:{s:96,m:1542,p:220,u:0}, c:{s:3,m:2,p:1}, doc:{e:0,w:1}, feat:1},
+  {name:'agent-tool-manager', path:'~/personal/agent-tool-manager', agents:['claude-code'], ctx:{s:22,m:0,p:0,u:0}, c:{s:1,m:0,p:0}, doc:{e:0,w:0}},
+  {name:'old-landing', path:'~/sites/old-landing', agents:['claude-code'], ctx:{s:0,m:0,p:0,u:0}, c:{s:0,m:0,p:0}, doc:{e:1,w:0}, miss:1},
+];
+const TOOLS = [
+  {k:'skill', n:'baoyu-comic', src:'jimliu/baoyu-skills', tok:96, used:1},
+  {k:'skill', n:'baoyu-cover', src:'jimliu/baoyu-skills', tok:88, used:1},
+  {k:'skill', n:'quick-brief', src:'cs11b137/skills', tok:130, used:1},
+  {k:'mcp', n:'figma', src:'registry', tok:1542, used:1},
+  {k:'mcp', n:'linear', src:'registry', tok:987, used:0},
+  {k:'mcp', n:'github', src:'registry', tok:2103, used:0},
+  {k:'plugin', n:'chart-lib', src:'atm-shared', tok:220, used:1},
+  {k:'plugin', n:'doc-exporter', src:'claude-market', tok:180, used:0},
+];
+const KIND = {skill:'SKILL', mcp:'MCP', plugin:'PLUGIN'};
+const AG = { 'claude-code':'Claude Code', cursor:'Cursor', codex:'Codex' };
+const fmt = n => n>=1000 ? (n/1000).toFixed(1).replace(/\.0$/,'')+'k' : ''+n;
+const bar = c => `<span class="bar"><b style="width:${Math.max(c.s,4)}%;background:var(--skill)"></b><b style="width:${Math.max(c.m,4)}%;background:var(--mcp)"></b><b style="width:${Math.max(c.p,4)}%;background:var(--plugin)"></b>${c.u?`<b class="hatch" style="width:8%"></b>`:''}</span>`;
+const docBadge = d => d.e?`<span class="st err"><i class="g e"></i>${d.e} 错误</span>`:d.w?`<span class="st warn"><i class="g w"></i>${d.w} 警告</span>`:`<span class="st ok"><i class="g o"></i>正常</span>`;
+const kindChip = k => `<span class="chip s-${k}"><i class="dot"></i>${KIND[k]}</span>`;
+
+/* ── 屏幕 ── */
+const views = {
+overview: () => `
+  <div class="phead"><div><h1>总览</h1><div class="sub"><span class="mono">~/.agent-tools</span> · 共享仓库 <span class="mono">2</span> 个 · 3 分钟前同步</div></div>
+  <div class="acts"><button class="btn" onclick="openDlg()"><svg class="ic"><use href="#i-dl"/></svg>搜索安装…</button><button class="btn t"><svg class="ic"><use href="#i-sync"/></svg>同步仓库</button></div></div>
+  <div class="grid-kpi">
+    <div class="card kpi"><span class="cap">项目</span><span class="v">3</span><span class="s"><b>2</b> 个已初始化 · 1 个缺失</span></div>
+    <div class="card kpi"><span class="cap">库内工具</span><span class="v">9</span><span class="s">skill 4 · mcp 3 · plugin 2</span></div>
+    <div class="card kpi"><span class="cap">Σ 常驻上下文</span><span class="v">≈1.9k</span><span class="s">峰值 <b>web-app</b> 1.9k tok</span></div>
+    <div class="card kpi"><span class="cap">健康</span><span class="v" style="color:var(--warn-ink)">1 warn</span><span class="s">断链 ×1 · 可自动修复</span></div>
+  </div>
+  <div class="ov">
+    <div class="card">
+      <table>
+        <thead><tr><th>项目</th><th>Agent</th><th>上下文</th><th class="num">Skill/MCP/插件</th><th>状态</th><th style="width:1"></th></tr></thead>
+        <tbody>
+        ${P.map(p=>`<tr class="${p.feat?'feat':''} ${p.miss?'miss':''}">
+          <td><div style="display:flex;flex-direction:column;gap:1px"><span class="mono" style="font-weight:500;font-size:13px">${p.name}</span><span class="mono" style="font-size:11.5px;color:var(--ink3)">${p.path}</span></div></td>
+          <td><span style="display:flex;gap:4px;flex-wrap:wrap">${p.agents.map(a=>`<span class="chip agent">${AG[a]}</span>`).join('')}</span></td>
+          <td><div style="display:flex;align-items:center;gap:10px">${p.miss?'<span style="color:var(--ink3)">—</span>':bar(p.ctx)+`<span class="mono" style="font-size:12px;color:var(--ink2)">≈${fmt(p.ctx.s+p.ctx.m+p.ctx.p)}</span>`}</div></td>
+          <td class="num" style="white-space:nowrap">${p.c.s} / ${p.c.m} / ${p.c.p}</td>
+          <td>${docBadge(p.doc)}</td>
+          <td><div style="display:flex;gap:6px">${p.miss?'<button class="btn sm">重定位</button><button class="btn sm t">移除</button>':`<button class="btn sm t" onclick="go('#/project')">打开<svg class="ic" style="width:12px;height:12px"><use href="#i-chev"/></svg></button>`}</div></td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div style="padding:10px 12px;border-bottom:1px solid var(--line)"><span class="cap">活动</span></div>
+      <ul class="feed">
+        <li><time>14:32</time><span><b class="mono" style="font-weight:500">web-app</b> 添加了 skill <span class="mono">quick-brief</span></span></li>
+        <li><time>13:05</time><span><b class="mono" style="font-weight:500">web-app</b> 测量了 mcp <span class="mono">figma</span>：1542 tok</span></li>
+        <li><time>11:48</time><span>同步 <span class="mono">jimliu/baoyu-skills</span> → <span class="mono">a1b2c3d</span></span></li>
+        <li><time>09:20</time><span><b class="mono" style="font-weight:500">agent-tool-manager</b> 初始化完成</span></li>
+        <li><time>昨天</time><span>检测到 <span class="mono">old-landing</span> 目录缺失</span></li>
+      </ul>
+    </div>
+  </div>`,
+
+project: () => `
+  <div class="phead">
+    <div><h1>web-app <span class="st ok" style="height:20px"><i class="g o"></i>正常</span></h1>
+    <div class="sub"><span class="mono">~/code/web-app</span> · claude-code · cursor</div></div>
+    <div class="acts"><button class="btn" onclick="openDlg()"><svg class="ic"><use href="#i-plus"/></svg>添加工具</button><button class="btn t">还原工具</button></div>
+  </div>
+  <div class="card" style="margin-bottom:16px;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <span class="cap">常驻上下文</span>${bar({s:96,m:1542,p:220,u:0})}
+    <span class="mono" style="font-size:13px">≈1.9k <span style="color:var(--ink3)">tok</span></span>
+    <span class="chip s-skill"><i class="dot"></i>96</span><span class="chip s-mcp"><i class="dot"></i>1542</span><span class="chip s-plugin"><i class="dot"></i>220</span>
+    <span style="flex:1"></span><button class="btn sm t"><svg class="ic"><use href="#i-pen"/></svg>配置 Agent</button>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>工具</th><th>来源</th><th class="num">Tokens</th><th>Agent</th><th style="text-align:center">启用</th><th style="width:1"></th></tr></thead>
+      <tbody>
+      ${TOOLS.filter(t=>t.used).map(t=>`<tr>
+        <td><span style="display:flex;align-items:center;gap:8px">${kindChip(t.k)}<span class="mono" style="font-weight:500;font-size:13px">${t.n}</span></span></td>
+        <td class="mono" style="color:var(--ink3);font-size:12px">${t.src}</td>
+        <td class="num">${t.tok?fmt(t.tok):'—'}</td>
+        <td><span style="display:flex;gap:4px"><span class="chip agent">Claude Code</span><span class="chip agent">Cursor</span></span></td>
+        <td style="text-align:center"><button class="sw on" role="switch" aria-checked="true" onclick="this.classList.toggle('on');this.setAttribute('aria-checked',this.classList.contains('on'))"><i></i></button></td>
+        <td><button class="btn sm t"><svg class="ic" style="width:13px;height:13px"><use href="#i-trash"/></svg></button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div style="height:14px"></div>
+  <div class="pending"><svg class="ic"><use href="#i-warn"/></svg><span>2 项待提交的变更</span><span class="sp"></span><button class="btn sm t" onclick="openDlg()">预览 diff</button><button class="btn sm">全部应用</button></div>`,
+
+library: () => `
+  <div class="phead"><div><h1>工具库</h1><div class="sub">9 个工具 · <span class="mono">~/.agent-tools</span></div></div>
+  <div class="acts"><button class="btn p" onclick="openDlg()"><svg class="ic"><use href="#i-plus"/></svg>搜索安装…</button><button class="btn"><svg class="ic"><use href="#i-dl"/></svg>下载安装</button><button class="btn t"><svg class="ic"><use href="#i-plus"/></svg>新建</button></div></div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <label class="inp"><svg class="ic" style="width:14px;height:14px"><use href="#i-search"/></svg><input placeholder="搜索工具…"></label>
+    <div class="seg"><button class="on">全部</button><button>Skill</button><button>MCP</button><button>插件</button></div>
+    <span style="flex:1"></span>
+    <button class="btn t"><svg class="ic"><use href="#i-branch"/></svg>仓库</button>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>工具</th><th>描述</th><th>来源</th><th class="num">Tokens</th><th class="num">被使用</th><th style="width:1"></th></tr></thead>
+      <tbody>
+      ${TOOLS.map(t=>`<tr>
+        <td><span style="display:flex;align-items:center;gap:8px">${kindChip(t.k)}<span class="mono" style="font-weight:500;font-size:13px">${t.n}</span></span></td>
+        <td style="color:var(--ink2)">${{skill:'多格漫画生成 / 文章封面图 / 快速简报',mcp:'Figma MCP / Linear / GitHub',plugin:'图表库 / 文档导出'}[t.k]}</td>
+        <td class="mono" style="color:var(--ink3);font-size:12px">${t.src}</td>
+        <td class="num">${t.tok?fmt(t.tok):'—'}</td>
+        <td class="num">${t.used} 个项目</td>
+        <td><button class="btn sm" onclick="openDlg()">关联</button></td>
+      </tr>`).join('')}
+      <tr><td colspan="6"><div class="empty">演示模式仅显示部分工具 · 搜索安装支持 GitHub / MCP Registry / 插件市场</div></td></tr>
+      </tbody>
+    </table>
+  </div>`,
+
+matrix: () => {
+  const cells = {
+    'baoyu-comic': ['on', 'on', 'na'], 'baoyu-cover': ['on', '', 'na'], 'quick-brief': ['on', 'on', 'na'],
+    'figma': ['on', '', 'na'], 'linear': ['add', '', 'na'], 'github': ['', '', 'na'],
+    'chart-lib': ['on', 'on', 'na'], 'doc-exporter': ['', 'rm', 'na'],
+  };
+  return `
+  <div class="phead"><div><h1>工具关联</h1><div class="sub">点击单元格启用或停用 · 攒成一批后统一预览写入</div></div>
+  <div class="acts"><button class="btn" onclick="openDlg()">预览 diff（3）</button><button class="btn p">全部应用</button></div></div>
+  <div class="card mtxwrap">
+    <table class="mtx">
+      <thead><tr><th style="min-width:170px">工具</th><th class="c">web-app</th><th class="c">agent-tool-manager</th><th class="c">old-landing</th></tr></thead>
+      <tbody>
+      ${TOOLS.map(t=>`<tr>
+        <td><span style="display:flex;align-items:center;gap:8px">${kindChip(t.k)}<span class="mono" style="font-size:12.5px">${t.n}</span></span></td>
+        ${cells[t.n].map((v,i)=>v==='na'
+          ?`<td class="c"><span class="cell na"></span></td>`
+          :`<td class="c"><button class="cell ${v}" onclick="cycle(this)" title="${['web-app','agent-tool-manager','old-landing'][i]}">${v==='on'?'✓':v==='add'?'+':v==='rm'?'−':''}</button></td>`).join('')}
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div style="height:12px"></div>
+  <div class="legend">
+    <span><i style="background:var(--accent)"></i>启用</span>
+    <span><i style="border:1.5px dashed var(--accent)"></i>待添加</span>
+    <span><i style="border:1.5px dashed var(--err)"></i>待移除</span>
+    <span><i class="hatch" style="border:1px solid var(--line)"></i>项目缺失</span>
+    <span style="margin-left:auto;color:var(--ink3)">28px 紧凑格 · 表头 sticky</span>
+  </div>`;
+},
+
+doctor: () => `
+  <div class="phead"><div><h1>健康检查</h1><div class="sub">全部项目 · 3 项发现</div></div>
+  <div class="acts"><button class="btn p" ><svg class="ic"><use href="#i-warn"/></svg>修复可自动修复项（1）</button></div></div>
+  <div class="card">
+    <table class="issues">
+      <thead><tr><th>级别</th><th>问题</th><th>项目</th><th style="width:1"></th></tr></thead>
+      <tbody>
+      <tr><td><span class="st err"><i class="g e"></i>error</span></td><td>项目目录缺失</td><td class="mono" style="font-size:12px">old-landing</td><td><button class="btn sm">重定位</button></td></tr>
+      <tr><td><span class="st warn"><i class="g w"></i>warn</span></td>
+        <td><details><summary>skill 断链（可修复）<svg class="ic" style="width:12px;height:12px;display:inline;vertical-align:-2px"><use href="#i-chev"/></svg></summary>
+        <div class="exp">软链目标不存在：<code>.agents/skills/baoyu-comic → ~/.agent-tools/skills/baoyu-comic</code><br>修复 = 对该项目重新执行 install 的 skill 部分。</div></details></td>
+        <td class="mono" style="font-size:12px">web-app</td><td><button class="btn sm" onclick="toast(this)">修复断链</button></td></tr>
+      <tr><td><span class="st ok"><i class="g" style="background:none;border:1.5px solid var(--ink3)"></i>info</span></td><td>上下文合计 ≈ 1.9k tok（budget 10%）</td><td class="mono" style="font-size:12px">web-app</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>`,
+
+global: () => `
+  <div class="phead"><div><h1>本机工具</h1><div class="sub">~/.claude 全局技能与插件 · 手动扫描</div></div>
+  <div class="acts"><button class="btn p"><svg class="ic"><use href="#i-search"/></svg>扫描本机工具</button></div></div>
+  <div class="card"><div class="empty">尚未扫描本机全局工具<br><br><button class="btn p">扫描本机工具</button></div></div>`,
+};
+
+/* ── dialog：添加工具 → diff 确认 ── */
+const dlgBody = () => `
+  <div class="frow"><label>工具</label>
+    <div class="fv"><span class="chip s-mcp sel"><i class="dot"></i>linear</span><span class="chip s-mcp"><i class="dot"></i>github</span><span class="chip s-skill"><i class="dot"></i>web-research</span></div></div>
+  <div class="frow"><label>落地到 Agent</label>
+    <div class="fv"><span class="chip agent sel" style="padding:0 9px">Claude Code</span><span class="chip agent">Cursor</span><span class="chip agent">Codex</span></div></div>
+  <div class="frow"><label>变更预览（3 个文件 · +14 −2）</label>
+    <div class="diff">
+      <div class="diff-h"><span>.claude/mcp 生成的配置 → <span class="mono">.mcp.json</span></span><span>修改</span></div>
+      <div class="diff-b"><div class="ctx">  "mcpServers": {</div><div class="plus">"linear": { "command": "npx", "args": ["-y", "@linear/mcp"], "env": { "LINEAR_TOKEN": "\${LINEAR_TOKEN}" } },</div><div class="ctx">  }</div></div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="diff">
+      <div class="diff-h"><span><span class="mono">.agents/tools.json</span></span><span>修改</span></div>
+      <div class="diff-b"><div class="ctx">  "mcp": [ "figma",</div><div class="plus">{ "name": "linear", "agents": ["claude-code"] }</div><div class="minus">"figma"</div><div class="ctx">  ],</div></div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="diff">
+      <div class="diff-h"><span><span class="mono">.agents/tools.lock.json</span></span><span>修改</span></div>
+      <div class="diff-b"><div class="plus">"linear": { "def": "registry", "hash": "9f2c…", "tokens": 987 }</div></div>
+    </div>
+  </div>`;
+
+/* ── runtime ── */
+const view = document.getElementById('view');
+const CRUMB = {overview:'总览', project:'项目 · web-app', library:'工具库', matrix:'工具关联', doctor:'健康检查', global:'本机工具'};
+function render(){
+  const id = (location.hash || '#/overview').slice(2).split('/')[0] || 'overview';
+  view.innerHTML = (views[id] || views.overview)();
+  view.parentElement && (view.closest('.scroll').scrollTop = 0);
+  document.getElementById('crumb').innerHTML = `<b>${CRUMB[id]||'总览'}</b>`;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('on', n.dataset.go === '#/'+id));
+  document.querySelector('[data-count]').textContent = new Date().toLocaleTimeString();
+}
+window.go = h => { location.hash = h; };
+window.cycle = el => {
+  const c = el.classList;
+  const order = ['', 'add', 'rm', ''];
+  const cur = c.contains('add') ? 1 : c.contains('rm') ? 2 : c.contains('on') ? 3 : 0;
+  const next = (cur + 1) % 4;
+  c.remove('on', 'add', 'rm');
+  el.textContent = '';
+  if (next === 1) c.add('add'), (el.textContent = '+');
+  else if (next === 2) c.add('rm'), (el.textContent = '−');
+  else if (next === 3) c.add('on'), (el.textContent = '✓');
+};
+document.querySelectorAll('[data-go]').forEach(n=>n.addEventListener('click',()=>go(n.dataset.go)));
+addEventListener('hashchange', render);
+
+const theme = document.getElementById('theme');
+theme.onclick = () => {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+  theme.querySelector('use').setAttribute('href', dark ? '#i-sun' : '#i-moon');
+};
+document.getElementById('dens').onclick = () => document.body.classList.toggle('compact');
+
+const scrim = document.getElementById('scrim'), dlg = document.getElementById('dlg');
+window.openDlg = () => {
+  document.getElementById('dlg-body').innerHTML = dlgBody();
+  dlg.classList.add('on'); scrim.classList.add('on');
+};
+const closeDlg = () => { dlg.classList.remove('on'); scrim.classList.remove('on'); };
+scrim.onclick = closeDlg;
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick = closeDlg);
+addEventListener('keydown', e => { if (e.key === 'Escape') closeDlg(); });
+
+window.toast = btn => {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;right:20px;bottom:20px;z-index:50;background:var(--overlay);border:1px solid var(--line2);border-left:3px solid var(--ok);border-radius:8px;box-shadow:var(--shadow);padding:10px 14px;font-size:12.5px;display:flex;gap:8px;align-items:center`;
+  t.innerHTML = `<i class="g o"></i>已修复 web-app 的 skill 断链`;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity 300ms'; setTimeout(()=>t.remove(),300); }, 2400);
+  btn.disabled = true; btn.textContent = '已修复';
+};
+render();
+</script>
+</body>
+</html>

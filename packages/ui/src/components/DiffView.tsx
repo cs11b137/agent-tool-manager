@@ -76,7 +76,7 @@ export function DiffTabs({ files, initial }: { files: DiffFile[]; initial?: numb
           </button>
         ))}
       </div>
-      <div id="diff-panel" role="tabpanel" aria-label={cur.change.relPath} className="overflow-hidden rounded-[16px] border border-line2 bg-glass-2">
+      <div id="diff-panel" role="tabpanel" aria-label={cur.change.relPath} className="overflow-hidden rounded-[8px] border border-line2 bg-field">
         <div className="mono flex justify-between gap-3 border-b border-line px-4 py-2.5 text-[12px] text-ink2">
           <span className="min-w-0 truncate">
             {multiProject && cur.projectName && !cur.change.relPath.startsWith('~') ? `${cur.projectName} · ` : ''}

@@ -1,121 +1,157 @@
 /*
- * Liquid Glass design tokens — values from design/liquid-glass/Main.dc.html.
- * Light is the default; dark applies via <html data-theme="dark">.
+ * atm Workbench v4 design tokens.
+ *
+ * 与 packages/ui/src/styles/tokens.css 变量名完全兼容（--glass* 变为实色别名，
+ * --edge/--hi 降级），新增 Geist 式语义槽位：--surface-3（active）、--field
+ * （凹陷输入槽）、--ink4（第四档文字）、--shadow-1（卡 hover 微升）。
+ * 全部颜色 OKLCH；dark 下表面层级靠明度阶梯 + 1px hairline，不靠阴影。
  */
 :root {
-  --ink: #1a1a1a;
-  --ink2: #4a4a4a;
-  --ink3: #686d76;
-  --accent: #0066ff;
-  --accent-h: #005ce6;
-  --accent-soft: rgba(0, 102, 255, 0.12);
-  --accent-ink: #0052cc;
-  --glass: rgba(255, 255, 255, 0.58);
-  --glass-2: rgba(255, 255, 255, 0.36);
-  --glass-strong: rgba(255, 255, 255, 0.82);
-  --glass-dialog: rgba(255, 255, 255, 0.86);
-  --edge: rgba(255, 255, 255, 0.78);
-  --hi: rgba(255, 255, 255, 0.7);
-  --line: rgba(26, 26, 26, 0.08);
-  --line2: rgba(26, 26, 26, 0.16);
-  --shadow: 0 2px 12px rgba(16, 24, 40, 0.06), 0 16px 40px rgba(16, 24, 40, 0.08);
-  --bg: #edf0f7;
-  --scrim: rgba(26, 30, 40, 0.28);
-  --b1: #8db8ff;
-  --b2: #cdb0ff;
-  --b3: #93e6df;
-  --b4: #ffc9de;
-  --skill: #3fb8c9;
-  --skill-ink: #0a6474;
-  --skill-soft: rgba(63, 184, 201, 0.18);
-  --mcp: #0066ff;
-  --mcp-ink: #0052cc;
-  --mcp-soft: rgba(0, 102, 255, 0.12);
-  --plugin: #4b22a0;
-  --plugin-ink: #5b2bb5;
-  --plugin-soft: rgba(91, 43, 181, 0.12);
-  --err: #d92d20;
-  --err-ink: #b42318;
-  --err-soft: rgba(217, 45, 32, 0.12);
-  --warn: #dc8a0e;
-  --warn-ink: #8a4b06;
-  --warn-soft: rgba(220, 138, 14, 0.16);
-  --ok: #079455;
-  --ok-ink: #067647;
-  --ok-soft: rgba(7, 148, 85, 0.12);
-  --iri: linear-gradient(120deg, #6fa8ff, #c7a6ff 30%, #8ee6e0 60%, #ffb8d5);
-  --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC',
-    'Segoe UI', sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  /* ── 表面阶梯：bg < field(凹陷) < surface < surface-2(hover) < surface-3(active) < overlay ── */
+  --bg: oklch(0.972 0.003 264);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.955 0.004 264);
+  --surface-3: oklch(0.93 0.005 264);
+  --field: oklch(0.962 0.004 264);
+  --overlay: oklch(1 0 0);
 
-  /* motion */
+  /* ── 文字四档 ── */
+  --ink: oklch(0.22 0.008 264);
+  --ink2: oklch(0.4 0.012 264);
+  --ink3: oklch(0.52 0.012 264);
+  --ink4: oklch(0.63 0.01 264);
+
+  /* ── hairline ── */
+  --line: oklch(0.22 0.008 264 / 9%);
+  --line2: oklch(0.22 0.008 264 / 16%);
+
+  /* ── 唯一强调（品牌蓝）── */
+  --accent: oklch(0.55 0.2 262);
+  --accent-h: oklch(0.5 0.21 262);
+  --accent-soft: oklch(0.55 0.2 262 / 10%);
+  --accent-ink: oklch(0.46 0.19 262);
+
+  /* ── 类型（仅小面积：6px 圆点 / ContextBar 分段 / 矩阵图例）── */
+  --skill: oklch(0.72 0.11 200);
+  --skill-ink: oklch(0.44 0.09 205);
+  --skill-soft: oklch(0.72 0.11 200 / 14%);
+  --mcp: oklch(0.55 0.2 262);
+  --mcp-ink: oklch(0.46 0.19 262);
+  --mcp-soft: oklch(0.55 0.2 262 / 10%);
+  --plugin: oklch(0.56 0.18 300);
+  --plugin-ink: oklch(0.47 0.16 300);
+  --plugin-soft: oklch(0.56 0.18 300 / 12%);
+
+  /* ── 状态（err/warn/ok 三色之外无彩色）── */
+  --err: oklch(0.577 0.215 27);
+  --err-ink: oklch(0.5 0.19 27);
+  --err-soft: oklch(0.577 0.215 27 / 10%);
+  --warn: oklch(0.73 0.14 70);
+  --warn-ink: oklch(0.5 0.12 65);
+  --warn-soft: oklch(0.73 0.14 70 / 16%);
+  --ok: oklch(0.66 0.17 155);
+  --ok-ink: oklch(0.5 0.13 155);
+  --ok-soft: oklch(0.66 0.17 155 / 12%);
+
+  /* ── 阴影只给浮层；卡 hover 用 shadow-1 ── */
+  --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 12px 32px rgb(16 24 40 / 12%);
+  --shadow-1: 0 1px 2px rgb(16 24 40 / 5%);
+  --scrim: oklch(0.2 0.01 264 / 32%);
+
+  /* ── 兼容别名（现有组件零改动换肤）── */
+  --glass: var(--surface);
+  --glass-2: var(--surface-2);
+  --glass-strong: var(--overlay);
+  --glass-dialog: var(--overlay);
+  --edge: var(--line);
+  --hi: oklch(1 0 0 / 50%);
+
+  --sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC',
+    'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Menlo', monospace;
+
+  /* ── 动效：快而短，无延迟级联 ── */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --dur-hover: 200ms;
-  --dur-rise: 480ms;
-  --dur-page: 300ms;
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-hover: 120ms;
+  --dur-rise: 180ms;
+  --dur-page: 180ms;
 
   color-scheme: light;
 }
 
 [data-theme='dark'] {
-  --ink: #f2f4f8;
-  --ink2: #c3c8d1;
-  --ink3: #9097a3;
-  --accent: #3d8bff;
-  --accent-h: #5a9cff;
-  --accent-soft: rgba(61, 139, 255, 0.18);
-  --accent-ink: #8dbbff;
-  --glass: rgba(28, 32, 42, 0.56);
-  --glass-2: rgba(28, 32, 42, 0.34);
-  --glass-strong: rgba(36, 40, 52, 0.86);
-  --glass-dialog: rgba(32, 36, 48, 0.9);
-  --edge: rgba(255, 255, 255, 0.12);
-  --hi: rgba(255, 255, 255, 0.08);
-  --line: rgba(255, 255, 255, 0.08);
-  --line2: rgba(255, 255, 255, 0.2);
-  --shadow: 0 2px 12px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.35);
-  --bg: #0d1017;
-  --scrim: rgba(0, 0, 0, 0.4);
-  --b1: #1d4ed8;
-  --b2: #6d28d9;
-  --b3: #0e7490;
-  --b4: #9d174d;
-  --skill: #5fd3e2;
-  --skill-ink: #86e3ee;
-  --skill-soft: rgba(95, 211, 226, 0.16);
-  --mcp: #3d8bff;
-  --mcp-ink: #8dbbff;
-  --mcp-soft: rgba(61, 139, 255, 0.18);
-  --plugin: #b795ff;
-  --plugin-ink: #c9aeff;
-  --plugin-soft: rgba(183, 149, 255, 0.16);
-  --err-ink: #ff8a80;
-  --err-soft: rgba(255, 99, 88, 0.16);
-  --warn-ink: #ffc266;
-  --warn-soft: rgba(255, 184, 77, 0.16);
-  --ok-ink: #5ce0a0;
-  --ok-soft: rgba(92, 224, 160, 0.14);
+  --bg: oklch(0.17 0.005 264);
+  --surface: oklch(0.202 0.006 264);
+  --surface-2: oklch(0.235 0.007 264);
+  --surface-3: oklch(0.27 0.008 264);
+  --field: oklch(0.148 0.004 264);
+  --overlay: oklch(0.218 0.007 264);
+
+  --ink: oklch(0.955 0.004 264);
+  --ink2: oklch(0.78 0.008 264);
+  --ink3: oklch(0.62 0.01 264);
+  --ink4: oklch(0.5 0.01 264);
+
+  --line: oklch(1 0 0 / 8%);
+  --line2: oklch(1 0 0 / 15%);
+
+  --accent: oklch(0.68 0.16 258);
+  --accent-h: oklch(0.73 0.14 258);
+  --accent-soft: oklch(0.68 0.16 258 / 16%);
+  --accent-ink: oklch(0.8 0.11 258);
+
+  --skill: oklch(0.82 0.1 198);
+  --skill-ink: oklch(0.86 0.09 198);
+  --skill-soft: oklch(0.82 0.1 198 / 14%);
+  --mcp: oklch(0.68 0.16 258);
+  --mcp-ink: oklch(0.8 0.11 258);
+  --mcp-soft: oklch(0.68 0.16 258 / 16%);
+  --plugin: oklch(0.74 0.15 305);
+  --plugin-ink: oklch(0.8 0.12 305);
+  --plugin-soft: oklch(0.74 0.15 305 / 14%);
+
+  --err: oklch(0.7 0.19 25);
+  --err-ink: oklch(0.78 0.14 22);
+  --err-soft: oklch(0.7 0.19 25 / 15%);
+  --warn: oklch(0.84 0.13 78);
+  --warn-ink: oklch(0.86 0.12 80);
+  --warn-soft: oklch(0.84 0.13 78 / 15%);
+  --ok: oklch(0.8 0.15 158);
+  --ok-ink: oklch(0.85 0.12 158);
+  --ok-soft: oklch(0.8 0.15 158 / 13%);
+
+  --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 12px 36px rgb(0 0 0 / 50%);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 30%);
+  --scrim: oklch(0 0 0 / 50%);
+  --hi: oklch(1 0 0 / 4%);
 
   color-scheme: dark;
 }
 
-/* Expose tokens to Tailwind utilities (bg-glass, text-ink3, border-line2, font-mono, rounded-panel …). */
+/* Tailwind 暴露：bg-surface、text-ink3、border-line2、rounded-card、shadow-1 … */
 @theme inline {
   --color-ink: var(--ink);
   --color-ink2: var(--ink2);
   --color-ink3: var(--ink3);
+  --color-ink4: var(--ink4);
   --color-accent: var(--accent);
   --color-accent-h: var(--accent-h);
   --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-field: var(--field);
+  --color-overlay: var(--overlay);
   --color-glass: var(--glass);
   --color-glass-2: var(--glass-2);
   --color-glass-strong: var(--glass-strong);
   --color-edge: var(--edge);
   --color-line: var(--line);
   --color-line2: var(--line2);
-  --color-bg: var(--bg);
   --color-skill: var(--skill);
   --color-skill-ink: var(--skill-ink);
   --color-skill-soft: var(--skill-soft);
@@ -136,10 +172,11 @@
   --color-ok-soft: var(--ok-soft);
   --font-sans: var(--sans);
   --font-mono: var(--mono);
-  --radius-cell: 8px;
-  --radius-card: 12px;
-  --radius-tile: 16px;
-  --radius-panel: 20px;
-  --radius-dialog: 24px;
+  --radius-cell: 6px;
+  --radius-card: 8px;
+  --radius-tile: 8px;
+  --radius-panel: 10px;
+  --radius-dialog: 12px;
   --shadow-glass: var(--shadow);
+  --shadow-1: var(--shadow-1);
 }

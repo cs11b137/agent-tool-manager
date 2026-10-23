@@ -18,6 +18,15 @@
 
 尚无原型：§9.2 的「全局 → 项目迁移」页（P5）。
 
+## v4「Workbench」（已实施，v0.3.0 起为现行界面）
+
+| 目录 | 内容 |
+|---|---|
+| [v4/README.md](./v4/README.md) | 调研对比、推荐结论（Linear 骨架 × Geist 表面语义 × Supabase 控件规约 × Raycast accent 纪律）与迁移记录 |
+| [v4/tokens.css](./v4/tokens.css) | 设计令牌（OKLCH，与 packages/ui 同源） |
+| [v4/prototype/](./v4/prototype/) | 单文件交互原型（6 屏 + 弹窗，暗/亮、密度可切）+ shots/ 截图 |
+| [redesign/](./redesign/) | v3 Console 存档（已被 v4 替代，仅参考） |
+
 ## 本地查看
 
 ```bash

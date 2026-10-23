@@ -11,15 +11,15 @@
 
 集中管理 Skill、MCP 和 Claude Code 插件，通过桌面应用、网页界面或 CLI 按项目关联到 Claude Code、Cursor、Codex。工具保存在共享 Git 仓库（默认 `~/.agent-tools`），每个项目用 `.agents/tools.json` 声明所需工具；Skill 使用软链，MCP 自动生成各 Agent 的原生配置，插件按项目启用。
 
-[下载 v0.2.0 · macOS Apple Silicon](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/Agent-Tool-Manager_0.2.0_macos-arm64.dmg) · [版本说明](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.2.0) · [SHA-256 校验文件](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/SHA256SUMS.txt)
+[下载 v0.3.0 · macOS Apple Silicon](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.3.0/Agent-Tool-Manager_0.3.0_macos-arm64.dmg) · [版本说明](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.3.0) · [SHA-256 校验文件](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.3.0/SHA256SUMS.txt)
 
-支持 macOS 14+、M 系列芯片。当前为未使用 Apple Developer ID 签名、未经公证的桌面预览版。
+支持 macOS 14+、M 系列芯片。安装包未使用 Apple Developer ID 签名、未经公证。
 
-## v0.2.0 新增
+## v0.3.0 新增
 
-1. **搜索安装**：搜索 Agent Skills、MCP Registry、Claude 官方插件市场及 GitHub 仓库，预览后勾选安装。
-2. **多种来源**：直接导入 Skill、MCP、Plugin 原生文件或完整目录；支持 GitHub 仓库、指定版本与子目录，以及 `.skill` / ZIP。
-3. **开发自动重载**：后端源码变化后自动重建并重启服务，保留会话，避免新界面连接旧接口。
+1. **Workbench 界面重构**：内容优先的高密度控制台——实色表面、1px 分隔线、表行式项目与工具列表、紧凑关联矩阵；数字统一等宽排版，色彩仅表达状态与类型标记。
+2. **暗/浅色双主题同级打磨**：全部颜色改为 OKLCH 令牌，支持跟随系统；界面密度与对比度按开发者控制台标准调校。
+3. **修复**：Node 26 环境下界面测试兼容；端到端用例与现有文案对齐。
 
 首次打开且尚未添加工具时，工具库为空；只初始化目录也不会自动导入本机插件。已安装插件在项目的「添加工具」中主动选择，「本机工具」页面需点击扫描后才展示本机工具。
 
@@ -72,7 +72,7 @@
 
 ### 桌面版
 
-下载 [v0.2.0 安装包](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.2.0/Agent-Tool-Manager_0.2.0_macos-arm64.dmg)，打开 DMG，将应用拖入 Applications。适用于 macOS 14+、Apple Silicon（M 系列）；[发布页面](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.2.0)附有版本说明和 SHA-256 校验文件。
+下载 [v0.3.0 安装包](https://github.com/cs11b137/agent-tool-manager/releases/download/v0.3.0/Agent-Tool-Manager_0.3.0_macos-arm64.dmg)，打开 DMG，将应用拖入 Applications。适用于 macOS 14+、Apple Silicon（M 系列）；[发布页面](https://github.com/cs11b137/agent-tool-manager/releases/tag/v0.3.0)附有版本说明和 SHA-256 校验文件。
 
 应用内置 Node 和本地服务，无需终端即可使用，支持托盘、单实例和可选登录启动。当前预览版尚未使用 Apple Developer ID 签名或通过公证，macOS 可能阻止打开；暂未提供 Intel Mac、Windows 或 Linux 安装包。Git 操作仍需本机 Git，MCP 自身依赖与凭据需自行配置。
 

@@ -114,14 +114,14 @@ export function WriteFlow(props: WriteFlowProps) {
 
   return (
     <Dialog open={open} onClose={onClose} labelledBy={titleId}>
-      <header className="flex flex-wrap items-center gap-4 border-b border-line px-[26px] py-[22px]">
+      <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3.5">
         <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-1.5">
           <span className="cap">{eyebrow}</span>
-          <h1 id={titleId} className="m-0 flex flex-wrap items-center gap-3 text-[24px] font-bold">
+          <h1 id={titleId} className="m-0 flex flex-wrap items-center gap-2.5 text-[14px] font-semibold">
             {title}
           </h1>
         </div>
-        <ol aria-label={msg("步骤")} className="m-0 flex list-none gap-1 rounded-full bg-line p-1 text-[13px]">
+        <ol aria-label={msg("步骤")} className="m-0 flex list-none gap-0.5 rounded-[6px] border border-line bg-field p-0.5 text-[12px]">
           {STEPS.map(([s, label], i) => {
             const cur = s === step;
             const done = i < stepIdx;
@@ -129,10 +129,10 @@ export function WriteFlow(props: WriteFlowProps) {
               <li
                 key={s}
                 aria-current={cur ? 'step' : undefined}
-                className="flex h-8 items-center gap-1.5 rounded-full px-3"
+                className="flex h-7 items-center gap-1.5 rounded-[5px] px-2.5"
                 style={
                   cur
-                    ? { background: 'var(--glass-strong)', fontWeight: 600, boxShadow: '0 1px 4px rgba(0,0,0,.08)' }
+                    ? { background: 'var(--surface-2)', fontWeight: 500 }
                     : { color: done ? 'var(--ink2)' : 'var(--ink3)' }
                 }
               >
@@ -144,23 +144,23 @@ export function WriteFlow(props: WriteFlowProps) {
             );
           })}
         </ol>
-        <button type="button" aria-label={msg("关闭")} className="btn btn-t btn-lg !w-11 !p-0" onClick={onClose}>
-          <X size={18} aria-hidden />
+        <button type="button" aria-label={msg("关闭")} className="btn btn-t !h-8 !w-8 !p-0" onClick={onClose}>
+          <X size={15} aria-hidden />
         </button>
       </header>
 
-      {step === 'select' && select && <div className="flex flex-col gap-5 px-[26px] py-[22px]">{select.content}</div>}
+      {step === 'select' && select && <div className="flex flex-col gap-4 px-4 py-3.5">{select.content}</div>}
 
       {step === 'preview' && (
         <div className="flex flex-wrap">
           {aside && (
-            <aside className="box-border flex flex-[4_1_300px] flex-col gap-[22px] border-line px-[26px] py-[22px] md:border-r">
+            <aside className="box-border flex flex-[4_1_300px] flex-col gap-4 border-line px-4 py-3.5 md:border-r">
               {aside}
             </aside>
           )}
-          <section className="box-border flex min-w-0 flex-[7_1_520px] flex-col gap-3.5 px-[26px] py-[22px]">
+          <section className="box-border flex min-w-0 flex-[7_1_520px] flex-col gap-3 px-4 py-3.5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="m-0 text-[16px] font-semibold">
+              <h2 className="m-0 text-[13px] font-semibold">
                 {msg("将要写入的文件")}<span className="font-normal text-ink3">· {data ? n : '…'}</span>
               </h2>
               <span className="chip" style={{ background: 'var(--mcp-soft)', color: 'var(--mcp-ink)', fontWeight: 500 }}>
@@ -190,10 +190,10 @@ export function WriteFlow(props: WriteFlowProps) {
                 {n > 0 ? (
                   <DiffTabs key={previewKey} files={data.files} />
                 ) : (
-                  !data.errors.length && <Empty className="rounded-[16px] border border-line2 bg-glass-2">{msg("没有需要写入的文件：磁盘上已经是清单描述的状态。")}</Empty>
+                  !data.errors.length && <Empty className="rounded-[8px] border border-line2 bg-field">{msg("没有需要写入的文件：磁盘上已经是清单描述的状态。")}</Empty>
                 )}
                 {data.warnings.map((w) => (
-                  <div key={w} className="flex gap-2.5 rounded-[12px] px-3.5 py-3 text-[13px] leading-[1.6]" style={{ background: 'var(--warn-soft)' }}>
+                  <div key={w} className="flex gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] leading-[1.6]" style={{ background: 'var(--warn-soft)' }}>
                     <LevelGlyph level="warn" size={8} className="mt-[7px]" />
                     <span>
                       <Rich text={w} />
@@ -210,12 +210,12 @@ export function WriteFlow(props: WriteFlowProps) {
       )}
 
       {step === 'write' && (
-        <div className="flex flex-col gap-4 px-[26px] py-[26px]">
+        <div className="flex flex-col gap-4 px-4 py-3.5">
           {ws.status === 'writing' && <Loading label={msg("正在写入 {0} 个文件…", {0: n})} className="!px-0" />}
           {ws.status === 'error' && <ErrorBox error={ws.error} />}
           {ws.status === 'done' && (
             <div className="morph flex flex-col gap-4">
-              <div className="flex items-center gap-3 rounded-[14px] px-5 py-4 text-[14px]" style={{ background: 'var(--ok-soft)' }}>
+              <div className="flex items-center gap-3 rounded-[8px] px-4 py-3 text-[13px]" style={{ background: 'var(--ok-soft)' }}>
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-white" style={{ background: 'var(--ok)' }}>
                   <Check size={13} strokeWidth={3} aria-hidden />
                 </span>
@@ -238,7 +238,7 @@ export function WriteFlow(props: WriteFlowProps) {
         </div>
       )}
 
-      <footer className="flex flex-wrap items-center justify-end gap-2.5 border-t border-line px-[26px] py-[18px]">
+      <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-4 py-3">
         <span className="mono mr-auto min-w-0 text-[12px] break-all text-ink3">
           {data?.commands.length ? msg("等价命令：{0}", {0: data.commands.join(' ; ')}) : ''}
         </span>

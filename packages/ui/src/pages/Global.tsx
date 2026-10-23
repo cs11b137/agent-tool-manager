@@ -39,7 +39,7 @@ export function GlobalPage() {
 
   if (!scanning) return <>
     <PageHeader title={msg("全局")} cap={msg("本机 Agent 工具")} />
-    <Empty className="glass rounded-[20px]">
+    <Empty className="glass rounded-[8px]">
       <strong className="block text-ink">{msg("尚未扫描本机全局工具")}</strong>
       <span className="mt-2 block">{msg("扫描后可查看已有全局工具，并选择迁移到项目中管理。")}</span>
       <button type="button" className="btn btn-p mt-4" onClick={() => setScanning(true)}>{msg("扫描本机全局工具")}</button>
@@ -64,14 +64,14 @@ export function GlobalPage() {
         sub={<span className="text-[14px] text-ink2">{msg("全局工具会被每个会话加载。只有少数项目在用的，建议移到项目级清单，按需启用。")}</span>}
       />
 
-      <section className="glass iri rise d1 flex flex-wrap items-center gap-8 rounded-[20px] px-6 py-[22px]" style={{ background: 'var(--glass-strong)' }}>
+      <section className="flex flex-wrap items-center gap-6 rounded-[8px] border border-line bg-surface px-4 py-3.5">
         <div className="flex flex-[7_1_360px] flex-col gap-3">
           <div className="flex items-baseline justify-between">
             <span className="cap">{msg("每个会话都会加载")}</span>
-            <span className="mono ca text-[32px] font-semibold">
+            <span className="mono text-[22px] font-medium">
               ≈ {fmtTok(skillTok + pluginTok)}
               {unmeasured > 0 && ' + ?'}{' '}
-              <span className="text-[13px] font-normal text-ink3" style={{ textShadow: 'none' }}>
+              <span className="text-[13px] font-normal text-ink3">
                 {msg("tokens / 会话")}</span>
             </span>
           </div>
@@ -96,7 +96,7 @@ export function GlobalPage() {
           <span className="cap">{msg("迁移建议")}</span>
           {sugg.length ? (
             <>
-              <span className="text-[24px] font-semibold">
+              <span className="text-[22px] font-medium">
                 <span className="mono">{sugg.length}</span> <span className="text-[14px] font-normal text-ink2">{msg("项可以移到项目级")}</span>
               </span>
               <span className="mono text-[12px] text-ink3">{sugg.join(' · ')}</span>
@@ -110,7 +110,7 @@ export function GlobalPage() {
       </section>
 
       <div className="flex flex-wrap items-start gap-4">
-        <section className="glass rise d2 min-w-0 flex-[1_1_420px] overflow-hidden rounded-[20px]">
+        <section className="glass min-w-0 flex-[1_1_420px] overflow-hidden rounded-[8px]">
           <div className="flex items-center gap-2.5 border-b border-line px-[18px] py-4">
             <KindChip kind="skill" />
             <h2 className="m-0 text-[16px] font-semibold">{msg("全局 Skill")}</h2>
@@ -146,7 +146,7 @@ export function GlobalPage() {
           <p className="m-0 px-[18px] py-3 text-[12px] leading-[1.5] text-ink3">{msg("全局 Skill 对所有项目的 Claude Code 会话生效；与项目内同名时会加载两份。")}</p>
         </section>
 
-        <section className="glass rise d3 min-w-0 flex-[1_1_420px] overflow-hidden rounded-[20px]">
+        <section className="glass min-w-0 flex-[1_1_420px] overflow-hidden rounded-[8px]">
           <div className="flex items-center gap-2.5 border-b border-line px-[18px] py-4">
             <KindChip kind="plugin" />
             <h2 className="m-0 text-[16px] font-semibold">{msg("全局启用的插件")}</h2>
@@ -197,7 +197,7 @@ export function GlobalPage() {
         </section>
       </div>
 
-      <p className="rise d4 m-0 text-[12px] leading-[1.6] text-ink3">{msg("「移到项目级」向导：选择用到它的项目 → 预览每个文件的 diff → 确认后在这些项目中添加，再从全局移除。")}</p>
+      <p className="m-0 text-[12px] leading-[1.6] text-ink3">{msg("「移到项目级」向导：选择用到它的项目 → 预览每个文件的 diff → 确认后在这些项目中添加，再从全局移除。")}</p>
 
       {target && <MigrateFlow onClose={() => setTarget(null)} kind={target.kind} name={target.name} suggested={target.suggested} />}
     </>

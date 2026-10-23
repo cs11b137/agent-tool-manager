@@ -249,7 +249,7 @@ export function NewMcpDialog({ onClose }: { onClose: () => void }) {
           </label>
           <div className="flex flex-col gap-1.5">
             <span className="label">transport</span>
-            <div role="tablist" aria-label="transport" className="glass flex gap-1 self-start rounded-full p-1">
+            <div role="tablist" aria-label="transport" className="seg-group self-start">
               {(['stdio', 'http'] as const).map((t) => (
                 <button key={t} type="button" role="tab" className="seg mono" aria-selected={transport === t} onClick={() => setTransport(t)}>
                   {t}
@@ -306,7 +306,7 @@ export function NewMcpDialog({ onClose }: { onClose: () => void }) {
             {msg("+ 添加一行")}</button>
         </fieldset>
         {transport === 'stdio' && (
-          <label className="flex items-start gap-2.5 rounded-[12px] px-3.5 py-3 text-[13px] leading-[1.6]" style={{ background: 'var(--warn-soft)' }}>
+          <label className="flex items-start gap-2.5 rounded-[8px] px-3 py-2.5 text-[13px] leading-[1.6]" style={{ background: 'var(--warn-soft)' }}>
             <input type="checkbox" className="mt-1" checked={confirmCmd} onChange={(e) => setConfirmCmd(e.target.checked)} />
             <span>
               <LevelGlyph level="warn" size={8} className="mr-2 align-middle" />
