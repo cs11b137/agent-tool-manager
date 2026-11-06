@@ -682,10 +682,9 @@
   background: var(--surface-2);
   color: var(--ink);
   font-weight: 500;
-  box-shadow: inset 2px 0 0 var(--accent);
 }
 .sidebar-link.is-active svg {
-  color: var(--accent-ink);
+  color: var(--ink);
 }
 .sidebar-badge {
   margin-left: auto;
