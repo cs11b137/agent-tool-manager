@@ -101,7 +101,7 @@ export function Shell({ children }: { children: ReactNode }) {
     <nav aria-label={msg('主导航')} className="sidebar hidden md:flex"><SidebarContent onAdd={openAdd} onSettings={openSettings} /></nav>
     <div className="flex min-w-0 flex-1 flex-col">
       <header className="topbar hidden md:flex">
-        <span className="topbar-crumb">{repositoryName}<ChevronRight size={11} aria-hidden /><b>{leaf}</b></span>
+        <span className="topbar-crumb"><span className="topbar-repository">{repositoryName}</span><ChevronRight size={11} aria-hidden /><b>{leaf}</b></span>
         <span className="topbar-right">
           <span className="topbar-status" role="status">
             <i style={{ background: status === 'open' ? 'var(--ok)' : 'var(--warn)' }} />

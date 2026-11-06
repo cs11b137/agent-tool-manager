@@ -60,13 +60,13 @@ export function DiffTabs({ files, initial }: { files: DiffFile[]; initial?: numb
   if (!cur) return null;
   return (
     <>
-      <div role="tablist" aria-label={msg("文件")} className="flex flex-wrap gap-1.5">
+      <div role="tablist" aria-label={msg("文件")} className="flex flex-nowrap gap-1.5 overflow-x-auto md:flex-wrap md:overflow-x-visible">
         {files.map((f, i) => (
           <button
             key={f.key}
             type="button"
             role="tab"
-            className="tab"
+            className="tab shrink-0 whitespace-nowrap"
             aria-selected={i === idx}
             aria-controls="diff-panel"
             onClick={() => setPicked(f.key)}

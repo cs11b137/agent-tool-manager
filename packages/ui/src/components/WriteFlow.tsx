@@ -153,11 +153,6 @@ export function WriteFlow(props: WriteFlowProps) {
 
       {step === 'preview' && (
         <div className="flex flex-wrap">
-          {aside && (
-            <aside className="box-border flex flex-[4_1_300px] flex-col gap-4 border-line px-4 py-3.5 md:border-r">
-              {aside}
-            </aside>
-          )}
           <section className="box-border flex min-w-0 flex-[7_1_520px] flex-col gap-3 px-4 py-3.5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="m-0 text-[13px] font-semibold">
@@ -206,6 +201,11 @@ export function WriteFlow(props: WriteFlowProps) {
               {footnote ?? msg("合并写入只改动 lock.managed 中列出的条目，文件里手写的 MCP 保持原样。写入采用临时文件 + rename，失败时清单与 lock 都不变。")}
             </p>
           </section>
+          {aside && (
+            <aside className="box-border flex min-w-0 flex-[4_1_300px] flex-col gap-4 border-line px-4 py-3.5 min-[854px]:border-l">
+              {aside}
+            </aside>
+          )}
         </div>
       )}
 
@@ -216,7 +216,7 @@ export function WriteFlow(props: WriteFlowProps) {
           {ws.status === 'done' && (
             <div className="morph flex flex-col gap-4">
               <div className="flex items-center gap-3 rounded-[8px] px-4 py-3 text-[13px]" style={{ background: 'var(--ok-soft)' }}>
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-white" style={{ background: 'var(--ok)' }}>
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full" style={{ background: 'var(--ok)', color: 'var(--on-accent)' }}>
                   <Check size={13} strokeWidth={3} aria-hidden />
                 </span>
                 <span>

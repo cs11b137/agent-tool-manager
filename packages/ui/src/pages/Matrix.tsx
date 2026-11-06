@@ -14,7 +14,7 @@ const cellKey = (i: LibraryItem, p: ProjectSummary) => `${itemKey(i)}|${p.id}`;
 type CellLook = { style: CSSProperties; glyph: string };
 
 const LOOK = {
-  on: { style: { border: 0, background: 'var(--accent)', color: '#FFFFFF' }, glyph: '✓' },
+  on: { style: { border: 0, background: 'var(--accent)', color: 'var(--on-accent)' }, glyph: '✓' },
   off: { style: { border: '1px solid var(--line2)', background: 'transparent', color: 'var(--ink3)' }, glyph: '' },
   add: { style: { border: '1.5px dashed var(--accent)', background: 'var(--accent-soft)', color: 'var(--accent-ink)' }, glyph: '+' },
   remove: { style: { border: '1.5px dashed var(--err-ink)', background: 'var(--err-soft)', color: 'var(--err-ink)' }, glyph: '−' },

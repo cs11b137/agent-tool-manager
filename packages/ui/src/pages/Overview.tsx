@@ -12,11 +12,12 @@ import { useToast } from '../components/Toaster';
 import { AGENT_LABEL, fmtTok, hhmm, tildify } from '../lib/format';
 
 /** 项目表列宽：项目 / Agent / 上下文 / S/M/P / 状态 / 行尾动作 */
-const ROW_GRID = 'minmax(150px,1.4fr) minmax(90px,.9fr) minmax(120px,1fr) 86px 84px 76px';
+const ROW_GRID = 'minmax(140px,1.4fr) minmax(80px,.9fr) minmax(104px,1fr) 76px 76px 140px';
 /** Link 只占前 5 列（动作按钮不能嵌在 a 里），内部网格与外层前 5 轨对齐 */
-const ROW_LINK_GRID = 'minmax(150px,1.4fr) minmax(90px,.9fr) minmax(120px,1fr) 86px 84px';
-const ROW_CLS = 'hover-row group grid min-h-[44px] items-center gap-3 border-t border-line px-[14px] py-2 text-ink no-underline';
-const ACTS_CLS = 'flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100';
+const ROW_LINK_GRID = 'minmax(140px,1.4fr) minmax(80px,.9fr) minmax(104px,1fr) 76px 76px';
+const ROW_CLS = 'overview-row hover-row group grid min-h-[44px] items-center gap-3 border-t border-line px-[14px] py-2 text-ink no-underline';
+const ROW_LINK_CLS = 'overview-row-link grid min-w-0 items-center gap-3 text-ink no-underline';
+const ACTS_CLS = 'overview-row-actions flex flex-wrap justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100';
 
 function Stat({ cap, value, sub }: { cap: string; value: ReactNode; sub: ReactNode }) {
   useLocale();
@@ -147,14 +148,14 @@ export function OverviewPage() {
         />
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid items-start gap-4 min-[1400px]:grid-cols-[minmax(0,1fr)_300px]">
         {projects.isLoading ? (
           <Loading />
         ) : !list.length ? (
           <Empty className="glass rounded-[8px]">{<><strong className="block text-ink">{msg("共享仓库已就绪")}</strong><span className="mt-2 block">{msg("先在工具库新建工具，再添加项目目录并关联。")}</span><Link className="btn btn-p mt-4" to="/library">{msg("前往工具库")}</Link></>}</Empty>
         ) : (
           <section className="tbl">
-            <div className="tbl-head grid min-h-[32px] items-center gap-3 border-b border-line px-[14px] py-2" style={{ gridTemplateColumns: ROW_GRID }}>
+            <div className="tbl-head grid min-h-[32px] items-center gap-3 border-b border-line px-[14px] py-2 max-lg:hidden" style={{ gridTemplateColumns: ROW_GRID }}>
               <span>{msg("项目")}</span>
               <span>Agent</span>
               <span>{msg("常驻上下文")}</span>
@@ -166,16 +167,18 @@ export function OverviewPage() {
               if (!p.exists) {
                 return (
                   <div key={p.id} className={ROW_CLS} style={{ gridTemplateColumns: ROW_GRID }}>
-                    <span className="min-w-0">
-                      <h2 className="m-0 truncate text-[13px] font-medium text-ink3 line-through">{p.name}</h2>
-                      <span className="mono block break-all text-[11px] text-ink4">{tildify(p.path)}</span>
-                    </span>
-                    <span className="flex min-w-0 gap-1 overflow-hidden">
-                      <span className="chip c-muted shrink-0">{msg("目录不存在")}</span>
-                    </span>
-                    <span className="text-[12px] text-ink3">—</span>
-                    <span className="mono text-right text-[12px] text-ink3">0 / 0 / 0</span>
-                    <span />
+                    <div className={ROW_LINK_CLS} style={{ gridColumn: '1 / 6', gridTemplateColumns: ROW_LINK_GRID }}>
+                      <span className="min-w-0">
+                        <h2 className="m-0 truncate text-[13px] font-medium text-ink3 line-through">{p.name}</h2>
+                        <span className="mono block break-all text-[11px] text-ink4">{tildify(p.path)}</span>
+                      </span>
+                      <span className="flex min-w-0 flex-wrap gap-1">
+                        <span className="chip c-muted shrink-0">{msg("目录不存在")}</span>
+                      </span>
+                      <span className="text-[12px] text-ink3">—</span>
+                      <span className="mono text-right text-[12px] text-ink3">0 / 0 / 0</span>
+                      <span />
+                    </div>
                     <span className={ACTS_CLS}>
                       <button type="button" className="btn btn-t btn-sm" onClick={() => setRelocate(p)}>
                         {msg("重新定位…")}</button>
@@ -191,14 +194,14 @@ export function OverviewPage() {
                 <div key={p.id} className={ROW_CLS} style={{ gridTemplateColumns: ROW_GRID }}>
                   <Link
                     to={`/projects/${p.id}`}
-                    className="grid min-w-0 items-center gap-3 text-ink no-underline"
+                    className={ROW_LINK_CLS}
                     style={{ gridColumn: '1 / 6', gridTemplateColumns: ROW_LINK_GRID }}
                   >
                     <span className="min-w-0">
                       <h2 className="m-0 truncate text-[13px] font-medium">{p.name}</h2>
                       <span className="mono block break-all text-[11px] text-ink4">{tildify(p.path)}</span>
                     </span>
-                    <span className="flex min-w-0 gap-1 overflow-hidden">
+                    <span className="flex min-w-0 flex-wrap gap-1">
                       {p.agents.map((a) => (
                         <span key={a} className="chip c-agent shrink-0">
                           {AGENT_LABEL[a]}
@@ -216,7 +219,7 @@ export function OverviewPage() {
                       </span>
                     </span>
                     <span className="mono text-right text-[12px] text-ink3">{`${c.skills} / ${c.mcp} / ${c.plugins}`}</span>
-                    <span className="min-w-0 overflow-hidden">
+                    <span className="min-w-0">
                       <DoctorChip counts={p.doctor} />
                     </span>
                   </Link>

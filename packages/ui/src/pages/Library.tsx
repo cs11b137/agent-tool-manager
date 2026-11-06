@@ -125,8 +125,8 @@ function AddPanel({ item, projects }: { item: LibraryItem; projects: ProjectSumm
           return (
             <label key={p.id} className="agt tall mono text-[13px] font-normal" style={{ color: p.exists ? 'var(--ink)' : 'var(--ink3)', cursor: e.ok ? 'pointer' : 'default' }}>
               <input type="checkbox" checked={checked} disabled={!e.ok} onChange={() => setPicked(checked ? picked.filter((x) => x !== p.id) : [...picked, p.id])} />
-              {p.name}
-              <span className="ml-auto font-sans text-[12px] text-ink3">{e.hint}</span>
+              <span className="min-w-0 flex-1 break-all">{p.name}</span>
+              <span className="ml-auto shrink-0 font-sans text-[12px] text-ink3">{e.hint}</span>
             </label>
           );
         })}
@@ -159,7 +159,7 @@ export function LibraryPage() {
   const rows = all.filter(
     (i) => (filter === 'all' || i.kind === filter) && (!needle || [i.name, i.source, i.description ?? '', i.detail ?? ''].some((s) => s.toLowerCase().includes(needle))),
   );
-  const selected = all.find((i) => key(i) === sel) ?? all.find((i) => !i.global && i.usedBy.length === 0) ?? all[0];
+  const selected = rows.find((i) => key(i) === sel) ?? rows.find((i) => !i.global && i.usedBy.length === 0) ?? rows[0];
 
   return (
     <>
@@ -183,7 +183,7 @@ export function LibraryPage() {
             {msg("搜索工具")}</label>
           <input id="lib-search" type="search" className="input input-lg" placeholder={msg("按名称、仓库或描述搜索")} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex flex-wrap items-center gap-1">
           <button type="button" className="btn btn-t btn-sm" onClick={() => setDialog('upload')}>{msg("上传工具包…")}</button>
           <button type="button" className="btn btn-t btn-sm" onClick={() => setDialog('project')}>{msg("添加项目目录…")}</button>
           <button type="button" className="btn btn-t btn-sm" onClick={() => setDialog('clone')}>
@@ -202,7 +202,7 @@ export function LibraryPage() {
 
       <div className="flex flex-wrap items-start gap-4">
         <section aria-label={msg("工具列表")} className="glass min-w-0 flex-[999_1_520px] overflow-hidden rounded-[8px]">
-          <div className="overflow-x-auto">
+          <div className="max-h-36 overflow-x-auto overflow-y-auto md:max-h-none">
             <div className="min-w-[640px]">
               <div className="tbl-head grid gap-3 border-b border-line px-[14px] py-2" style={{ gridTemplateColumns: GRID }}>
                 <span>{msg("类型")}</span>

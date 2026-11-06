@@ -58,6 +58,72 @@ test('dark theme overview', async ({ browser }) => {
   await ctx.close();
 });
 
+test('narrow overview keeps project rows and actions inside the table', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'web-app' })).toBeVisible();
+  const rows = page.locator('.overview-row');
+  expect(await rows.count()).toBeGreaterThan(0);
+  for (const row of await rows.all()) {
+    const actions = row.locator('.overview-row-actions');
+    await expect(actions).toHaveCSS('opacity', '1');
+    expect(await row.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    expect(await actions.evaluate((el) => {
+      const actionRect = el.getBoundingClientRect();
+      const row = el.closest('.overview-row');
+      if (!row) return false;
+      const rowRect = row.getBoundingClientRect();
+      return actionRect.left >= rowRect.left - 1 && actionRect.right <= rowRect.right + 1;
+    })).toBe(true);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('library filtering keeps detail within visible results and clears it when empty', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto('/library');
+  await expect(page.getByRole('button', { name: '预览改动' })).toBeVisible();
+  await page.getByRole('tab', { name: /^Skill/ }).click();
+  const selected = page.locator('section[aria-label="工具列表"] button[aria-pressed="true"]');
+  await expect(selected).toHaveCount(1);
+  await expect(selected).toContainText('baoyu-comic');
+  await expect(page.locator('aside')).toContainText('baoyu-comic');
+  await page.getByRole('searchbox', { name: '搜索工具' }).fill('no-such-tool-zzzz');
+  await expect(page.getByText('没有匹配的工具。')).toBeVisible();
+  await expect(page.locator('aside')).toHaveCount(0);
+});
+
+test('narrow MCP variable rows keep inputs and delete actions inside the dialog', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto('/library');
+  await page.getByRole('button', { name: '新建 MCP 定义…' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  expect(await dialog.evaluate((el) => {
+    const bounds = el.getBoundingClientRect();
+    return Array.from(el.querySelectorAll('button')).every((button) => {
+      const rect = button.getBoundingClientRect();
+      return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
+    });
+  })).toBe(true);
+});
+
+test('narrow add-tool preview places the diff before secondary metadata', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto('/library');
+  await page.getByRole('button', { name: '预览改动' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('将要写入的文件')).toBeVisible();
+  expect(await dialog.evaluate((el) => {
+    const diff = el.querySelector('section');
+    const aside = el.querySelector('aside');
+    return diff && aside ? diff.getBoundingClientRect().top < aside.getBoundingClientRect().top : false;
+  })).toBe(true);
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+});
+
 test.describe('write flows against the mock', () => {
   test.beforeEach(({ page }) => {
     page.on('pageerror', (e) => {

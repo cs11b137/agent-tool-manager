@@ -83,11 +83,11 @@ function ProjectRef({ issue, link }: { issue: DoctorIssue; link: boolean }) {
   useLocale();
   if (!issue.projectName) return null;
   return link && issue.projectId ? (
-    <Link to={`/projects/${issue.projectId}`} className="mono text-[13px] font-medium text-accent-ink">
+    <Link to={`/projects/${issue.projectId}`} className="mono min-w-0 max-w-full break-all text-[13px] font-medium text-accent-ink">
       {issue.projectName}
     </Link>
   ) : (
-    <span className="mono text-[13px] font-medium">{issue.projectName}</span>
+    <span className="mono min-w-0 max-w-full break-all text-[13px] font-medium">{issue.projectName}</span>
   );
 }
 
@@ -233,33 +233,27 @@ export function DoctorPage() {
       />
 
       <div className="statbar" style={{ gridTemplateColumns: 'repeat(3,minmax(0,1fr))' }}>
-        <div className="flex items-center gap-3">
-          <LevelGlyph level={errors.length ? 'error' : 'ok'} size={10} />
-          <span className="flex flex-col gap-0.5">
-            <span className="mono text-[22px] font-medium">{errors.length}</span>
-            <span className="text-[12px] text-ink2">{errText}</span>
-          </span>
+        <div className="doctor-stat">
+          <LevelGlyph level={errors.length ? 'error' : 'ok'} size={10} className="doctor-stat-glyph" />
+          <span className="doctor-stat-value">{errors.length}</span>
+          <span className="doctor-stat-label">{errText}</span>
         </div>
-        <div className="flex items-center gap-3">
-          <LevelGlyph level="warn" size={10} />
-          <span className="flex flex-col gap-0.5">
-            <span className="mono text-[22px] font-medium">{warns.length}</span>
-            <span className="text-[12px] text-ink2">{warns.length ? msg("警告 · 需要确认") : msg("警告 · 未发现")}</span>
-          </span>
+        <div className="doctor-stat">
+          <LevelGlyph level="warn" size={10} className="doctor-stat-glyph" />
+          <span className="doctor-stat-value">{warns.length}</span>
+          <span className="doctor-stat-label">{warns.length ? msg("警告 · 需要确认") : msg("警告 · 未发现")}</span>
         </div>
-        <div className="flex items-center gap-3">
-          <LevelGlyph level="info" size={10} />
-          <span className="flex flex-col gap-0.5">
-            <span className="mono text-[22px] font-medium">{infos.length}</span>
-            <span className="text-[12px] text-ink2">{msg('提示 · 供参考')}</span>
-          </span>
+        <div className="doctor-stat">
+          <LevelGlyph level="info" size={10} className="doctor-stat-glyph" />
+          <span className="doctor-stat-value">{infos.length}</span>
+          <span className="doctor-stat-label">{msg('提示 · 供参考')}</span>
         </div>
       </div>
 
       {(errors.length > 0 || report.projects.length > 0) && <Section level="error">
         {errors.length === 0 && (
           <div className="flex flex-wrap items-center gap-3 px-3.5 py-3 text-[14px]" style={{ background: 'var(--ok-soft)' }}>
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-white" style={{ background: 'var(--ok)' }}>
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full" style={{ background: 'var(--ok)', color: 'var(--on-accent)' }}>
               <Check size={13} strokeWidth={3} aria-hidden />
             </span>
             <span>{fixedNote ? <Rich text={msg("已重建链接 {0}，未发现其他错误", {0: fixedNote})} /> : msg("未发现错误")}</span>
@@ -272,7 +266,7 @@ export function DoctorPage() {
                 <ProjectRef issue={i} link={false} />
                 {i.kind && <KindChip kind={i.kind} />}
                 <strong className="text-[15px]">{doctorCopy(i, report).title}</strong>
-                {i.name && <span className="mono text-[12px] text-ink2">{i.name}</span>}
+                {i.name && <span className="mono min-w-0 max-w-full break-all text-[12px] text-ink2">{i.name}</span>}
               </div>
               <p className="m-0 text-[13px] leading-[1.6] text-ink2">{doctorCopy(i, report).detail}</p>
               <DiagnosticDetails issue={i} />
@@ -299,7 +293,7 @@ export function DoctorPage() {
                   <ProjectRef issue={i} link />
                   {i.kind && <KindChip kind={i.kind} />}
                   <strong className="text-[15px]">{doctorCopy(i, report).title}</strong>
-                  {i.name && <span className="mono text-[12px] text-ink2">{i.name}</span>}
+                  {i.name && <span className="mono min-w-0 max-w-full break-all text-[12px] text-ink2">{i.name}</span>}
                 </div>
                 <p className="m-0 text-[13px] leading-[1.6] text-ink2">{doctorCopy(i, report).detail}</p>
                 <DiagnosticDetails issue={i} />
@@ -318,7 +312,7 @@ export function DoctorPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <ProjectRef issue={i} link />
                   <span className="text-[14px]">{doctorCopy(i, report).title}</span>
-                  {i.name && <span className="mono text-[12px] text-ink2">{i.name}</span>}
+                  {i.name && <span className="mono min-w-0 max-w-full break-all text-[12px] text-ink2">{i.name}</span>}
                 </div>
                 <p className="m-0 text-[12px] text-ink3">{doctorCopy(i, report).detail}</p>
                 <DiagnosticDetails issue={i} />

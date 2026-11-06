@@ -244,9 +244,9 @@ export function AddToolFlow({
         <div className="flex flex-col gap-2">
           <h2 className="cap m-0">{msg("写入到")}</h2>
           {targets.map((p) => (
-            <div key={p.id} className="agt tall mono !cursor-default text-[13px]">
-              {p.name}
-              <span className="ml-auto font-sans text-[12px] font-normal text-ink3">
+            <div key={p.id} className="agt tall mono min-w-0 !cursor-default text-[13px]">
+              <span className="min-w-0 break-all">{p.name}</span>
+              <span className="ml-auto shrink-0 font-sans text-[12px] font-normal text-ink3">
                 {item.kind === 'plugin' ? '.claude/settings.json' : '.agents/skills'}
               </span>
             </div>
@@ -350,10 +350,10 @@ export function MigrateFlow({ onClose, kind, name, suggested }: { onClose: () =>
                 const disabled = !p.exists || (pluginOnlyCC && !p.agents.includes('claude-code'));
                 const on = ids.includes(p.id);
                 return (
-                  <label key={p.id} className={`agt tall mono text-[13px] ${disabled ? 'disabled' : ''}`}>
+                  <label key={p.id} className={`agt tall mono min-w-0 text-[13px] ${disabled ? 'disabled' : ''}`}>
                     <input type="checkbox" checked={on} disabled={disabled} onChange={() => setIds(on ? ids.filter((x) => x !== p.id) : [...ids, p.id])} />
-                    {p.name}
-                    <span className="ml-auto font-sans text-[12px] font-normal text-ink3">
+                    <span className="min-w-0 break-all">{p.name}</span>
+                    <span className="ml-auto shrink-0 font-sans text-[12px] font-normal text-ink3">
                       {!p.exists ? msg("目录缺失") : disabled ? msg("未启用 Claude Code") : suggested.includes(p.id) ? msg("在用") : ''}
                     </span>
                   </label>
@@ -362,11 +362,11 @@ export function MigrateFlow({ onClose, kind, name, suggested }: { onClose: () =>
             </fieldset>
             <div className="flex min-w-0 flex-[2_1_260px] flex-col gap-3">
               <h2 className="cap m-0">{msg("全局")}</h2>
-              <div className="flex items-center gap-3.5 rounded-[8px] border border-line2 bg-field px-4 py-3.5">
+              <div className="flex min-w-0 items-center gap-3.5 rounded-[8px] border border-line2 bg-field px-4 py-3.5">
                 <Switch checked={removeGlobal} onChange={setRemoveGlobal} label={msg("迁移后从全局移除")} />
-                <span className="flex flex-col gap-0.5">
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="text-[14px] font-medium">{msg("迁移后从全局移除")}</span>
-                  <span className="mono text-[12px] text-ink3">{kind === 'plugin' ? '~/.claude/settings.json' : `~/.claude/skills/${name}`}</span>
+                  <span className="mono break-all text-[12px] text-ink3">{kind === 'plugin' ? '~/.claude/settings.json' : `~/.claude/skills/${name}`}</span>
                 </span>
               </div>
               <p className="m-0 text-[12px] leading-[1.6] text-ink3">

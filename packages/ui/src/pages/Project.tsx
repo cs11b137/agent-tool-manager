@@ -137,18 +137,20 @@ function GeneratedDialog({ project, onClose }: { project: ProjectDetail; onClose
   const drift = (q.data ?? []).filter((c) => c.additions + c.deletions > 0).length;
   return (
     <Dialog open onClose={onClose} labelledBy={id}>
-      <header className="flex flex-wrap items-center gap-4 border-b border-line px-4 py-3.5">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="cap">{project.name} {msg("· 清单渲染结果 vs 磁盘")}</span>
+          <span className="cap break-all">{project.name} {msg("· 清单渲染结果 vs 磁盘")}</span>
           <h1 id={id} className="m-0 text-[14px] font-semibold">
             {msg("查看生成的配置")}</h1>
         </div>
-        <span className={drift ? 'st st-warn' : 'st st-ok'}>
-          {drift ? msg("{0} 个文件与清单不一致", {0: drift}) : msg("与磁盘一致")}
-        </span>
-        <button type="button" aria-label={msg("关闭")} className="btn btn-t !h-8 !w-8 !p-0" onClick={onClose}>
-          <X size={18} aria-hidden />
-        </button>
+        <div className="flex w-full items-center justify-between gap-4 sm:w-auto">
+          <span className={drift ? 'st st-warn' : 'st st-ok'}>
+            {drift ? msg("{0} 个文件与清单不一致", {0: drift}) : msg("与磁盘一致")}
+          </span>
+          <button type="button" aria-label={msg("关闭")} className="btn btn-t !h-8 !w-8 !p-0" onClick={onClose}>
+            <X size={18} aria-hidden />
+          </button>
+        </div>
       </header>
       <div className="flex flex-col gap-3.5 px-4 py-3.5">
         {q.isLoading && <Loading className="!px-0" />}
@@ -182,9 +184,9 @@ export function ProjectPage() {
   if (!p.exists) {
     return (
       <>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex min-w-0 max-w-full flex-col gap-1.5">
           <h1 className="m-0 text-[15px] font-semibold text-ink3 line-through">{p.name}</h1>
-          <span className="mono text-[11px] text-ink4">{tildify(p.path)}</span>
+          <span className="mono max-w-full break-all text-[11px] text-ink4">{tildify(p.path)}</span>
         </div>
         <section className="flex flex-col gap-4 rounded-[8px] p-4" style={{ border: '1.5px dashed var(--line2)', background: 'repeating-linear-gradient(135deg, var(--surface-2) 0 8px, transparent 8px 16px)' }}>
           <span className="chip c-muted self-start font-sans">{msg("目录不存在")}</span>
@@ -259,9 +261,9 @@ export function ProjectPage() {
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex min-w-0 max-w-full flex-[1_1_16rem] flex-col gap-1.5">
           <h1 className="m-0 text-[15px] font-semibold">{p.name}</h1>
-          <span className="mono text-[11px] text-ink4">
+          <span className="mono max-w-full break-all text-[11px] text-ink4">
             {tildify(p.path)} · {p.initialized ? '.agents/tools.json' : msg("未初始化")}
           </span>
         </div>

@@ -282,16 +282,16 @@ export function NewMcpDialog({ onClose }: { onClose: () => void }) {
         <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
           <legend className="label pb-1.5">{transport === 'stdio' ? 'env' : 'headers'} {msg("· 值必须写成 $")}{'{VAR}'} {msg("引用")}</legend>
           {vars.map((row, i) => (
-            <div key={i} className="grid grid-cols-[1fr_1.4fr_auto] gap-2">
+            <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-2">
               <input
-                className="input mono"
+                className="input mono min-w-0"
                 aria-label={msg("变量名")}
                 value={row.k}
                 placeholder={transport === 'stdio' ? 'LINEAR_TOKEN' : 'Authorization'}
                 onChange={(e) => setVars(vars.map((x, j) => (j === i ? { ...x, k: e.target.value } : x)))}
               />
               <input
-                className="input mono"
+                className="input mono min-w-0"
                 aria-label={msg("值")}
                 value={row.v}
                 placeholder={transport === 'stdio' ? '${LINEAR_TOKEN}' : 'Bearer ${LINEAR_TOKEN}'}

@@ -92,14 +92,14 @@ export function GlobalPage() {
             )}
           </div>
         </div>
-        <div className="flex flex-[5_1_280px] flex-col gap-2">
+        <div className="flex min-w-0 flex-[5_1_280px] flex-col gap-2">
           <span className="cap">{msg("迁移建议")}</span>
           {sugg.length ? (
             <>
               <span className="text-[22px] font-medium">
                 <span className="mono">{sugg.length}</span> <span className="text-[14px] font-normal text-ink2">{msg("项可以移到项目级")}</span>
               </span>
-              <span className="mono text-[12px] text-ink3">{sugg.join(' · ')}</span>
+              <span className="mono break-all text-[12px] text-ink3">{sugg.join(' · ')}</span>
             </>
           ) : (
             <span className="inline-flex items-center gap-2 text-[14px] text-ink2">
@@ -113,16 +113,16 @@ export function GlobalPage() {
         <section className="glass min-w-0 flex-[1_1_420px] overflow-hidden rounded-[8px]">
           <div className="flex items-center gap-2.5 border-b border-line px-[18px] py-4">
             <KindChip kind="skill" />
-            <h2 className="m-0 text-[16px] font-semibold">{msg("全局 Skill")}</h2>
+            <h2 className="m-0 text-[13px] font-semibold">{msg("全局 Skill")}</h2>
             <span className="mono text-[13px] text-ink3">{g.skills.length}</span>
           </div>
           {g.skills.length === 0 && <Empty className="border-b border-line">{msg("~/.claude/skills 是空的。")}</Empty>}
           {g.skills.map((s) => (
             <div key={s.name} className="hover-row flex flex-wrap items-center gap-4 border-b border-line px-[18px] py-4">
               <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-1.5">
-                <div className="flex justify-between gap-2">
-                  <span className="mono text-[14px] font-medium">{s.name}</span>
-                  <span className="mono text-[13px] font-semibold">{fmtTok(s.contextTokens)}</span>
+                <div className="flex min-w-0 justify-between gap-2">
+                  <span className="mono min-w-0 flex-1 break-all text-[14px] font-medium">{s.name}</span>
+                  <span className="mono shrink-0 text-[13px] font-semibold">{fmtTok(s.contextTokens)}</span>
                 </div>
                 <span className="mono text-[12px] break-all text-ink3">
                   {tildify(s.path)}
@@ -149,7 +149,7 @@ export function GlobalPage() {
         <section className="glass min-w-0 flex-[1_1_420px] overflow-hidden rounded-[8px]">
           <div className="flex items-center gap-2.5 border-b border-line px-[18px] py-4">
             <KindChip kind="plugin" />
-            <h2 className="m-0 text-[16px] font-semibold">{msg("全局启用的插件")}</h2>
+            <h2 className="m-0 text-[13px] font-semibold">{msg("全局启用的插件")}</h2>
             <span className="mono text-[13px] text-ink3">{g.plugins.length}</span>
           </div>
           {g.plugins.length === 0 && <Empty className="border-b border-line">{msg("没有全局启用的插件。")}</Empty>}
@@ -159,11 +159,11 @@ export function GlobalPage() {
             return (
               <div key={p.name} className="hover-row flex flex-wrap items-center gap-4 border-b border-line px-[18px] py-4">
                 <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-1.5">
-                  <div className="flex justify-between gap-2">
-                    <span className="mono text-[14px] font-medium">{displayName('plugin', p.name)}</span>
-                    <span className="mono text-[13px] font-semibold">{p.contextTokens === null ? '?' : fmtTok(p.contextTokens)}</span>
+                  <div className="flex min-w-0 justify-between gap-2">
+                    <span className="mono min-w-0 flex-1 break-all text-[14px] font-medium">{displayName('plugin', p.name)}</span>
+                    <span className="mono shrink-0 text-[13px] font-semibold">{p.contextTokens === null ? '?' : fmtTok(p.contextTokens)}</span>
                   </div>
-                  <span className="mono text-[12px] text-ink3">{at > 0 ? p.name.slice(at) : p.name}</span>
+                  <span className="mono break-all text-[12px] text-ink3">{at > 0 ? p.name.slice(at) : p.name}</span>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="chip font-medium" style={p.installed ? { background: 'var(--line)', color: 'var(--ink2)' } : { background: 'var(--err-soft)', color: 'var(--err-ink)' }}>
                       {p.installed ? msg("已安装") : msg("未安装")}

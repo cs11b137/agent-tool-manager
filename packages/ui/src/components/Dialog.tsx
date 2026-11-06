@@ -42,7 +42,10 @@ export function Dialog({
         if (!f.length) return;
         const a = f[0]!;
         const z = f[f.length - 1]!;
-        if (e.shiftKey && document.activeElement === a) {
+        if (document.activeElement === node) {
+          e.preventDefault();
+          (e.shiftKey ? z : a).focus();
+        } else if (e.shiftKey && document.activeElement === a) {
           e.preventDefault();
           z.focus();
         } else if (!e.shiftKey && document.activeElement === z) {
